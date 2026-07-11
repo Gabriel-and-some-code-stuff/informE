@@ -1,4 +1,4 @@
-# informE — RMM on-premise
+# informE
 
 Monitoramento e gerenciamento remoto de máquinas (RMM) para labs de escola e PMEs.
 Roda 100% na rede do cliente, sem nuvem. TCC.
@@ -17,7 +17,6 @@ Duas soluções, três executáveis:
 - **`informE.Agent.slnx`** — o agente (Windows Service) que roda em cada máquina monitorada.
 - **`informE.Contracts`** — DTOs e contratos de hub, compartilhado pelas duas soluções.
 
-Dependências apontam **para dentro** (Onion): `Domain` ← `Application` ← `Infrastructure` ← executáveis.
 
 ## Rodar em dev
 
