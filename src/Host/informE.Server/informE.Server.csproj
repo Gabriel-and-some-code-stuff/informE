@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\informE.Infrastructure\informE.Infrastructure.csproj" />
+    <ProjectReference Include="..\informE.Application\informE.Application.csproj" />
+    <ProjectReference Include="..\..\Shared\informE.Contracts\informE.Contracts.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

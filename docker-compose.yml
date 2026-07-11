@@ -1,0 +1,18 @@
+# Postgres de desenvolvimento do informE. Sobe com: docker compose up -d
+# ponytail: só o banco; o Server roda via `dotnet run` no dev. Empacotar o Server
+# em container fica pra sprint de deploy, se precisar.
+services:
+  postgres:
+    image: postgres:16
+    container_name: informe-postgres
+    environment:
+      POSTGRES_USER: informe
+      POSTGRES_PASSWORD: informe_dev
+      POSTGRES_DB: informe
+    ports:
+      - "5432:5432"
+    volumes:
+      - informe_pgdata:/var/lib/postgresql/data
+
+volumes:
+  informe_pgdata:

@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Host/">
+    <Project Path="src/Host/informE.Application/informE.Application.csproj" />
+    <Project Path="src/Host/informE.Desktop/informE.Desktop.csproj" />
+    <Project Path="src/Host/informE.Domain/informE.Domain.csproj" />
+    <Project Path="src/Host/informE.Infrastructure/informE.Infrastructure.csproj" />
+    <Project Path="src/Host/informE.Server/informE.Server.csproj" />
+    <Project Path="src/Host/informE.UI/informE.UI.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src/Shared/informE.Contracts/informE.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/informE.Application.Tests/informE.Application.Tests.csproj" />
+    <Project Path="tests/informE.Domain.Tests/informE.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

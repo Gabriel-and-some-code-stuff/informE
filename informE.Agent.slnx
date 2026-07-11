@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Agent/">
+    <Project Path="src/Agent/informE.Agent.Application/informE.Agent.Application.csproj" />
+    <Project Path="src/Agent/informE.Agent.Core/informE.Agent.Core.csproj" />
+    <Project Path="src/Agent/informE.Agent.Infrastructure/informE.Agent.Infrastructure.csproj" />
+    <Project Path="src/Agent/informE.Agent.Worker/informE.Agent.Worker.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src/Shared/informE.Contracts/informE.Contracts.csproj" />
+  </Folder>
+</Solution>
