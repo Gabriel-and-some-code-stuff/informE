@@ -1,0 +1,57 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get diff (.cs e .csproj, máx 8 KB)
+        id: diff
+        run: |
+          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD \
+            -- '*.cs' '*.csproj' '*.razor' | head -c 8000)
+          {
+            echo 'diff<<EOF'
+            echo "$DIFF"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Claude review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          DIFF: ${{ steps.diff.outputs.diff }}
+        run: |
+          # ponytail: Haiku 4.5 — barato, rápido, suficiente pra revisão de PR.
+          BODY=$(curl -sf https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "$(jq -n \
+              --arg diff "$DIFF" \
+              '{
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 1024,
+                messages: [{
+                  role: "user",
+                  content: ("Você é revisor de código C#/.NET 10. Revise o diff abaixo de um projeto RMM (Arquitetura Onion: Domain ← Application ← Infrastructure ← executáveis).\n\nRegras do projeto:\n- Domain NUNCA referencia Infrastructure\n- Senhas: só Argon2id via IPasswordHasher\n- IDs: sempre Guid, nunca int\n- Datas: sempre UTC (DateTimeOffset ou DateTime.UtcNow)\n- JWT: só via IJwtTokenService\n\nAponte no máximo 5 problemas reais (bugs, violações de Onion, segurança, race conditions). Ignore style. Se estiver ok, diga. Seja direto e em português.\n\nDiff:\n" + $diff)
+                }]
+              }')" \
+            | jq -r '.content[0].text')
+
+          gh pr comment "$PR_NUM" --body "## Revisão automática (Claude Haiku)
+
+$BODY
+
+---
+*Gerado em \`${{ github.sha }}\` · [workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
