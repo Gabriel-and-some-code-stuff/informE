@@ -1,0 +1,13 @@
+# Normaliza line endings no repositório para LF.
+# .ps1 fica CRLF porque o PowerShell no Windows prefere.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binários — sem conversão.
+*.png binary
+*.svg binary
+*.ttf binary
+*.jpg binary
+*.ico binary
