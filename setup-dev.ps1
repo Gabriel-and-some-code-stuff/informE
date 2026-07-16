@@ -1,13 +1,14 @@
 # setup-dev.ps1 — ambiente informE sem privilégio de admin
 # Uso: powershell -ExecutionPolicy Bypass -File setup-dev.ps1
 #
-# O que instala (tudo em $HOME, sem elevação):
+# Pré-condições (já instalados pela TI ou pelo time):
+#   - Git
+#   - Docker Desktop (com WSL2 backend)
+#
+# O que este script instala (tudo em $HOME/$LOCALAPPDATA, sem UAC):
 #   - .NET 10 SDK  → $env:LOCALAPPDATA\dotnet
 #   - MAUI workload (maui-windows)
-#   - gh CLI       → $HOME\.local\gh
-#   - Adiciona ambos ao PATH do usuário (persistente)
-#
-# Docker Desktop precisa de admin — instale via TI ou use WSL2 pré-configurado.
+#   - gh CLI       → $HOME\.local\gh\<versao>\bin
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -28,7 +29,7 @@ Write-Host "`n[1/3] Git" -ForegroundColor Cyan
 if (Test-Command git) {
     Write-Host "  OK — $(git --version)"
 } else {
-    Write-Error "Git nao encontrado. Peca pra TI instalar ou use o Portable Git (https://git-scm.com/download/win)."
+    Write-Error "Git nao encontrado. Instale o Git Portable (https://git-scm.com/download/win) e reabra o terminal."
 }
 
 # ── 2. .NET 10 SDK ───────────────────────────────────────────────────────────
@@ -42,49 +43,44 @@ if (Test-Command dotnet) {
         Write-Host "  OK — .NET $ver"
         $needDotnet = $false
     } else {
-        Write-Host "  Versao atual: $ver — instalando .NET 10 em paralelo..."
+        Write-Host "  Versao atual: $ver — instalando .NET 10 em paralelo em $dotnetDir ..."
     }
 }
 
 if ($needDotnet) {
-    Write-Host "  Baixando dotnet-install.ps1..."
+    Write-Host "  Baixando dotnet-install.ps1 (Microsoft oficial)..."
     $installer = "$env:TEMP\dotnet-install.ps1"
     Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer -UseBasicParsing
     & powershell -ExecutionPolicy Bypass -File $installer -Channel '10.0' -InstallDir $dotnetDir
     Add-ToUserPath $dotnetDir
-    Write-Host "  .NET 10 instalado em $dotnetDir"
+    Write-Host "  .NET 10 instalado."
 }
 
-# Garante que dotnet aponta pro diretório do usuário nesta sessão
 if ($env:PATH -notlike "*$dotnetDir*") { $env:PATH = "$dotnetDir;$env:PATH" }
 
-# ── MAUI workload ─────────────────────────────────────────────────────────────
+# MAUI workload
 $workloads = dotnet workload list 2>$null
 if ($workloads -notlike '*maui-windows*') {
     Write-Host "  Instalando workload maui-windows (pode demorar ~5 min na 1a vez)..."
     dotnet workload install maui-windows --skip-sign-check
 } else {
-    Write-Host "  Workload maui-windows ja presente."
+    Write-Host "  Workload maui-windows OK."
 }
 
 # ── 3. gh CLI ────────────────────────────────────────────────────────────────
 Write-Host "`n[3/3] gh CLI" -ForegroundColor Cyan
-$ghDir = "$HOME\.local\gh"
-$ghBin = "$ghDir\bin"
 
 if (Test-Command gh) {
     Write-Host "  OK — $(gh --version | Select-Object -First 1)"
 } else {
-    Write-Host "  Baixando gh CLI (sem admin)..."
-    # Pega a versao mais recente via API do GitHub
-    $release  = Invoke-RestMethod 'https://api.github.com/repos/cli/cli/releases/latest'
-    $asset    = $release.assets | Where-Object { $_.name -like '*windows_amd64.zip' } | Select-Object -First 1
-    $zip      = "$env:TEMP\gh.zip"
+    Write-Host "  Baixando gh CLI (sem admin, via zip)..."
+    $release = Invoke-RestMethod 'https://api.github.com/repos/cli/cli/releases/latest'
+    $asset   = $release.assets | Where-Object { $_.name -like '*windows_amd64.zip' } | Select-Object -First 1
+    $zip     = "$env:TEMP\gh.zip"
     Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
-    Expand-Archive -Path $zip -DestinationPath $ghDir -Force
-    # O zip tem uma pasta interna tipo gh_2.x.x_windows_amd64\bin\gh.exe
-    $inner = Get-ChildItem $ghDir -Directory | Select-Object -First 1
-    $ghBin = "$($inner.FullName)\bin"
+    $ghRoot  = "$HOME\.local\gh"
+    Expand-Archive -Path $zip -DestinationPath $ghRoot -Force
+    $ghBin   = (Get-ChildItem $ghRoot -Directory | Select-Object -First 1).FullName + '\bin'
     Add-ToUserPath $ghBin
     Write-Host "  gh CLI instalado em $ghBin"
 }
@@ -95,12 +91,14 @@ Write-Host " Ambiente pronto!" -ForegroundColor Green
 Write-Host "══════════════════════════════════════════" -ForegroundColor Green
 Write-Host @"
 
-Proximos passos:
-  1. Reinicie o terminal (PATH foi atualizado pra sua conta)
-  2. docker compose up -d              # sobe o Postgres (Docker precisa estar instalado)
-  3. dotnet ef database update ...     # aplica migrations
-  4. gh auth login                     # autentica no GitHub
+Proximos passos (abra um novo terminal para o PATH valer):
 
-Docker Desktop exige admin — se nao tiver, peca pra TI ou use o Postgres
-ja instalado na maquina (ajuste a connection string em appsettings.Development.json).
+  1. gh auth login                          # autentica no GitHub
+  2. git clone https://github.com/Gabriel-and-some-code-stuff/informE
+  3. cd informE
+  4. docker compose up -d                   # sobe o Postgres (Docker ja instalado)
+  5. dotnet ef database update `
+       -p src/Host/informE.Infrastructure `
+       -s src/Host/informE.Server           # aplica migrations (quando existirem)
+  6. dotnet run --project src/Host/informE.Server
 "@

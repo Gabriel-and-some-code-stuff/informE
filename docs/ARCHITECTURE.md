@@ -322,7 +322,54 @@ feature larga antes do esqueleto fechar.**
 
 ---
 
-## 8. Status das confirmações
+## 8. Ambiente de desenvolvimento (sem admin)
+
+O script `setup-dev.ps1` na raiz do repo instala tudo sem privilégio de administrador:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File setup-dev.ps1
+```
+
+| Ferramenta | Instalação | Onde fica |
+|---|---|---|
+| .NET 10 SDK | `dotnet-install.ps1` (Microsoft oficial) | `%LOCALAPPDATA%\dotnet` |
+| MAUI workload | `dotnet workload install maui-windows` | dentro do SDK do usuário |
+| gh CLI | zip do GitHub Releases, sem instalador | `$HOME\.local\gh\<versao>\bin` |
+| Docker Desktop | **precisa de TI / já instalado** | — |
+| PostgreSQL | via `docker compose up -d` | container `informe-postgres` |
+
+> **Postgres roda em Docker** — não precisa instalar separado. Docker Desktop
+> é pré-requisito (instalar uma vez com admin da TI). Depois de ter o Docker,
+> `docker compose up -d` sobe o banco e `docker compose down` derruba, sem admin.
+
+Após rodar o script, **abra um novo terminal** (PATH foi atualizado para a conta do usuário, mas não recarrega na sessão atual).
+
+---
+
+## 9. Pipeline de CI/CD
+
+Dois jobs paralelos em `.github/workflows/ci.yml`:
+
+| Job | Runner | O que faz |
+|---|---|---|
+| `build-agent` | ubuntu-latest | Compila `informE.Agent.slnx` (~1 min, sem MAUI) |
+| `build-host` | windows-latest | Compila `informE.Host.slnx` + roda testes; workload MAUI **cacheado** |
+
+Na primeira execução o cache do workload MAUI ainda não existe — leva ~5 min.
+A partir da segunda, o step de restauração é pulado e o job cai para ~1–2 min.
+
+### Revisão de PR por IA (`.github/workflows/ai-review.yml`)
+
+A cada Pull Request, o diff em `.cs/.razor/.csproj` (até 8 KB) é enviado ao
+**GitHub Models** (GPT-4o mini) que aponta até 5 problemas reais — violações de
+Onion, segurança, bugs. Custo: **$0** — usa o `GITHUB_TOKEN` automático do
+Actions, sem secret extra, sem conta Anthropic.
+
+> A IA revisa; o time decide. Não rejeita o PR automaticamente.
+
+---
+
+## 10. Status das confirmações
 1. ✅ **Modelo de Task**: `TASKS` = disparo; `DEVICES_TASKS` = alvos; `TASK_EXECUTION_LOGS` = 1 log/máquina (add `id_device`).
 2. ✅ **Reboot/Shutdown** = scripts pré-definidos.
 3. ✅ **Schema real recebido** (MySQL, "não perfeito"). Sprint inclui **portar pro Postgres + polir** — §3.5 (porting) e §3.6 (checklist).
