@@ -24,10 +24,12 @@ WSL parece corrompido (erro comum apos atualizacao do Windows).
 Corrija com admin ANTES de continuar:
 
   1. PowerShell como Administrador:
-       winget uninstall Microsoft.WSL
+       Get-AppxPackage -Name "*WindowsSubsystemForLinux*" | Remove-AppxPackage
   2. Reinicie o computador.
-  3. PowerShell como Administrador:
-       winget install Microsoft.WSL
+  3. Instale pelo Microsoft Store (pesquise "Windows Subsystem for Linux")
+     OU no PowerShell como Administrador:
+       Invoke-WebRequest -Uri "https://github.com/microsoft/WSL/releases/latest/download/wsl.latest.x64.msi" -OutFile "$env:TEMP\wsl.msi" -UseBasicParsing
+       Start-Process msiexec.exe -ArgumentList "/i $env:TEMP\wsl.msi /quiet" -Wait
   4. Reinicie novamente.
 
 Depois rode este script de novo.
