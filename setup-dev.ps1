@@ -13,6 +13,41 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# ── 0. Pré-voo: WSL + Docker ─────────────────────────────────────────────────
+Write-Host "`n[0/3] Verificando WSL e Docker" -ForegroundColor Cyan
+
+# WSL: REGDB_E_CLASSNOTREG significa instalação corrompida — detecta antes de qualquer coisa.
+$wslOut = & wsl --status 2>&1
+if ($LASTEXITCODE -ne 0 -or ($wslOut -join '') -match 'corrompida|corrupted|REGDB') {
+    Write-Warning @"
+WSL parece corrompido (erro comum apos atualizacao do Windows).
+Corrija com admin ANTES de continuar:
+
+  1. PowerShell como Administrador:
+       winget uninstall Microsoft.WSL
+  2. Reinicie o computador.
+  3. PowerShell como Administrador:
+       winget install Microsoft.WSL
+  4. Reinicie novamente.
+
+Depois rode este script de novo.
+"@
+    exit 1
+}
+Write-Host "  WSL OK"
+
+# Docker Desktop: verifica se o daemon responde.
+$dockerOk = & docker info 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning @"
+Docker Desktop nao esta respondendo.
+Abra o Docker Desktop, aguarde o icone ficar verde na bandeja e rode o script de novo.
+Se o Docker nao abre, corrija o WSL primeiro (veja acima).
+"@
+    exit 1
+}
+Write-Host "  Docker OK"
+
 function Add-ToUserPath($dir) {
     $current = [Environment]::GetEnvironmentVariable('PATH', 'User')
     if ($current -notlike "*$dir*") {
