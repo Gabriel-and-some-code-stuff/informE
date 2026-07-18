@@ -1,4 +1,5 @@
 using informE.Domain.Enums;
+using TaskStatus = informE.Domain.Enums.TaskStatus;
 
 namespace informE.Domain.Entities;
 

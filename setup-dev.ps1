@@ -14,7 +14,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # ── 0. Pré-voo: WSL + Docker ─────────────────────────────────────────────────
-Write-Host "`n[0/3] Verificando WSL e Docker" -ForegroundColor Cyan
+Write-Host "`n[0/4] Verificando WSL e Docker" -ForegroundColor Cyan
 
 # WSL: REGDB_E_CLASSNOTREG significa instalação corrompida — detecta antes de qualquer coisa.
 $wslOut = & wsl --status 2>&1
@@ -62,7 +62,7 @@ function Add-ToUserPath($dir) {
 function Test-Command($cmd) { $null -ne (Get-Command $cmd -ErrorAction SilentlyContinue) }
 
 # ── 1. Git ───────────────────────────────────────────────────────────────────
-Write-Host "`n[1/3] Git" -ForegroundColor Cyan
+Write-Host "`n[1/4] Git" -ForegroundColor Cyan
 if (Test-Command git) {
     Write-Host "  OK — $(git --version)"
 } else {
@@ -70,7 +70,7 @@ if (Test-Command git) {
 }
 
 # ── 2. .NET 10 SDK ───────────────────────────────────────────────────────────
-Write-Host "`n[2/3] .NET 10 SDK" -ForegroundColor Cyan
+Write-Host "`n[2/4] .NET 10 SDK" -ForegroundColor Cyan
 $dotnetDir = "$env:LOCALAPPDATA\dotnet"
 $needDotnet = $true
 
@@ -105,7 +105,7 @@ if ($workloads -notlike '*maui-windows*') {
 }
 
 # ── 3. gh CLI ────────────────────────────────────────────────────────────────
-Write-Host "`n[3/3] gh CLI" -ForegroundColor Cyan
+Write-Host "`n[3/4] gh CLI" -ForegroundColor Cyan
 
 if (Test-Command gh) {
     Write-Host "  OK — $(gh --version | Select-Object -First 1)"
@@ -122,20 +122,45 @@ if (Test-Command gh) {
     Write-Host "  gh CLI instalado em $ghBin"
 }
 
+# ── 4. Banco: Docker Compose + migrations ────────────────────────────────────
+# Só sobe o banco se este script rodar de dentro do repo (existe docker-compose.yml).
+if (Test-Path "$PSScriptRoot\docker-compose.yml") {
+    Write-Host "`n[4/4] Banco de dados" -ForegroundColor Cyan
+
+    Write-Host "  Subindo Postgres via docker compose..."
+    docker compose -f "$PSScriptRoot\docker-compose.yml" up -d
+
+    # Espera o healthcheck do container ficar 'healthy' antes de aplicar migrations.
+    Write-Host "  Aguardando o Postgres aceitar conexao..."
+    $healthy = $false
+    foreach ($i in 1..20) {
+        $state = docker inspect --format '{{.State.Health.Status}}' informe-postgres 2>$null
+        if ($state -eq 'healthy') { $healthy = $true; break }
+        Start-Sleep -Seconds 3
+    }
+
+    if ($healthy) {
+        Write-Host "  Postgres pronto. Aplicando migrations..."
+        dotnet ef database update -p "$PSScriptRoot\src\Host\informE.Infrastructure" -s "$PSScriptRoot\src\Host\informE.Server"
+        Write-Host "  Banco criado e migrations aplicadas."
+    } else {
+        Write-Warning "  Postgres nao ficou 'healthy' a tempo. Rode manualmente: docker compose up -d && dotnet ef database update ..."
+    }
+} else {
+    Write-Host "`n  (rode dentro do repo clonado para subir o banco automaticamente)" -ForegroundColor DarkGray
+}
+
 # ── Resumo ────────────────────────────────────────────────────────────────────
 Write-Host "`n══════════════════════════════════════════" -ForegroundColor Green
 Write-Host " Ambiente pronto!" -ForegroundColor Green
 Write-Host "══════════════════════════════════════════" -ForegroundColor Green
 Write-Host @"
 
-Proximos passos (abra um novo terminal para o PATH valer):
+Se rodou fora do repo, abra um novo terminal (PATH atualizado) e:
 
-  1. gh auth login                          # autentica no GitHub
+  1. gh auth login
   2. git clone https://github.com/Gabriel-and-some-code-stuff/informE
   3. cd informE
-  4. docker compose up -d                   # sobe o Postgres (Docker ja instalado)
-  5. dotnet ef database update `
-       -p src/Host/informE.Infrastructure `
-       -s src/Host/informE.Server           # aplica migrations (quando existirem)
-  6. dotnet run --project src/Host/informE.Server
+  4. .\setup-dev.ps1        # agora sobe o banco e aplica migrations sozinho
+  5. dotnet run --project src/Host/informE.Server
 "@
