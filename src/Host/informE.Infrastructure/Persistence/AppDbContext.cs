@@ -19,6 +19,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<TaskExecutionLog> TaskExecutionLogs => Set<TaskExecutionLog>();
     public DbSet<Software> Softwares => Set<Software>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<DeviceDailyMetrics> DeviceDailyMetrics => Set<DeviceDailyMetrics>();
+    public DbSet<Alert> Alerts => Set<Alert>();
+    public DbSet<NetworkGrowthSnapshot> NetworkGrowthSnapshots => Set<NetworkGrowthSnapshot>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

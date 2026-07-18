@@ -26,4 +26,6 @@ public class Device
     public ICollection<TaskExecutionLog> ExecutionLogs { get; set; } = [];
     public ICollection<MachineTask> Tasks { get; set; } = [];
     public ICollection<Software> InstalledSoftwares { get; set; } = [];
+    public ICollection<DeviceDailyMetrics> DailyMetrics { get; set; } = [];
+    public ICollection<Alert> Alerts { get; set; } = [];
 }

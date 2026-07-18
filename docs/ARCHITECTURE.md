@@ -144,7 +144,8 @@ Espelhando o **schema real** (imagem). Coluna "Polir" = furos a resolver no port
 - **Chave do agente** (colunas em DEVICES: `agent_key_hash`, `key_rotated_at`) + **EnrollmentToken** (tabela) → sem isso o Agent não autentica (RF05-08 + pilar Segurança).
 - **id_device em TASK_EXECUTION_LOGS** → obrigatório pro "1 log por máquina" que confirmamos.
 - **Campos de sessão** (token_hash/expires_at/last_seen) → sustentam JWT + 3 sessões + revogar ocioso.
-- **ALERTS** (tabela) → núcleo do produto; decidir armazenar vs live-only (sprint de alertas).
+- **ALERTS** (tabela) → ✅ **decidido: persiste** (ver §3.7) — necessário pro gráfico
+  "Histórico de Alertas" do dashboard e pra auditoria por dispositivo.
 - **SCRIPTS** (tabela) → decidir extrair vs manter inline (sprint de execução).
 
 > **Modelo de Task (✅ CONFIRMADO, mapeado ao schema real):**
@@ -353,8 +354,113 @@ um caso de uso da Application, devolvem a resposta.
 3. **[necessário]** Auth do agente: `agent_key_hash` + `key_rotated_at` em DEVICES; tabela EnrollmentToken; status/last_seen do device.
 4. **[necessário]** Sessão: `token_hash` + `expires_at` + `last_seen` em SESSIONS.
 5. **[sprint 3-4]** Extrair tabela SCRIPTS (predefinido/custom) vs manter `source_script` inline.
-6. **[sprint 3]** Tabela ALERTS (tipo/device/msg/timestamps) vs alerta live-only.
+6. ✅ **Resolvido:** Tabela ALERTS persiste (ver §3.7) — necessária pro gráfico de
+   histórico e auditoria por dispositivo.
 7. **[opcional]** `version` em DEVICES_SOFTWARES; padronizar nomes PT/EN (cosmético).
+
+---
+
+### 3.7 Métricas diárias, Alertas e crescimento da rede (dashboard + gráficos)
+
+O wireframe do dashboard pede: big numbers com delta (`+3`, `-2`), um toggle de
+período (`7 dias` / `15 dias`) e um gráfico empilhado "Histórico de Alertas" por
+tipo. Isso levantou a pergunta: uma entidade `History` única guardando uptime,
+picos de CPU/RAM/disco, contagem de alertas, contagem de execuções, hostname, IP
+e crescimento da rede — tudo junto?
+
+**Não.** Esses campos têm **grãos diferentes** (o que uma linha representa), e
+misturar grão numa tabela só cria uma tabela larga, cheia de coluna às vezes
+nula, com índices que servem bem pra uma pergunta e mal pra outra. A solução
+manteve os dois princípios (EF Code-First, Onion) mas separou por grão real:
+
+#### `DeviceDailyMetrics` — grão: por device, por dia
+
+```csharp
+public class DeviceDailyMetrics
+{
+    public Guid Id { get; set; }
+    public Guid DeviceId { get; set; }
+    public DateOnly Date { get; set; }
+    public int UptimeSeconds { get; set; }
+    public float PeakCpuPercent { get; set; }
+    public float PeakRamPercent { get; set; }
+    public float PeakDiskPercent { get; set; }
+    public int ActiveUsersCount { get; set; }
+}
+```
+
+Uptime, picos de recurso e usuários ativos são **o mesmo grão** (uma máquina,
+um dia) — cabem na mesma linha sem violar nada. O **agente** calcula isso
+localmente (contador de uptime + máximos observados desde a meia-noite) e
+manda um upsert incremental pelo `AgentHub` (`DailyMetricsDto` em
+`informE.Contracts`) — não espera o dia fechar, então uma queda do agente no
+meio do dia só perde o intervalo desde o último envio, não o dia inteiro.
+`UNIQUE(DeviceId, Date)` garante 1 linha por combinação.
+
+#### `Alert` — grão: por device, por ocorrência
+
+```csharp
+public class Alert
+{
+    public Guid Id { get; set; }
+    public Guid DeviceId { get; set; }
+    public AlertType Type { get; set; }     // enum já existente em Domain.Enums
+    public string Message { get; set; } = "";
+    public DateTimeOffset OccurredAt { get; set; }
+}
+```
+
+Diferente de telemetria (que continua **ao vivo, nunca persistida** — decisão
+mantida), o alerta passa a ser **persistido**. É o que sustenta:
+- o gráfico "Histórico de Alertas" (stacked bar por dia/tipo): `GROUP BY
+  DATE(occurred_at), type` direto nessa tabela — sem tabela agregada extra;
+- auditoria "quantos alertas esse device teve" — mesma query, sem `JOIN` com
+  `DeviceDailyMetrics`.
+
+**Contagem de alertas por dia e contagem de execuções por dia (pergunta 4 da
+proposta original) não viram coluna em lugar nenhum** — são derivadas por
+`GROUP BY` em `Alert` e em `TaskExecutionLog` (que já existe) no momento da
+consulta. Duplicar esse número seria redundância sem ganho: as tabelas são
+pequenas o bastante (escala de escola/PME) para o agregado ser instantâneo.
+
+#### `NetworkGrowthSnapshot` — grão: por dia (tenant inteiro, sem device)
+
+```csharp
+public class NetworkGrowthSnapshot
+{
+    public Guid Id { get; set; }
+    public DateOnly Date { get; set; }
+    public int TotalDevices { get; set; }
+    public int TotalGroups { get; set; }
+}
+```
+
+Este é o único caso que genuinamente não cabe nas tabelas por-device — "total
+de agents e grupos" é uma métrica do tenant inteiro, uma linha por dia. Um job
+diário grava o snapshot. **Opcional**: só compensa se o produto quiser mesmo
+"há 30 dias tínhamos 80 máquinas, hoje 105" — se bastar o número atual, é só
+`COUNT(*)` ao vivo, sem histórico nenhum.
+
+#### O que ficou fora (YAGNI)
+
+- **Hostname/IP no histórico diário** — ficam como estão hoje, valor atual em
+  `Device.Hostname`/`Device.LastIp`. Histórico de renomeação ou de troca de IP
+  por DHCP é evento raro; se algum dia for pedido de verdade, é uma tabela de
+  evento à parte (mesmo padrão do `Alert`), não uma coluna nesta.
+
+#### Sparkline e filtro de data (7/15 dias)
+
+Uma vez que `DeviceDailyMetrics`/`Alert` têm grão diário, o toggle do wireframe
+é só camada de consulta: `WHERE Date BETWEEN @inicio AND @fim` — não precisa de
+estrutura nova além do que já foi criado aqui.
+
+#### Retenção — e o gancho de precificação
+
+O job de purga (`IDeviceDailyMetricsRepository.PurgeOlderThanAsync`) apaga
+linhas mais velhas que a janela de retenção configurada. Essa janela (ex.: 15
+dias) é um valor de configuração por tenant — o que a torna, de graça, uma
+alavanca natural de plano: *"Básico: 15 dias de histórico"* vs *"Pro: 90
+dias"* é o mesmo mecanismo, só lendo um número diferente.
 
 ---
 
