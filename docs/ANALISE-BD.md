@@ -5,6 +5,36 @@ do relatório de validação (`Validação BD2.docx`, 16 evidências, 15–16/07
 `docker-compose.yml` que o time usava. Fecha com **ponderações** e **perguntas** que
 precisam de decisão antes de avançar.
 
+> **Atualização (18/07):** migration `InitialCreate` aplicada com sucesso num
+> Postgres real via `docker compose up` + `dotnet ef database update` — as 13
+> tabelas (12 + `__EFMigrationsHistory`) foram criadas. Sprint 1 DoD item 1 ✅.
+
+---
+
+## 0. Se `dotnet ef database update` falhar com senha errada
+
+Se aparecer `28P01: autenticação do tipo senha falhou para o usuário "informe"`
+mesmo com a senha certa no `appsettings.json` e no `docker-compose.yml`, o
+suspeito nº 1 é **outro Postgres disputando a porta 5432** — comum em máquinas
+que já tiveram Postgres instalado nativamente (ex.: da aula de BD2). Duas
+instâncias na mesma porta fazem a conexão cair ora numa, ora noutra, com
+credenciais diferentes — por isso o erro é inconsistente.
+
+Diagnóstico:
+```powershell
+netstat -ano | findstr :5432          # mostra os PIDs escutando na porta
+tasklist /FI "PID eq <pid>"           # identifica o processo
+sc query postgresql-x64-18            # se for um serviço Postgres nativo do Windows
+```
+
+Se for um serviço Postgres nativo (`postgresql-x64-<versão>`), pare e desabilite
+(precisa de PowerShell/Prompt como Administrador):
+```powershell
+sc.exe stop postgresql-x64-18
+sc.exe config postgresql-x64-18 start= disabled
+```
+Isso libera a porta 5432 pro container Docker de vez (sem voltar no próximo boot).
+
 ---
 
 ## 1. O relatório de validação (docx)
