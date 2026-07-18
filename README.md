@@ -66,7 +66,12 @@ dotnet run --project src/Agent/informE.Agent.Worker # o agente (numa VM Windows)
 ```
 
 Ou rode `setup-dev.ps1` (raiz do repo) — instala tudo sem admin (.NET 10, MAUI,
-gh CLI) e já sobe o Postgres + aplica as migrations sozinho.
+gh CLI) e já sobe o Postgres + aplica as migrations sozinho. Se só quiser subir
+o banco rápido (sem reinstalar nada), use `start-db.ps1` — abre o Docker
+Desktop se estiver fechado e sobe o `docker compose up -d` sozinho:
+```bash
+powershell -ExecutionPolicy Bypass -File start-db.ps1
+```
 
 Requisitos: **.NET 10 SDK**, workload **maui-windows** (`dotnet workload restore informE.Host.slnx`), Docker Desktop.
 
