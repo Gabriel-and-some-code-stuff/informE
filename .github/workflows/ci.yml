@@ -9,8 +9,8 @@ jobs:
   build-agent:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - run: dotnet build informE.Agent.slnx -c Release --nologo
@@ -19,14 +19,14 @@ jobs:
   build-host:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
       - name: Cache MAUI workload
         id: maui-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: C:\Users\runneradmin\AppData\Local\Microsoft\dotnet\
           key: maui-workload-net10-${{ runner.os }}

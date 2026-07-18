@@ -217,6 +217,135 @@ em C# → EF gera o Postgres + migrations), aplicando:
 > Manter os nomes do banco (`id_user`, `password_user`…) com **EFCore.NamingConventions**
 > (snake_case) — assim o C# fica PascalCase e o Postgres fica igual ao desenho.
 
+---
+
+### 3.6 As camadas da Onion, uma a uma (o que existe hoje no repo)
+
+A regra de ouro: **cada camada só pode referenciar as que estão mais pro centro
+dela.** Nunca o contrário. Se um arquivo em `Domain` precisar de algo de
+`Infrastructure`, a arquitetura quebrou — é o primeiro erro que a IA de review
+(`.github/workflows/ai-review.yml`) foi instruída a caçar.
+
+```
+Contracts (folha, zero deps)
+   ↑
+Domain (o centro — zero deps)
+   ↑
+Application (depende de Domain + Contracts)
+   ↑
+Infrastructure (depende de Application + Domain + Contracts)
+   ↑
+Server / Desktop / Agent.Worker (composition root — depende de tudo)
+```
+
+#### `informE.Contracts` — o vocabulário compartilhado
+
+`src/Shared/informE.Contracts/`. **Zero dependências** — nem de `Domain`. É a
+única coisa que existe nas DUAS soluções (`Host` e `Agent`) ao mesmo tempo,
+porque é o que os dois lados precisam concordar sobre para conversar via
+SignalR: nomes de método e formato de dado, sem lógica nenhuma.
+
+- **`Dtos/`** — os "envelopes" que trafegam pela rede. Um DTO nunca é uma
+  entidade do Domain reaproveitada; é um objeto simples e achatado, pensado pra
+  serialização:
+  - `TelemetryDto(DeviceId, CpuPercent, RamPercent, DiskPercent, Timestamp)` —
+    o que o Agent manda a cada ping.
+  - `CommandDto(TaskId, LogId, Script, Kind)` — o que o Server manda pro Agent
+    executar.
+  - `CommandResultDto(LogId, Succeeded, Output, ExecutedAt)` — a resposta do
+    Agent depois de rodar o comando.
+  - `AlertDto(DeviceId, AlertType, Message, Timestamp)` — um alerta pra exibir
+    ao vivo no Desktop.
+- **`Hubs/`** — as interfaces que descrevem os métodos que cada lado pode
+  chamar no outro via SignalR (isso dá autocomplete e checagem de tipo nas duas
+  pontas, em vez de nomes de método soltos em string):
+  - `IAgentClient` — métodos que o **Server chama no Agent**: `RunCommand`,
+    `RotateKey`.
+  - `IDashboardClient` — métodos que o **Server chama no operador**:
+    `EndpointStatusChanged`, `TelemetryUpdated`, `AlertRaised`, `TaskProgress`.
+
+#### `informE.Domain` — o centro, as regras que não mudam
+
+`src/Host/informE.Domain/`. **Zero dependências externas** — nem EF, nem
+ASP.NET, nada. Só C# puro. Se você abrir esse projeto daqui a 2 anos e trocar
+Postgres por outro banco, ou SignalR por outra coisa, **nada aqui muda**.
+
+- **`Enums/`** — `UserRole`, `TaskStatus`, `RamType`, `StorageType`,
+  `EndpointStatus`, `AlertType`. São os "vocabulários fechados" do domínio.
+- **`Entities/`** — os objetos que o negócio entende, cada um com `Guid Id` e
+  datas em `DateTimeOffset` (UTC): `User`, `Session`, `Device`, `DeviceInfo`,
+  `Group`, `EnrollmentToken`, `MachineTask`, `TaskExecutionLog`, `Software`,
+  `AuditLog`. Cada entidade tem só propriedades e as coleções de navegação
+  (`ICollection<T>`) — **nenhuma tem `[Table]`, `[Column]` ou qualquer atributo
+  de EF**. O Domain não sabe que existe banco de dados.
+
+#### `informE.Application` — os casos de uso e as "portas"
+
+`src/Host/informE.Application/`. Depende de `Domain` + `Contracts`. É aqui que
+moram as **interfaces (ports)** que a Infrastructure vai implementar — é assim
+que a Application pede "salve isso" ou "gere um hash" sem nunca saber que por
+trás tem EF Core ou Argon2.
+
+- **`Abstractions/`** — interfaces de infraestrutura transversal:
+  - `IPasswordHasher` — hash/verificação de senha (Argon2id por trás).
+  - `IJwtTokenService` — gera access token + refresh token.
+  - `IAgentAuthenticator` — valida a chave rotativa que o agente apresenta.
+  - `IUnitOfWork` — `SaveChangesAsync()`; hoje o próprio `AppDbContext`
+    implementa essa interface diretamente (ver Infrastructure).
+  - `IEndpointConnectionRegistry` — quem está online agora (RF08).
+  - `ICommandDispatcher` — manda um `CommandDto` pro `AgentHub`.
+  - `IDashboardNotifier` — empurra telemetria/alerta/status pro `DashboardHub`.
+- **`Abstractions/Repositories/`** — uma interface por agregado, cada uma só
+  com os métodos que o caso de uso realmente precisa (não é CRUD genérico):
+  `IUserRepository`, `IDeviceRepository`, `IGroupRepository`,
+  `IMachineTaskRepository`, `ISoftwareRepository`, `IAuditLogRepository`.
+
+> Ninguém implementa essas interfaces ainda (é a próxima tarefa do Pedro/
+> Guilherme) — hoje elas só *existem como contrato*. É esperado que o Server
+> ainda não injete nada além do `AppDbContext`.
+
+#### `informE.Infrastructure` — onde a tecnologia mora
+
+`src/Host/informE.Infrastructure/`. Depende de `Application` + `Domain` +
+`Contracts`. Aqui — e só aqui — aparecem EF Core, Npgsql, SignalR, Argon2, JWT.
+É a única camada que "suja as mãos" com tecnologia concreta.
+
+- **`Persistence/AppDbContext.cs`** — o `DbContext` do EF Core. Implementa
+  `IUnitOfWork` (o `SaveChangesAsync` herdado do próprio `DbContext` já bate
+  com a assinatura da interface). Expõe um `DbSet<T>` por entidade.
+- **`Persistence/Configurations/`** — uma classe `IEntityTypeConfiguration<T>`
+  por entidade (Fluent API), uma pra cada uma das 10 entidades — define nome de
+  tabela, tamanho de coluna, índices únicos, FKs e comportamento de delete
+  (cascade/restrict/set null). É aqui que o "português do banco" (`users`,
+  `id_role`) se conecta ao "C# do domínio" (`User.Role`).
+- **`Persistence/Migrations/`** — geradas por `dotnet ef migrations add`, nunca
+  escritas à mão. Histórico versionado do schema.
+- **`Persistence/AppDbContextFactory.cs`** — só existe para o `dotnet ef`
+  conseguir montar um `AppDbContext` em tempo de design (gerar/aplicar
+  migration) sem precisar subir o `Server` inteiro.
+- **`DependencyInjection.cs`** — um método de extensão
+  (`AddInfrastructure(config)`) que registra tudo isso no container de DI.
+  O `Server` chama essa única linha no `Program.cs` — ele não sabe (nem
+  precisa saber) o que tem dentro.
+- **Ainda não implementado aqui** (próximas tarefas): `Argon2PasswordHasher`
+  (implementa `IPasswordHasher`), `JwtTokenService`, os repositórios
+  concretos, e os Hubs (`AgentHub`, `DashboardHub`).
+
+#### `informE.Server` / `informE.Desktop` / `informE.Agent.Worker` — os executáveis
+
+Estes são os **composition roots** — os únicos lugares que conhecem *todas*
+as camadas ao mesmo tempo, porque é aqui que o `Program.cs` liga tudo via DI
+(`builder.Services.AddInfrastructure(...)`, etc.). Eles não têm regra de
+negócio própria — só orquestram: recebem uma requisição HTTP/SignalR, chamam
+um caso de uso da Application, devolvem a resposta.
+
+> **Por que essa separação importa na prática:** se amanhã alguém decidir
+> trocar Postgres por SQL Server, só `Infrastructure` muda. Se decidir trocar
+> Argon2 por outra lib de hash, só a implementação de `IPasswordHasher` muda —
+> ninguém que chama `IPasswordHasher.Hash(senha)` no `Application` percebe a
+> diferença. Essa é a promessa do Onion: **mudança de tecnologia não vaza pro
+> resto do sistema.**
+
 ### 3.6 Checklist de polish (resolver conforme a arch fecha — não tudo na Sprint 1)
 
 1. ✅ **PK = `uuid` único** (INT surrogate dropado; FKs em uuid).
@@ -366,6 +495,15 @@ Onion, segurança, bugs. Custo: **$0** — usa o `GITHUB_TOKEN` automático do
 Actions, sem secret extra, sem conta Anthropic.
 
 > A IA revisa; o time decide. Não rejeita o PR automaticamente.
+
+> ⚠️ **Por que aparece um ❌ em vermelho no Actions mesmo sem PR aberto:** o
+> `ai-review.yml` só dispara em `pull_request` (abrir/atualizar). Como o time
+> ainda está commitando direto na `master` (sem passar por PR), o GitHub cria
+> uma entrada "failure" **fantasma** pra esse workflow em todo push — mas com
+> **zero jobs executados** (confirmável em Actions → clicar na run → "0 jobs").
+> Não é revisão barrando nada; é só o GitHub avisando que o evento não bateu
+> com o trigger. Some sozinho assim que o time passar a trabalhar com Pull
+> Requests (branch → PR → merge) em vez de push direto na `master`.
 
 ---
 
