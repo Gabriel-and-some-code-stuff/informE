@@ -397,6 +397,16 @@ manda um upsert incremental pelo `AgentHub` (`DailyMetricsDto` em
 meio do dia só perde o intervalo desde o último envio, não o dia inteiro.
 `UNIQUE(DeviceId, Date)` garante 1 linha por combinação.
 
+| | |
+|---|---|
+| **Quem escreve** | O **agente**, nunca o Server — ele já sabe em tempo real seu próprio uptime/CPU/RAM, pedir pro Server reconstruir isso seria refazer o mesmo trabalho de outro lugar. |
+| **Padrão de escrita** | **Upsert**, não insert. Cada envio do agente **substitui** o valor do dia — não soma. 20 envios no mesmo dia continuam sendo 1 linha, só atualizada 20 vezes. |
+| **Recorrência** | Periódica e curta (ex.: a cada 10–15 min, ou a cada reconexão) — não espera o dia fechar. Assim, se o agente cair, perde-se só o intervalo desde o último envio, não o dia todo. |
+| **Retenção** | Configurável (ex.: 15 dias) — um job de limpeza roda periodicamente e apaga linhas mais velhas que o limite (`IDeviceDailyMetricsRepository.PurgeOlderThanAsync`). É o gancho natural pra planos diferentes ("Básico: 15 dias" / "Pro: 90 dias") sem mudar estrutura, só o número. |
+| **Por que é assim** | Porque o dado é **mutável durante o dia e imutável depois que o dia fecha** — upsert modela exatamente isso; um insert por evento (como em `Alert`) geraria centenas de linhas por dia por máquina, sem necessidade. |
+| **Como gravar** | `IDeviceDailyMetricsRepository.UpsertAsync(deviceId, date, uptimeSeconds, peakCpu, peakRam, peakDisk, activeUsers)` — nunca SQL cru fora do repositório. |
+| **Como consultar** | `IDeviceDailyMetricsRepository.ListByDeviceAsync(deviceId, from, to)`. Em SQL puro (só pra depurar): `SELECT date, uptime_seconds, peak_cpu_percent FROM device_daily_metrics WHERE device_id = '...' AND date >= CURRENT_DATE - 7 ORDER BY date;` |
+
 #### `Alert` — grão: por device, por ocorrência
 
 ```csharp
@@ -423,6 +433,25 @@ proposta original) não viram coluna em lugar nenhum** — são derivadas por
 consulta. Duplicar esse número seria redundância sem ganho: as tabelas são
 pequenas o bastante (escala de escola/PME) para o agregado ser instantâneo.
 
+| | |
+|---|---|
+| **Quem escreve** | O **Server**, no exato momento em que detecta um alerta (CPU alto, disco cheio...) — grava a linha **e** empurra pro dashboard ao vivo (SignalR) na mesma operação. |
+| **Padrão de escrita** | **Insert**, nunca upsert. Cada alerta é um evento que já aconteceu e não muda depois — não existe "atualizar" um alerta passado. |
+| **Recorrência** | Sem periodicidade — acontece quando o problema acontece. Pode ser 0 ou 10 num dia. |
+| **Retenção** | Sem purga automática (diferente de `DeviceDailyMetrics`) — auditoria pede um horizonte mais longo que métricas de uso corrente. Se um dia precisar limpar, é o mesmo padrão de filtro por data. |
+| **Por que é assim** | Telemetria ao vivo (CPU/RAM a cada segundo) é ruído — não vale persistir. Alerta é sinal — "passou do limite" é um evento raro e importante, exatamente o que vale gravar para auditoria e gráfico histórico. |
+| **Como gravar** | `IAlertRepository.AddAsync(alert)`. |
+| **Como consultar** | `IAlertRepository.ListByRangeAsync(from, to)`. Em SQL puro: `SELECT DATE(occurred_at) AS dia, type, COUNT(*) FROM alerts WHERE occurred_at >= now() - interval '7 days' GROUP BY dia, type ORDER BY dia;` — é a query exata atrás do gráfico "Histórico de Alertas". |
+
+**Resumo da diferença entre as duas:**
+
+| | `DeviceDailyMetrics` | `Alert` |
+|---|---|---|
+| 1 linha representa | uma máquina, num dia | um evento que aconteceu |
+| Quem escreve | Agente (upsert incremental) | Server (insert único) |
+| Atualiza a mesma linha? | Sim, várias vezes no dia | Não — cada linha é definitiva |
+| Purga automática | Sim, configurável | Ainda não (é auditoria) |
+
 #### `NetworkGrowthSnapshot` — grão: por dia (tenant inteiro, sem device)
 
 ```csharp
@@ -440,6 +469,15 @@ de agents e grupos" é uma métrica do tenant inteiro, uma linha por dia. Um job
 diário grava o snapshot. **Opcional**: só compensa se o produto quiser mesmo
 "há 30 dias tínhamos 80 máquinas, hoje 105" — se bastar o número atual, é só
 `COUNT(*)` ao vivo, sem histórico nenhum.
+
+| | |
+|---|---|
+| **Quem escreve** | Um job agendado no Server, 1x por dia — não o agente, não é em resposta a evento nenhum. |
+| **Padrão de escrita** | Insert único por dia (`UNIQUE(Date)` impede duplicar). |
+| **Recorrência** | Fixa: 1x/dia, sempre. |
+| **Retenção** | Sem necessidade prática de purga — 1 linha/dia é ínfimo em volume (365 linhas/ano). |
+| **Como gravar** | `INetworkGrowthRepository.SnapshotTodayAsync(totalDevices, totalGroups)`. |
+| **Como consultar** | `INetworkGrowthRepository.ListByRangeAsync(from, to)`. |
 
 #### O que ficou fora (YAGNI)
 
