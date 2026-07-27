@@ -14,4 +14,7 @@ public class DeviceDailyMetrics
     public float PeakRamPercent { get; set; }
     public float PeakDiskPercent { get; set; }
     public int ActiveUsersCount { get; set; }
+
+    public DeviceDailyMetrics () { }
+
 }

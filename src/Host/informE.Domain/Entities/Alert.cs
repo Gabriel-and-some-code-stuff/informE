@@ -14,4 +14,6 @@ public class Alert
     public AlertType Type { get; set; }
     public string Message { get; set; } = "";
     public DateTimeOffset OccurredAt { get; set; }
+
+    public Alert () { }
 }

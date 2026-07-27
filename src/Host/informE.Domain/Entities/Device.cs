@@ -28,4 +28,20 @@ public class Device
     public ICollection<Software> InstalledSoftwares { get; set; } = [];
     public ICollection<DeviceDailyMetrics> DailyMetrics { get; set; } = [];
     public ICollection<Alert> Alerts { get; set; } = [];
+
+    public Device () { }
+
+    // Construtor principal para cadastro dos devices
+    public Device (Guid id, string hostname, string lastIp, string macAddress, string os, string osUser, string agentKeyHash, Guid? groupId, DeviceInfo? info)
+    {
+        Id = id;
+        Hostname = hostname;
+        LastIp = lastIp;
+        MacAddress = macAddress;
+        Os = os;
+        OsUser = osUser;
+        AgentKeyHash = agentKeyHash;
+        GroupId = groupId;
+        Info = info;
+    }
 }
