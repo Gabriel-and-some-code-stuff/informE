@@ -10,4 +10,16 @@ public class EnrollmentToken
 
     public Guid CreatedByUserId { get; set; }
     public Guid? RedeemedByDeviceId { get; set; } // preenchido quando o agente faz enroll
+
+    public EnrollmentToken() { }
+
+    // Construtor para registro padrão
+    public EnrollmentToken(string token, DateTimeOffset expiresAt, bool isUsed, Guid createdByUserId, Guid? redeemedByDeviceId)
+    {
+        Token = token;
+        ExpiresAt = expiresAt;
+        IsUsed = isUsed;
+        CreatedByUserId = createdByUserId;
+        RedeemedByDeviceId = redeemedByDeviceId;
+    }
 }

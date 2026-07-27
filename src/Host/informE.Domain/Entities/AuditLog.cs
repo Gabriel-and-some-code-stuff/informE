@@ -14,7 +14,6 @@ public class AuditLog
 
     public AuditLog() { }
 
-
     // Construtor para registro padrão
     public AuditLog(Guid id, string action, string ipAddress, Guid userId)
     {
@@ -22,5 +21,6 @@ public class AuditLog
         Action = action;
         IpAddress = ipAddress;
         UserId = userId;
+        CreatedAt = DateTimeOffset.Now;
     }
 }

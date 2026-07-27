@@ -17,4 +17,15 @@ public class DeviceDailyMetrics
 
     public DeviceDailyMetrics () { }
 
+    // Construtor para registro padrão
+    public DeviceDailyMetrics(Guid deviceId, int uptimeSeconds, float peakCpuPercent, float peakRamPercent, float peakDiskPercent, int activeUsersCount)
+    {
+        DeviceId = deviceId;
+        UptimeSeconds = uptimeSeconds;
+        PeakCpuPercent = peakCpuPercent;
+        PeakRamPercent = peakRamPercent;
+        PeakDiskPercent = peakDiskPercent;
+        ActiveUsersCount = activeUsersCount;
+        Date = DateOnly.FromDateTime(DateTime.Today);
+    }
 }
