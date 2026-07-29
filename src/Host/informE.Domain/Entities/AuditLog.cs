@@ -1,3 +1,5 @@
+using informE.Domain.Enums;
+
 namespace informE.Domain.Entities;
 
 public class AuditLog
@@ -9,4 +11,16 @@ public class AuditLog
 
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
+
+    public AuditLog() { }
+
+    // Construtor para registro padrão
+    public AuditLog(Guid id, string action, string ipAddress, Guid userId)
+    {
+        Id = id;
+        Action = action;
+        IpAddress = ipAddress;
+        UserId = userId;
+        CreatedAt = DateTimeOffset.Now;
+    }
 }

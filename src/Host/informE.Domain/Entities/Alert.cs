@@ -12,6 +12,16 @@ public class Alert
     public Device Device { get; set; } = null!;
 
     public AlertType Type { get; set; }
-    public string Message { get; set; } = "";
+    public string? Message { get; set; } = string.Empty;
     public DateTimeOffset OccurredAt { get; set; }
+
+    public Alert () { }
+
+    // Construtor para registro padrão
+    public Alert(Guid deviceId, AlertType type, string message)
+    {
+        DeviceId = deviceId;
+        Type = type;
+        Message = message;
+    }
 }
