@@ -7,7 +7,7 @@ namespace informE.Domain.Entities;
 public class TaskExecutionLog
 {
     public Guid Id { get; set; }
-    public string ActionType { get; set; } = "";
+    public string ActionType { get; set; } = string.Empty;
     public TaskStatus Status { get; set; }
     public string? OutputLog { get; set; }
     public DateTimeOffset ExecutedAt { get; set; }
@@ -17,4 +17,18 @@ public class TaskExecutionLog
 
     public Guid DeviceId { get; set; } // coluna ausente no schema original — adicionada no port
     public Device Device { get; set; } = null!;
+
+    public TaskExecutionLog() { }
+
+    // Construtor padrão 
+
+    public TaskExecutionLog(string actionType, TaskStatus status, string? outputLog, DateTimeOffset executedAt, Guid machineTaskId, Guid deviceId)
+    {
+        ActionType = actionType;
+        Status = status;
+        OutputLog = outputLog;
+        ExecutedAt = executedAt; // Não deixei automático pra que seja registrado a exata hora em que a execução for feita, não a criação do registro no bd 
+        MachineTaskId = machineTaskId;
+        DeviceId = deviceId;
+    }
 }

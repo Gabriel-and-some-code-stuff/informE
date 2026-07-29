@@ -13,4 +13,17 @@ public class User
 
     public ICollection<Session> Sessions { get; set; } = [];
     public ICollection<AuditLog> AuditLogs { get; set; } = [];
+
+    public User() { }
+
+    // Construtor padrão
+
+    public User(string  username, string email, string passwordHash, UserRole role)
+    {
+        Username = username;
+        Role = role;
+        Email = email;
+        PasswordHash = passwordHash;
+        CreatedAt = DateTimeOffset.Now;
+    }
 }
