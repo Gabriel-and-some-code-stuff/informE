@@ -12,7 +12,7 @@ public class DeviceInfo
     public RamType RamType { get; set; }
     public int StorageGb { get; set; }
     public StorageType StorageType { get; set; }
-    public string? Firmware { get; set; } = string.Empty; // Nullable porque em alguns computadores não vamos conseguir obter a versão do firmware
+    public string? Bios { get; set; } = string.Empty; // Nullable porque em alguns computadores não vamos conseguir obter a versão do firmware
     public DateTimeOffset CollectedAt { get; set; }
 
     public Guid DeviceId { get; set; }
@@ -21,7 +21,7 @@ public class DeviceInfo
     public DeviceInfo() { }
 
     // Construtor para registro padrão
-    public DeviceInfo(Guid deviceId, string cpu, string gpu, int ramGb, RamType ramType, int storageGb, StorageType storageType, string? firmware)
+    public DeviceInfo(Guid deviceId, string cpu, string gpu, int ramGb, RamType ramType, int storageGb, StorageType storageType, string? bios)
     {
         DeviceId = deviceId;
         Cpu = cpu;
@@ -30,6 +30,6 @@ public class DeviceInfo
         RamType = ramType;
         StorageGb = storageGb;
         StorageType = storageType;
-        Firmware = firmware;
+        Bios = bios;
     }
 }
