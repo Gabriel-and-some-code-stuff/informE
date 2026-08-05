@@ -39,10 +39,10 @@ public class User
     }
 
     public static bool ValidateUsername(string username)
-    { 
+    {
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("O nome de usuário não pode ser vazio.");
-           
+
         if (username.Length > 60)
             throw new ArgumentException("O nome de usuário ultrapassou o limite de caracteres.");
 
@@ -69,5 +69,4 @@ public class User
             Email = email;
         }
     }
-
 }
