@@ -1,4 +1,5 @@
 using informE.Domain.Enums;
+using System.Text.RegularExpressions;
 
 namespace informE.Domain.Entities;
 
@@ -27,39 +28,46 @@ public class User
         CreatedAt = DateTimeOffset.Now;
     }
 
-    // Criação do método
+    // Criação dos métodos
 
-    public void UpdateUsername(string username) 
+    public void UpdateUsername(string username)
     {
-        if (string.IsNullOrWhiteSpace(username)
+        if (ValidateUsername(username))
         {
-            throw new ArgumentException("O nome de usuário não é válido.");
+            Username = username;
         }
-        if (username.Length > 60)
-        {
-            throw new ArgumentException("O nome de usuário ultrapassou o limite de caracteres.");
-        }
-        if (username.Contains("@") || username.Contains("*"))
+    }
 
-        Username = username;
+    public static bool ValidateUsername(string username)
+    { 
+        if (string.IsNullOrWhiteSpace(username))
+            throw new ArgumentException("O nome de usuário não pode ser vazio.");
+           
+        if (username.Length > 60)
+            throw new ArgumentException("O nome de usuário ultrapassou o limite de caracteres.");
+
+        if (!username.All(char.IsLetterOrDigit))
+            throw new ArgumentException("O nome de usuário contém caracteres inválidos.");
+
+        return true;
     }
 
     //Validação do Email
 
+    public static bool ValidateEmail(string email)
+    {
+        string regex = @"^[^@\s]+@[^@\s]+\.(com|net|org|gov)$";
+
+        return Regex.IsMatch(email, regex, RegexOptions.IgnoreCase);
+    }
+
 
     public void UpdateEmail(string email)
     {
-        Email = email;
-
-        if (email.Contains("@"))
+        if(ValidateEmail(email))
         {
-
+            Email = email;
         }
-        else
-        {
-
-        }
-
-
-
     }
+
+}
