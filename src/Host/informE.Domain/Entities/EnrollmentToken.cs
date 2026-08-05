@@ -4,7 +4,7 @@ namespace informE.Domain.Entities;
 public class EnrollmentToken
 {
     public Guid Id { get; set; }
-    public string Token { get; set; } = ""; // valor apresentado ao agente
+    public string Token { get; set; } = string.Empty; // valor apresentado ao agente
     public DateTimeOffset ExpiresAt { get; set; }
     public bool IsUsed { get; set; }
 
