@@ -9,7 +9,7 @@ public class TaskExecutionLog
     public Guid Id { get; set; }
     public string ActionType { get; set; } = string.Empty;
     public TaskStatus Status { get; set; }
-    public string? OutputLog { get; set; }
+    public string? OutputLog { get; set; } 
     public DateTimeOffset ExecutedAt { get; set; }
 
     public Guid MachineTaskId { get; set; }

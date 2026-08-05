@@ -15,8 +15,8 @@ public class DeviceInfo
     public string? Bios { get; set; } = string.Empty; // Nullable porque em alguns computadores não vamos conseguir obter a versão do firmware
     public DateTimeOffset CollectedAt { get; set; }
 
-    public Guid DeviceId { get; set; }
-    public Device Device { get; set; } = null!;
+    public Guid DeviceId { get; set; } //?
+    public Device Device { get; set; } = null!;//?
 
     public DeviceInfo() { }
 
