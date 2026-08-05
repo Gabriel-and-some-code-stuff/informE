@@ -29,9 +29,9 @@ public class User
 
     // Criação do método
 
-    public void UpdateUsername(string username) 
+    public void UpdateUsername(string username)
     {
-        if (string.IsNullOrWhiteSpace(username)
+        if (string.IsNullOrWhiteSpace(username))
         {
             throw new ArgumentException("O nome de usuário não é válido.");
         }
@@ -41,7 +41,7 @@ public class User
         }
         if (username.Contains("@") || username.Contains("*"))
 
-        Username = username;
+            Username = username;
     }
 
     //Validação do Email
@@ -63,3 +63,4 @@ public class User
 
 
     }
+}
