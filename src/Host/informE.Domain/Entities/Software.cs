@@ -18,4 +18,7 @@ public class Software
         Name = name;
         Version = version;
     }
+
+    //Criação dos métodos
+
 }

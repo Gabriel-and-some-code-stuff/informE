@@ -21,4 +21,11 @@ public class Group
         IsActive = true;
         CreatedAt = DateTimeOffset.Now;
     }
+
+    //Criação dos métodos
+    public void UpdateGroupName(string groupName)
+    {
+        Name = groupName;
+    }
+
 }
