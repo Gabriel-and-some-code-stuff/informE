@@ -15,28 +15,28 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet build informE.Agent.slnx -c Release --nologo
 
-  # Host precisa de MAUI (Windows-only). Workload cacheado pra não reinstalar toda vez.
+  # ponytail: informE.Desktop (MAUI) fica de fora do CI por ora — o workload
+  # MAUI + windows-latest deixava o pipeline lento demais pro ritmo do time.
+  # Builda Server (que arrasta Contracts/Domain/Application/Infrastructure)
+  # + UI direto, sem passar pela .slnx inteira, e roda os testes. Isso já cobre
+  # tudo que não é MAUI. Pra voltar a validar o Desktop no CI: trocar runs-on
+  # pra windows-latest, restaurar o workload maui-windows e buildar
+  # informE.Host.slnx como antes (ver histórico do git deste arquivo).
   build-host:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
-      - name: Cache MAUI workload
-        id: maui-cache
-        uses: actions/cache@v6
-        with:
-          path: C:\Users\runneradmin\AppData\Local\Microsoft\dotnet\
-          key: maui-workload-net10-${{ runner.os }}
+      - name: Build Server (Domain + Application + Infrastructure + Contracts)
+        run: dotnet build src/Host/informE.Server/informE.Server.csproj -c Release --nologo
 
-      - name: Restore workloads (MAUI)
-        if: steps.maui-cache.outputs.cache-hit != 'true'
-        run: dotnet workload restore informE.Host.slnx
-
-      - name: Build Host
-        run: dotnet build informE.Host.slnx -c Release --nologo
+      - name: Build UI
+        run: dotnet build src/Host/informE.UI/informE.UI.csproj -c Release --nologo
 
       - name: Test
-        run: dotnet test informE.Host.slnx -c Release --nologo
+        run: |
+          dotnet test tests/informE.Domain.Tests -c Release --nologo
+          dotnet test tests/informE.Application.Tests -c Release --nologo
