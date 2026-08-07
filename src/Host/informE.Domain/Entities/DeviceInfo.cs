@@ -35,27 +35,20 @@ public class DeviceInfo
 
     public void UpdateCpu(string cpu)
     {
-        if (!string.IsNullOrEmpty(cpu)) {
+        if (!string.IsNullOrEmpty(cpu))
             Cpu = cpu;
-        }
     }
 
     public void UpdateGpu(string gpu)
     {
-        if (!string.IsNullOrEmpty(gpu)) {
-            Gpu = gpu;
-        }
-
-    public void UpdateRamGb(int ramGb) {
-        if (!string.IsNullOrEmpty(ramGb))
-        {
-            RamGb = ramGb;
-        }
-
-
-
+        if (!string.IsNullOrEmpty(gpu))
+           Gpu = gpu;
     }
 
-
+    public void UpdateRamGb(int ramGb)
+    {
+        if (ramGb>0)
+            RamGb = ramGb;
+    }
 
 }
