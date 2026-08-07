@@ -1,11 +1,10 @@
 using informE.Domain.Entities;
 using informE.Domain.Enums;
-
+using System.Security.Cryptography.X509Certificates;
+using Xunit.Abstractions;
 namespace informE.Domain.Tests;
 
-// Placeholder — mostra o padrão Arrange-Act-Assert. Sem dependência de banco/mock:
-// Domain é C# puro, então o teste também é.
-public class UserTests
+public class UserTests()
 {
     [Fact]
     public void UpdateUsername_ComNomeValido_AtualizaOUsername()
@@ -35,4 +34,27 @@ public class UserTests
             Assert.Throws<ArgumentException>(() => User.ValidateUsername(username));
         }
     }
+
+
+
+    [Fact]
+    public void Construtor_CreatedAtMomentoAtual()
+    {
+        var antes = DateTimeOffset.Now;
+
+        var user = new User(
+            "gabriel",
+            "gabriel.zemella@etec.sp.gov.br",
+            "hash-fake",
+            UserRole.Admin
+        );
+
+        var depois = DateTimeOffset.Now;
+
+        Assert.InRange(user.CreatedAt, antes, depois);
+    }
+
+
 }
+
+

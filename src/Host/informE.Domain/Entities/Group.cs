@@ -20,6 +20,7 @@ public class Group
         Description = description;
         IsActive = true;
         CreatedAt = DateTimeOffset.Now;
+        OwnerId = ownerId;
     }
 
     //Criação dos métodos
