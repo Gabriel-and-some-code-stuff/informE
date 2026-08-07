@@ -1,10 +1,21 @@
 using informE.Domain.Enums;
+using System.Text.RegularExpressions;
 
 namespace informE.Domain.Entities;
 
 // "Endpoint" no domínio do produto — a máquina monitorada.
 public class Device
 {
+    // Regex estáticos e compilados para melhor performance em chamadas recorrentes
+    private static readonly Regex HostnameRegex = new(@"^[a-zA-Z0-9-]+$", RegexOptions.Compiled);
+
+    private static readonly Regex MacAddressRegex = new(@"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$|^([0-9A-Fa-f]{12})$", RegexOptions.Compiled);
+
+    private static readonly Regex IPv4Regex = new(@"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$", RegexOptions.Compiled);
+
+    private static readonly Regex IPv6Regex = new(@"^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^:((:[0-9a-fA-F]{1,4}){1,7}|:)$|^[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})$", RegexOptions.Compiled);
+
+    // Atributos da classe
     public Guid Id { get; set; }
     public string Hostname { get; set; } = string.Empty;
     public string LastIp { get; set; } = string.Empty;
@@ -34,13 +45,83 @@ public class Device
     // Construtor para registro padrão
     public Device (string hostname, string lastIp, string macAddress, string os, string osUser, string agentKeyHash, Guid? groupId, DeviceInfo? info)
     {
-        Hostname = hostname;
-        LastIp = lastIp;
-        MacAddress = macAddress;
+        if (ValidateHostname (hostname))
+            Hostname = hostname;
+
+        if (ValidateIpAddress (lastIp))
+            LastIp = lastIp;
+
+        if (ValidateMacAddress(macAddress))
+            MacAddress = macAddress;
+
+        Status = EndpointStatus.Unknown;
         Os = os;
         OsUser = osUser;
         AgentKeyHash = agentKeyHash;
         GroupId = groupId;
         Info = info;
+    }
+
+    // Métodos de validação
+    public bool ValidateHostname(string hostname)
+    {
+        if (string.IsNullOrWhiteSpace(hostname) || hostname.Length > 15)
+            return false;
+
+        if (hostname.StartsWith("-") || hostname.EndsWith("-"))
+            return false;
+
+        if (Regex.IsMatch(hostname, @"^\d+$")) // Não pode conter apenas números
+            return false;
+
+        return HostnameRegex.IsMatch(hostname);
+    }
+
+    public bool ValidateIpAddress(string ipAddress)
+    {
+        if (string.IsNullOrWhiteSpace(ipAddress))
+            return false;
+
+        // Aceita tanto IPv4 quanto IPv6 sem depender da System.Net
+        return IPv4Regex.IsMatch(ipAddress) || IPv6Regex.IsMatch(ipAddress);
+    }
+
+    public bool ValidateMacAddress(string macAddress)
+    {
+        if (string.IsNullOrWhiteSpace(macAddress))
+            return false;
+
+        return MacAddressRegex.IsMatch(macAddress);
+    }
+
+    // Métodos de domínio
+
+    public void UpdateHostname(string hostname)
+    {
+
+    }
+
+    public void UpdateLastIp(string ipAddress)
+    {
+
+    }
+
+    public void UpdateMacAddr(string macAddress)
+    {
+
+    }
+
+    public void UpdateOs(string os)
+    {
+
+    }
+    public void UpdateOsUser(string osUser)
+    {
+
+    }
+
+    public void UpdateStatus(EndpointStatus status)
+    {
+
     }
 }
