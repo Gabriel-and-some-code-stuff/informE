@@ -14,10 +14,10 @@ public class EnrollmentToken
     public EnrollmentToken() { }
 
     // Construtor para registro padrão
-    public EnrollmentToken(string token, DateTimeOffset expiresAt, bool isUsed, Guid createdByUserId, Guid? redeemedByDeviceId)
+    public EnrollmentToken(string token, bool isUsed, Guid createdByUserId, Guid? redeemedByDeviceId)
     {
         Token = token;
-        ExpiresAt = expiresAt;
+        ExpiresAt = (DateTimeOffset.Now).AddHours(2);
         IsUsed = isUsed;
         CreatedByUserId = createdByUserId;
         RedeemedByDeviceId = redeemedByDeviceId;
