@@ -14,7 +14,7 @@ public class Group
     public Group() { }
 
     // Construtor para registro padrão
-    public Group(string name, string description)
+    public Group(string name, string description, Guid ownerId)
     {
         Name = name;
         Description = description;
