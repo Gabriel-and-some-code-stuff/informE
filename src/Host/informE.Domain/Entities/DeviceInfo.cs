@@ -42,7 +42,7 @@ public class DeviceInfo
     public void UpdateGpu(string gpu)
     {
         if (!string.IsNullOrEmpty(gpu))
-           Gpu = gpu;
+            Gpu = gpu;
     }
 
     public void UpdateRamGb(int ramGb)
