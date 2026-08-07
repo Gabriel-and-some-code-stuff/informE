@@ -65,25 +65,25 @@ public class DeviceInfo
             RamGb = ramGb;
     }
 
-    public void UpdateRamType (RamType ramType)
+    public void UpdateRamType(RamType ramType)
     {
         if (ValidateRamType(ramType))
             RamType = ramType;
     }
 
-    public void UpdateStorageGb (int storageGb)
+    public void UpdateStorageGb(int storageGb)
     {
         if (storageGb > 0)
             StorageGb = storageGb;
     }
 
-    public void UpdateStorageType (StorageType storageType)
+    public void UpdateStorageType(StorageType storageType)
     {
         if (ValidateStorageType(storageType))
             StorageType = storageType;
     }
 
-    public void UpdateBios (string bios)
+    public void UpdateBios(string bios)
     {
         if (!string.IsNullOrEmpty(bios))
             Bios = bios;
