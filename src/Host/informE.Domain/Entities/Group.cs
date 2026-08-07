@@ -1,10 +1,12 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace informE.Domain.Entities;
 
 public class Group
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; }
 
@@ -14,9 +16,13 @@ public class Group
     public Group() { }
 
     // Construtor para registro padrão
-    public Group(string name, string description, Guid ownerId)
+    public Group(string name, string? description, Guid ownerId)
     {
-        Name = name;
+        if (ValidateName(name))
+        {
+            Name = name;
+        }
+
         Description = description;
         IsActive = true;
         CreatedAt = DateTimeOffset.Now;
@@ -24,9 +30,41 @@ public class Group
     }
 
     //Criação dos métodos
-    public void UpdateGroupName(string groupName)
+
+    public static bool ValidateName(string name)
     {
-        Name = groupName;
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("O nome do grupo não pode ser vazio.");
+
+        if (name.Length > 45)
+            throw new ArgumentException("O nome do grupo ultrapassou o limite de caracteres.");
+
+        return true;
+    }
+
+    public void UpdateGroupName(string name)
+    {
+        if (ValidateName(name))
+        {
+            Name = name;
+        }
+        
+    }
+
+    public static bool ValidateDescription(string? description)
+    {
+        if(description != null && description > 100)
+            throw new ArgumentException("A descrição ultrapassou o limite de caracteres.");
+
+        return true
+    }
+
+    public void UpdateDescription(string? description)
+    {
+        if (ValidateDescription(description))
+        {
+            Description = description;
+        }
     }
 
 }
