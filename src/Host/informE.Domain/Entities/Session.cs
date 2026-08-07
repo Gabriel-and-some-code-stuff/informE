@@ -1,7 +1,13 @@
+using System.Text.RegularExpressions;
+
 namespace informE.Domain.Entities;
 
 public class Session
 {
+    private static readonly Regex IPv4Regex = new(@"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$", RegexOptions.Compiled);
+
+    private static readonly Regex IPv6Regex = new(@"^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^:((:[0-9a-fA-F]{1,4}){1,7}|:)$|^[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})$", RegexOptions.Compiled);
+
     public Guid Id { get; set; }
     public string IpAddress { get; set; } = string.Empty;
     public DateTimeOffset LoginAt { get; set; }
@@ -18,7 +24,9 @@ public class Session
     // Construtor padrão
     public Session(string ipAddress, DateTimeOffset lastSeenAt, string refreshTokenHash, Guid userId)
     {
-        IpAddress = ipAddress;
+        if (ValidateIpAddress(ipAddress))
+            IpAddress = ipAddress;
+
         LoginAt = DateTimeOffset.Now;
         ExpiresAt = (DateTimeOffset.Now).AddHours(6);// resolver pois em uma má intenção, há a possibilidade de se colocar o horário da máquina + 6 horas e burlar isso
         LastSeenAt = lastSeenAt;
@@ -27,8 +35,13 @@ public class Session
         UserId = userId;
     }
 
-    //método validar IP
+    // Métodos de validação
+    public bool ValidateIpAddress(string ipAddress)
+    {
+        if (string.IsNullOrWhiteSpace(ipAddress))
+            return false;
 
-
-
+        // Aceita tanto IPv4 quanto IPv6 sem depender da System.Net
+        return IPv4Regex.IsMatch(ipAddress) || IPv6Regex.IsMatch(ipAddress);
+    }
 }
