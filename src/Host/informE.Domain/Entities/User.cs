@@ -21,9 +21,16 @@ public class User
 
     public User(string username, string email, string passwordHash, UserRole role)
     {
-        Username = username;
+        if (ValidateUsername(username))
+        {
+            Username = username;
+        }
+        if (ValidateEmail(email))
+        {
+            Email = email;
+        }
+
         Role = role;
-        Email = email;
         PasswordHash = passwordHash;
         CreatedAt = DateTimeOffset.Now;
     }
@@ -56,7 +63,7 @@ public class User
 
     public static bool ValidateEmail(string email)
     {
-        string regex = @"^[^@\s]+@[^@\s]+\.(com|net|org|gov)$";
+        string regex = @"^[^@\s]+@[^@\s]+\.(com|net|org|gov|br|edu)$";
 
         return Regex.IsMatch(email, regex, RegexOptions.IgnoreCase);
     }
@@ -64,7 +71,7 @@ public class User
 
     public void UpdateEmail(string email)
     {
-        if(ValidateEmail(email))
+        if (ValidateEmail(email))
         {
             Email = email;
         }
