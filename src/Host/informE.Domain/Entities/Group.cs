@@ -59,4 +59,12 @@ public class Group
         if (ValidateDescription(description))
             Description = description;
     }
+
+    public void UpdateActiveStatus (bool active)
+    {
+        if (!active)
+            IsActive = false;
+        if (active)
+            IsActive = true;
+    }
 }
