@@ -18,4 +18,21 @@ public class NetworkGrowthSnapshot
         TotalDevices = totalDevices;
         TotalGroups = totalGroups;
     }
+
+    public void UpdateTotalDevices(int totalDevices)
+    {
+        if (totalDevices > 0)
+        {
+            TotalDevices = totalDevices;
+        }
+    }
+
+    public void UpdateTotalGroups(int totalGroups)
+    {
+        if (totalGroups > 0)
+        {
+            TotalGroups = totalGroups;
+        }
+
+
 }
