@@ -12,16 +12,17 @@ public class DeviceInfo
     public RamType RamType { get; set; }
     public int StorageGb { get; set; }
     public StorageType StorageType { get; set; }
+    public string? MotherBoard { get; set; } = string.Empty;
     public string? Bios { get; set; } = string.Empty; // Nullable porque em alguns computadores não vamos conseguir obter a versão do firmware
     public DateTimeOffset CollectedAt { get; set; }
 
-    public Guid DeviceId { get; set; } //?
-    public Device Device { get; set; } = null!;//?
+    public Guid DeviceId { get; set; }
+    public Device Device { get; set; } = null!;
 
     public DeviceInfo() { }
 
     // Construtor para registro padrão
-    public DeviceInfo(Guid deviceId, string cpu, string gpu, int ramGb, RamType ramType, int storageGb, StorageType storageType, string? bios)
+    public DeviceInfo(Guid deviceId, string cpu, string gpu, int ramGb, RamType ramType, int storageGb, StorageType storageType, string? board, string? bios)
     {
         DeviceId = deviceId;
         Cpu = cpu;
@@ -31,8 +32,21 @@ public class DeviceInfo
         StorageGb = storageGb;
         StorageType = storageType;
         Bios = bios;
+        MotherBoard = board;
     }
 
+    // Métodos de validação
+    public bool ValidateRamType(RamType ramType)
+    {
+        return Enum.IsDefined(typeof(RamType), ramType);
+    }
+
+    public bool ValidateStorageType(StorageType storageType)
+    {
+        return Enum.IsDefined(typeof(StorageType), storageType);
+    }
+
+    // Métodos de domínio
     public void UpdateCpu(string cpu)
     {
         if (!string.IsNullOrEmpty(cpu))
@@ -51,4 +65,33 @@ public class DeviceInfo
             RamGb = ramGb;
     }
 
+    public void UpdateRamType (RamType ramType)
+    {
+        if (ValidateRamType(ramType))
+            RamType = ramType;
+    }
+
+    public void UpdateStorageGb (int storageGb)
+    {
+        if (storageGb > 0)
+            StorageGb = storageGb;
+    }
+
+    public void UpdateStorageType (StorageType storageType)
+    {
+        if (ValidateStorageType(storageType))
+            StorageType = storageType;
+    }
+
+    public void UpdateBios (string bios)
+    {
+        if (!string.IsNullOrEmpty(bios))
+            Bios = bios;
+    }
+
+    public void UpdateMotherBoard(string board)
+    {
+        if (!string.IsNullOrEmpty(board))
+            MotherBoard = board;
+    }
 }
