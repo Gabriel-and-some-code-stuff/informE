@@ -16,14 +16,19 @@ public class Session
     public Session() { }
 
     // Construtor padrão
-    public Session(string ipAddress, DateTimeOffset expiresAt, DateTimeOffset lastSeenAt, string refreshTokenHash, Guid userId)
+    public Session(string ipAddress, DateTimeOffset lastSeenAt, string refreshTokenHash, Guid userId)
     {
         IpAddress = ipAddress;
         LoginAt = DateTimeOffset.Now;
-        ExpiresAt = expiresAt;
+        ExpiresAt = (DateTimeOffset.Now).AddHours(6);// resolver pois em uma má intenção, há a possibilidade de se colocar o horário da máquina + 6 horas e burlar isso
         LastSeenAt = lastSeenAt;
         RefreshTokenHash = refreshTokenHash;
         IsActive = true;
         UserId = userId;
     }
+
+    //método validar IP
+
+
+
 }
