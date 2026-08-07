@@ -15,6 +15,10 @@ public class Device
 
     private static readonly Regex IPv6Regex = new(@"^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^:((:[0-9a-fA-F]{1,4}){1,7}|:)$|^[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})$", RegexOptions.Compiled);
 
+    private static readonly Regex Argon2HashRegex = new(
+    @"^\$argon2(id|i|d)\$v=\d+\$m=\d+,t=\d+,p=\d+\$[A-Za-z0-9+/=]+\$[A-Za-z0-9+/=]+$",
+    RegexOptions.Compiled);
+
     // Atributos da classe
     public Guid Id { get; set; }
     public string Hostname { get; set; } = string.Empty;
@@ -94,34 +98,70 @@ public class Device
         return MacAddressRegex.IsMatch(macAddress);
     }
 
+    public bool ValidateOsUser(string osUser)
+    {
+        if (string.IsNullOrWhiteSpace(osUser) || osUser.Length > 104)
+            return false;
+
+        // Bloqueia caracteres proibidos no Windows/Linux para nomes de usuário
+        // Permite formato "DOMINIO\usuario", letras, números, acentos, hífen, ponto e underline
+        string pattern = @"^[a-zA-Z0-9á-úÁ-Úà-ùÀ-Ùã-õÃ-Õâ-ûÂ-ÛçÇ._\-\\]+$";
+
+        return Regex.IsMatch(osUser, pattern);
+    }
+
+    public bool ValidateHashKey(string hashKey)
+    {
+        if (string.IsNullOrEmpty(hashKey))
+            return false;
+
+        return Argon2HashRegex.IsMatch(hashKey);
+    }
+
+    public bool ValidateStatus(EndpointStatus status)
+    {
+        return Enum.IsDefined(typeof(EndpointStatus), status);
+    }
     // Métodos de domínio
 
     public void UpdateHostname(string hostname)
     {
-
+        if (ValidateHostname(hostname))
+            Hostname = hostname;
     }
 
     public void UpdateLastIp(string ipAddress)
     {
-
+        if (ValidateHostname(ipAddress))
+            LastIp = ipAddress;
     }
 
     public void UpdateMacAddr(string macAddress)
     {
-
+        if (ValidateHostname(macAddress))
+            MacAddress = macAddress;
     }
 
     public void UpdateOs(string os)
     {
-
+        if (!string.IsNullOrWhiteSpace(os))
+            Os = os;
     }
     public void UpdateOsUser(string osUser)
     {
-
+       if (ValidateOsUser(osUser))
+            OsUser = osUser;
     }
 
     public void UpdateStatus(EndpointStatus status)
     {
+        if (ValidateStatus(status))
+            Status = status;
+    }
 
+    public void UpdateAgentHashKey(string hashKey)
+    {
+       if (ValidateHashKey(hashKey))
+            AgentKeyHash = hashKey;
     }
 }
