@@ -1,10 +1,9 @@
 using informE.Domain.Entities;
 using informE.Domain.Enums;
-using System.Security.Cryptography.X509Certificates;
-using Xunit.Abstractions;
+
 namespace informE.Domain.Tests;
 
-public class UserTests()
+public class UserTests
 {
     [Fact]
     public void UpdateUsername_ComNomeValido_AtualizaOUsername()

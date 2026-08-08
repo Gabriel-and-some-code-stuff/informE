@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using informE.Domain.Entities;
 
-namespace informE.Domain.Tests
+namespace informE.Domain.Tests;
+
+public class AuditLogTests
 {
-    internal class DatetimeTests
-    {
-    }
+    // TODO: quando AuditLog.ValidateIpAddress() existir, testar IPs válidos e inválidos.
+    // TODO: testar que CreatedAt é preenchido no construtor.
 }

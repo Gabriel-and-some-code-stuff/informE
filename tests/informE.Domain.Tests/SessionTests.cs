@@ -8,52 +8,38 @@ public class SessionTests
     [Fact]
     public void Construtor_DeveIniciarComoAtiva()
     {
-
-        var session = new Session(
-            ipAddress: "192.168.0.10",
-            expiresAt: DateTimeOffset.Now.AddDays(7),
-            lastSeenAt: DateTimeOffset.Now,
-            refreshTokenHash: "hash-fake",
-            userId: Guid.NewGuid());
-        // Assert
+        var session = new Session("192.168.0.10", DateTimeOffset.Now, "hash-fake", Guid.NewGuid());
 
         Assert.True(session.IsActive);
     }
+
     [Fact]
     public void Construtor_DeveDefinirLoginAt()
     {
-        var dateBefore = DateTimeOffset.Now;
+        var antes = DateTimeOffset.Now;
+        var session = new Session("192.168.0.10", DateTimeOffset.Now, "hash-fake", Guid.NewGuid());
+        var depois = DateTimeOffset.Now;
 
-        var session = new Session(
-            ipAddress: "192.168.0.10",
-            expiresAt: DateTimeOffset.Now.AddDays(7),
-            lastSeenAt: DateTimeOffset.Now,
-            refreshTokenHash: "hash-fake",
-            userId: Guid.NewGuid()
-        );
+        Assert.InRange(session.LoginAt, antes, depois);
+    }
 
-        var dateAfter = DateTimeOffset.Now;
+    [Fact]
+    public void Construtor_ExpiresAtDeveSerMaiorQueLoginAt()
+    {
+        var session = new Session("192.168.0.10", DateTimeOffset.Now, "hash-fake", Guid.NewGuid());
 
-        Assert.InRange(session.LoginAt, dateBefore, dateAfter);
+        Assert.True(session.ExpiresAt > session.LoginAt);
     }
 
     [Fact]
     public void Construtor_DeveDefinirDadosInformados()
     {
         var userId = Guid.NewGuid();
-        var expiresAt = DateTimeOffset.Now.AddDays(7);
         var lastSeenAt = DateTimeOffset.Now;
 
-        var session = new Session(
-            "192.168.0.10",
-            expiresAt,
-            lastSeenAt,
-            "hash-fake",
-            userId
-        );
+        var session = new Session("192.168.0.10", lastSeenAt, "hash-fake", userId);
 
         Assert.Equal("192.168.0.10", session.IpAddress);
-        Assert.Equal(expiresAt, session.ExpiresAt);
         Assert.Equal(lastSeenAt, session.LastSeenAt);
         Assert.Equal("hash-fake", session.RefreshTokenHash);
         Assert.Equal(userId, session.UserId);
