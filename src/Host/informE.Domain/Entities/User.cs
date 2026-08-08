@@ -22,15 +22,14 @@ public class User
     public User(string username, string email, string passwordHash, UserRole role)
     {
         if (ValidateUsername(username))
-        {
             Username = username;
-        }
-        if (ValidateEmail(email))
-        {
-            Email = email;
-        }
 
-        Role = role;
+        if (ValidateEmail(email))
+            Email = email;
+
+        if (ValidateRole(role))
+            Role = role;
+
         PasswordHash = passwordHash;
         CreatedAt = DateTimeOffset.Now;
     }
@@ -40,9 +39,7 @@ public class User
     public void UpdateUsername(string username)
     {
         if (ValidateUsername(username))
-        {
             Username = username;
-        }
     }
 
     public static bool ValidateUsername(string username)
@@ -59,8 +56,6 @@ public class User
         return true;
     }
 
-    //Validação do Email
-
     public static bool ValidateEmail(string email)
     {
         string regex = @"^[^@\s]+@[^@\s]+\.(com|net|org|gov|br|edu)$";
@@ -68,12 +63,15 @@ public class User
         return Regex.IsMatch(email, regex, RegexOptions.IgnoreCase);
     }
 
+    public bool ValidateRole(UserRole role)
+    {
+        return Enum.IsDefined(typeof(UserRole), role);
+    }
 
+    // Métodos de domínio
     public void UpdateEmail(string email)
     {
         if (ValidateEmail(email))
-        {
             Email = email;
-        }
     }
 }
