@@ -28,4 +28,35 @@ public class DeviceDailyMetrics
         ActiveUsersCount = activeUsersCount;
         Date = DateOnly.FromDateTime(DateTime.Today);
     }
+
+    // Métodos de domínio
+    public void UpdateUptime(int uptimeSeconds)
+    {
+        if (uptimeSeconds > 0)
+            UptimeSeconds = uptimeSeconds;
+    }
+
+    public void UpdatePeakCpu(float peakCpuPercent)
+    {
+        if (peakCpuPercent > 0)
+            PeakCpuPercent = peakCpuPercent;
+    }
+
+    public void UpdatePeakRam(float peakRamPercent)
+    {
+        if (peakRamPercent > 0)
+            PeakRamPercent = peakRamPercent;
+    }
+
+    public void UpdatePeakDisk(float peakDiskPercent)
+    {
+        if (peakDiskPercent > 0)
+            PeakDiskPercent = peakDiskPercent;
+    }
+
+    public void UpdateActiveUsersCount(int activeUsersCount)
+    {
+        if (activeUsersCount > 0)
+            ActiveUsersCount = activeUsersCount;
+    }
 }
