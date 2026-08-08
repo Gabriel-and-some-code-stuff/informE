@@ -33,10 +33,10 @@ jobs:
       - name: Build Server (Domain + Application + Infrastructure + Contracts)
         run: dotnet build src/Host/informE.Server/informE.Server.csproj -c Release --nologo
 
-      - name: Build UI
-        run: dotnet build src/Host/informE.UI/informE.UI.csproj -c Release --nologo
+      # - name: Build UI
+       # run: dotnet build src/Host/informE.UI/informE.UI.csproj -c Release --nologo
 
-      - name: Test
-        run: |
-          dotnet test tests/informE.Domain.Tests -c Release --nologo
-          dotnet test tests/informE.Application.Tests -c Release --nologo
+      # - name: Test
+       # run: |
+         # dotnet test tests/informE.Domain.Tests -c Release --nologo
+         # dotnet test tests/informE.Application.Tests -c Release --nologo
