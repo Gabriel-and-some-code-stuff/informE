@@ -22,10 +22,25 @@ public class MachineTask
 
     public MachineTask(string name, string sourceScript, DateTimeOffset scheduledAt, TaskStatus status, Guid createdByUserId)
     {
-        Name = name;
+        if (!string.IsNullOrEmpty(name) && name.Length < 100)
+            Name = name;
+
         SourceScript = sourceScript;
         ScheduledAt = scheduledAt; // Hora não automática pois o usuário pode programar
-        Status = status;
+
+        if (ValidateStatus(status))
+            Status = status;
+
         CreatedByUserId = createdByUserId;
     }
+
+    // Métodos de validação
+    public bool ValidateStatus(TaskStatus status)
+    {
+        return Enum.IsDefined(typeof(TaskStatus), status);
+    }
+
+    // Precisamos criar o método para validar o caminho do script
+
+    // Nenhum método de domínio porque depois da execução não terá como alterar nada
 }
