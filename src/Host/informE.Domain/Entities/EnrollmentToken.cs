@@ -22,4 +22,17 @@ public class EnrollmentToken
         CreatedByUserId = createdByUserId;
         RedeemedByDeviceId = redeemedByDeviceId;
     }
+
+    // Métodos de validação
+    // Criar um método pra validar o token
+
+    // Métodos de domínio
+    public void UpdateStatus(bool isUsed)
+    {
+        if (!isUsed)
+            IsUsed = false;
+
+        if (isUsed)
+            IsUsed = true;
+    }
 }
