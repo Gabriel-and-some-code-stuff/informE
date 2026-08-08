@@ -21,7 +21,9 @@ public class Group
         if (ValidateName(name))
             Name = name;
 
-        Description = description;
+        if (ValidateDescription(description))
+            Description = description;
+
         IsActive = true;
         CreatedAt = DateTimeOffset.Now;
         OwnerId = ownerId;
@@ -64,6 +66,7 @@ public class Group
     {
         if (!active)
             IsActive = false;
+        
         if (active)
             IsActive = true;
     }
