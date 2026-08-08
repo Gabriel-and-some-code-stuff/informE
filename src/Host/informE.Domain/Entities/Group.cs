@@ -66,7 +66,7 @@ public class Group
     {
         if (!active)
             IsActive = false;
-        
+
         if (active)
             IsActive = true;
     }
