@@ -13,7 +13,7 @@ public class AuditLog
     public string Action { get; set; } = string.Empty;
     public string IpAddress { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
-
+     
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
@@ -22,7 +22,9 @@ public class AuditLog
     // Construtor para registro padrão
     public AuditLog(string action, string ipAddress, Guid userId)
     {
-        Action = action;
+
+        if (!string.IsNullOrWhiteSpace(action) && action.Length < 30)
+             Action = action;
 
         if (ValidateIpAddress((ipAddress)))
             IpAddress = ipAddress;

@@ -36,7 +36,7 @@ public class Device
 
     public Guid? GroupId { get; set; }
     public Group? Group { get; set; }
-    public DeviceInfo? Info { get; set; }
+    public DeviceInfo? DeviceInfo { get; set; }
 
     public ICollection<TaskExecutionLog> ExecutionLogs { get; set; } = [];
     public ICollection<MachineTask> Tasks { get; set; } = [];
@@ -47,7 +47,7 @@ public class Device
     public Device () { }
 
     // Construtor para registro padrão
-    public Device (string hostname, string lastIp, string macAddress, string os, string osUser, string agentKeyHash, Guid? groupId, DeviceInfo? info)
+    public Device (string hostname, string lastIp, string macAddress, string os, string osUser, string agentKeyHash, Guid? groupId, DeviceInfo? deviceInfo)
     {
         if (ValidateHostname (hostname))
             Hostname = hostname;
@@ -63,7 +63,7 @@ public class Device
         OsUser = osUser;
         AgentKeyHash = agentKeyHash;
         GroupId = groupId;
-        Info = info;
+        DeviceInfo = deviceInfo;
         RegisteredAt = DateTimeOffset.Now;
         KeyRotatedAt = DateTimeOffset.Now;
     }
