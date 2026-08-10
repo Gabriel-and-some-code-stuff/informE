@@ -14,6 +14,20 @@ ensina o porquê de cada peça.
 - **Auth humana = JWT + Argon2, IDs UUID, SEM ASP.NET Core Identity** (justificativa abaixo).
 - **Auth do Agente = enrollment token → chave rotativa** (guardada com DPAPI no disco do agente).
 - **Onion Architecture**, 2 soluções (`Host`, `Agent`), conexão via SignalR + REST.
+- **PADRÃO DE DESENVOLVIMENTO DOS ATRIBUTOS** =>
+```csharp
+// Pode ser null
+public string? Message { get; set; }
+
+// Não-nullable, começa vazio
+public string Message { get; set; } = string.Empty;
+
+// Não-nullable, será preenchido externamente
+public string Message { get; set; } = null!;
+
+// Não-nullable, garantido pelo construtor
+public string Message { get; set; }
+´´´
 
 **Filosofia (preguiçoso = eficiente):** usar o que .NET/SignalR/EF já dão de graça.
 SignalR resolve reconexão, fila e pub/sub; EF resolve persistência e migrations.
