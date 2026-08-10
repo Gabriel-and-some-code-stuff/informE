@@ -36,7 +36,7 @@ public class Software
         return true;
     }
 
-    private static bool ValidateVersion(string? version)
+    private static bool ValidateVersion(string version)
     {
         if (version != null && version.Length > 50)
             throw new ArgumentException("A versão do software ultrapassou o limite de caracteres.");
@@ -51,7 +51,7 @@ public class Software
             Name = name;
     }
 
-    public void UpdateVersion(string? version)
+    public void UpdateVersion(string version)
     {
         if (ValidateVersion(version))
             Version = version;
