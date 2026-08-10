@@ -33,15 +33,16 @@ public class DeviceInfo
         StorageType = storageType;
         Bios = bios;
         MotherBoard = board;
+        CollectedAt = DateTimeOffset.Now;
     }
 
     // Métodos de validação
-    public bool ValidateRamType(RamType ramType)
+    private static bool ValidateRamType(RamType ramType)
     {
         return Enum.IsDefined(typeof(RamType), ramType);
     }
 
-    public bool ValidateStorageType(StorageType storageType)
+    private static bool ValidateStorageType(StorageType storageType)
     {
         return Enum.IsDefined(typeof(StorageType), storageType);
     }

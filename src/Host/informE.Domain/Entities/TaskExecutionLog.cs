@@ -1,5 +1,4 @@
 using informE.Domain.Enums;
-using static System.Enum;
 using TaskStatus = informE.Domain.Enums.TaskStatus;
 
 namespace informE.Domain.Entities;
@@ -35,7 +34,7 @@ public class TaskExecutionLog
         DeviceId = deviceId;
     }
 
-    public bool ValidateTaskStatus(TaskStatus taskStatus)
+    private static bool ValidateTaskStatus(TaskStatus taskStatus)
     {
         return Enum.IsDefined(typeof(TaskStatus), taskStatus);
     }

@@ -22,15 +22,18 @@ public class UserTests
     [InlineData("gabriel123", true)]
     [InlineData("", false)]
     [InlineData("nome com espaço", false)]
-    public void ValidateUsername_DeveAceitarOuRejeitarConformeORegex(string username, bool esperadoValido)
+    public void UpdateUsername_DeveAceitarOuRejeitarConformeRegra(string username, bool esperadoValido)
     {
+        var user = new User("gabriel", "gabriel@etec.sp.gov.br", "hash-fake", UserRole.Admin);
+
         if (esperadoValido)
         {
-            Assert.True(User.ValidateUsername(username));
+            user.UpdateUsername(username);
+            Assert.Equal(username, user.Username);
         }
         else
         {
-            Assert.Throws<ArgumentException>(() => User.ValidateUsername(username));
+            Assert.Throws<ArgumentException>(() => user.UpdateUsername(username));
         }
     }
 

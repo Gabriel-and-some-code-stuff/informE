@@ -22,10 +22,12 @@ public class MachineTask
 
     public MachineTask(string name, string sourceScript, DateTimeOffset scheduledAt, TaskStatus status, Guid createdByUserId)
     {
-        if (!string.IsNullOrEmpty(name) && name.Length < 100)
+        if (ValidateName(name))
             Name = name;
 
-        SourceScript = sourceScript;
+        if (ValidateSourceScript(sourceScript))
+            SourceScript = sourceScript;
+
         ScheduledAt = scheduledAt; // Hora não automática pois o usuário pode programar
 
         if (ValidateStatus(status))
@@ -35,12 +37,29 @@ public class MachineTask
     }
 
     // Métodos de validação
-    public bool ValidateStatus(TaskStatus status)
+    private static bool ValidateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("O nome da tarefa não pode ser vazio.");
+
+        if (name.Length > 100)
+            throw new ArgumentException("O nome da tarefa ultrapassou o limite de caracteres.");
+
+        return true;
+    }
+
+    private static bool ValidateSourceScript(string script)
+    {
+        if (string.IsNullOrWhiteSpace(script))
+            throw new ArgumentException("O script não pode ser vazio.");
+
+        return true;
+    }
+
+    private static bool ValidateStatus(TaskStatus status)
     {
         return Enum.IsDefined(typeof(TaskStatus), status);
     }
-
-    // Precisamos criar o método para validar o caminho do script
 
     // Nenhum método de domínio porque depois da execução não terá como alterar nada
 }

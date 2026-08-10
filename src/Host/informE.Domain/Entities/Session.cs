@@ -36,7 +36,7 @@ public class Session
     }
 
     // Métodos de validação
-    public bool ValidateIpAddress(string ipAddress)
+    private static bool ValidateIpAddress(string ipAddress)
     {
         if (string.IsNullOrWhiteSpace(ipAddress))
             return false;

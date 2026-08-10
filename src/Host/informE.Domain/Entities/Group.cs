@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace informE.Domain.Entities;
 
 public class Group
@@ -30,7 +28,7 @@ public class Group
     }
 
     //Métodos de validação
-    public static bool ValidateName(string name)
+    private static bool ValidateName(string name)
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("O nome do grupo não pode ser vazio.");
@@ -41,7 +39,7 @@ public class Group
         return true;
     }
 
-    public static bool ValidateDescription(string? description)
+    private static bool ValidateDescription(string? description)
     {
         if(description != null && description.Length > 100)
             throw new ArgumentException("A descrição ultrapassou o limite de caracteres.");
@@ -62,12 +60,8 @@ public class Group
             Description = description;
     }
 
-    public void UpdateActiveStatus (bool active)
+    public void UpdateActiveStatus(bool active)
     {
-        if (!active)
-            IsActive = false;
-        
-        if (active)
-            IsActive = true;
+        IsActive = active;
     }
 }

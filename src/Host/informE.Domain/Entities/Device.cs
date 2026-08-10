@@ -64,10 +64,12 @@ public class Device
         AgentKeyHash = agentKeyHash;
         GroupId = groupId;
         Info = info;
+        RegisteredAt = DateTimeOffset.Now;
+        KeyRotatedAt = DateTimeOffset.Now;
     }
 
     // Métodos de validação
-    public bool ValidateHostname(string hostname)
+    private bool ValidateHostname(string hostname)
     {
         if (string.IsNullOrWhiteSpace(hostname) || hostname.Length > 15)
             return false;
@@ -81,7 +83,7 @@ public class Device
         return HostnameRegex.IsMatch(hostname);
     }
 
-    public bool ValidateIpAddress(string ipAddress)
+    private static bool ValidateIpAddress(string ipAddress)
     {
         if (string.IsNullOrWhiteSpace(ipAddress))
             return false;
@@ -90,7 +92,7 @@ public class Device
         return IPv4Regex.IsMatch(ipAddress) || IPv6Regex.IsMatch(ipAddress);
     }
 
-    public bool ValidateMacAddress(string macAddress)
+    private static bool ValidateMacAddress(string macAddress)
     {
         if (string.IsNullOrWhiteSpace(macAddress))
             return false;
@@ -98,7 +100,7 @@ public class Device
         return MacAddressRegex.IsMatch(macAddress);
     }
 
-    public bool ValidateOsUser(string osUser)
+    private static bool ValidateOsUser(string osUser)
     {
         if (string.IsNullOrWhiteSpace(osUser) || osUser.Length > 104)
             return false;
@@ -110,7 +112,7 @@ public class Device
         return Regex.IsMatch(osUser, pattern);
     }
 
-    public bool ValidateHashKey(string hashKey)
+    private static bool ValidateHashKey(string hashKey)
     {
         if (string.IsNullOrEmpty(hashKey))
             return false;
@@ -118,7 +120,7 @@ public class Device
         return Argon2HashRegex.IsMatch(hashKey);
     }
 
-    public bool ValidateStatus(EndpointStatus status)
+    private static bool ValidateStatus(EndpointStatus status)
     {
         return Enum.IsDefined(typeof(EndpointStatus), status);
     }
@@ -132,13 +134,13 @@ public class Device
 
     public void UpdateLastIp(string ipAddress)
     {
-        if (ValidateHostname(ipAddress))
+        if (ValidateIpAddress(ipAddress))
             LastIp = ipAddress;
     }
 
     public void UpdateMacAddr(string macAddress)
     {
-        if (ValidateHostname(macAddress))
+        if (ValidateMacAddress(macAddress))
             MacAddress = macAddress;
     }
 
@@ -162,6 +164,21 @@ public class Device
     public void UpdateAgentHashKey(string hashKey)
     {
        if (ValidateHashKey(hashKey))
-            AgentKeyHash = hashKey;
+       {
+           AgentKeyHash = hashKey;
+           KeyRotatedAt = DateTimeOffset.Now;
+       }
+    }
+
+    // Métodos de domínio — status do endpoint
+    public void MarkSeen(DateTimeOffset now)
+    {
+        LastSeenAt = now;
+        Status = EndpointStatus.Online;
+    }
+
+    public void MarkOffline()
+    {
+        Status = EndpointStatus.Offline;
     }
 }

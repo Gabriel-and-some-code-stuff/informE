@@ -105,7 +105,9 @@ informE/
 
 ## 3. Modelo de Domínio (o que vocês pediram: entidades, enums, interfaces)
 
-> Todos os `Id` são `Guid` (mapeados como `uuid` no Postgres). Datas em UTC.
+> Todos os `Id` são `Guid` (mapeados como `uuid` no Postgres). Datas com `DateTimeOffset.Now`
+> (captura hora local + offset) — padrão adotado pelo time nas entidades; adequado para
+> servidor on-prem que roda no mesmo fuso do cliente.
 > Entidades e enums ficam em **`informE.Domain`** (o centro, sem dependências).
 
 ### 3.1 Enums (`informE.Domain/Enums`)

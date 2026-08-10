@@ -21,16 +21,17 @@ public class Alert
     public Alert(Guid deviceId, AlertType type, string message)
     {
         DeviceId = deviceId;
+        OccurredAt = DateTimeOffset.Now;
 
         if (ValidateType(type))
             Type = type;
 
-        if (string.IsNullOrEmpty(message) && message.Length < 255)
+        if (!string.IsNullOrEmpty(message) && message.Length < 255)
             Message = message;
     }
 
     // Métodos de validação
-    public bool ValidateType(AlertType type)
+    private static bool ValidateType(AlertType type)
     {
         return Enum.IsDefined(typeof(AlertType), type);
     }

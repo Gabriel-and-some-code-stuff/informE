@@ -14,25 +14,21 @@ public class EnrollmentToken
     public EnrollmentToken() { }
 
     // Construtor para registro padrão
-    public EnrollmentToken(string token, bool isUsed, Guid createdByUserId, Guid? redeemedByDeviceId)
+    public EnrollmentToken(string token, Guid createdByUserId)
     {
         Token = token;
-        ExpiresAt = (DateTimeOffset.Now).AddHours(2);
-        IsUsed = isUsed;
+        ExpiresAt = DateTimeOffset.Now.AddHours(2);
+        IsUsed = false;
         CreatedByUserId = createdByUserId;
-        RedeemedByDeviceId = redeemedByDeviceId;
     }
 
     // Métodos de validação
-    // Criar um método pra validar o token
+    // Token é válido quando ainda não foi usado e não expirou.
+    public bool IsValid() => !IsUsed && ExpiresAt > DateTimeOffset.Now;
 
     // Métodos de domínio
     public void UpdateStatus(bool isUsed)
     {
-        if (!isUsed)
-            IsUsed = false;
-
-        if (isUsed)
-            IsUsed = true;
+        IsUsed = isUsed;
     }
 }

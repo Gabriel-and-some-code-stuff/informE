@@ -5,6 +5,10 @@ namespace informE.Domain.Entities;
 
 public class User
 {
+    private static readonly Regex EmailRegex = new(
+        @"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public Guid Id { get; set; }
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
@@ -42,7 +46,7 @@ public class User
             Username = username;
     }
 
-    public static bool ValidateUsername(string username)
+    private static bool ValidateUsername(string username)
     {
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("O nome de usuário não pode ser vazio.");
@@ -56,14 +60,12 @@ public class User
         return true;
     }
 
-    public static bool ValidateEmail(string email)
+    private static bool ValidateEmail(string email)
     {
-        string regex = @"^[^@\s]+@[^@\s]+\.(com|net|org|gov|br|edu)$";
-
-        return Regex.IsMatch(email, regex, RegexOptions.IgnoreCase);
+        return EmailRegex.IsMatch(email);
     }
 
-    public bool ValidateRole(UserRole role)
+    private bool ValidateRole(UserRole role)
     {
         return Enum.IsDefined(typeof(UserRole), role);
     }
