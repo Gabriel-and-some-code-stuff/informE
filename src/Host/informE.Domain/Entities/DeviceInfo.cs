@@ -90,9 +90,9 @@ public class DeviceInfo
             Bios = bios;
     }
 
-    public void UpdateMotherBoard(string board)
+    public void UpdateMotherBoard(string motherBoard)
     {
-        if (!string.IsNullOrEmpty(board))
-            MotherBoard = board;
+        if (!string.IsNullOrEmpty(motherBoard))
+            MotherBoard = motherBoard;
     }
 }
