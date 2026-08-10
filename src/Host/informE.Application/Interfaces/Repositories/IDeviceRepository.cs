@@ -1,7 +1,7 @@
 using informE.Domain.Entities;
 using informE.Domain.Enums;
 
-namespace informE.Application.Abstractions.Repositories;
+namespace informE.Application.Interfaces.Repositories;
 
 public interface IDeviceRepository
 {

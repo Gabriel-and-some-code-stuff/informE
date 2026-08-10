@@ -156,7 +156,7 @@ Espelhando o **schema real** (imagem). Coluna "Polir" = furos a resolver no port
 > (resultado/saída/tempo) — *precisa ganhar `id_device`*. **Reboot/Shutdown = scripts
 > pré-definidos** (quando extrairmos a tabela SCRIPTS; hoje o script é inline).
 
-### 3.3 Interfaces / Ports (`informE.Application/Abstractions`)
+### 3.3 Interfaces / Ports (`informE.Application/Interfaces`)
 
 Portas que a Application define e a Infrastructure implementa (é isso que mantém o
 Onion: a Application não conhece EF nem SignalR, só as interfaces).
@@ -289,7 +289,7 @@ moram as **interfaces (ports)** que a Infrastructure vai implementar — é assi
 que a Application pede "salve isso" ou "gere um hash" sem nunca saber que por
 trás tem EF Core ou Argon2.
 
-- **`Abstractions/`** — interfaces de infraestrutura transversal:
+- **`Interfaces/`** — interfaces de infraestrutura transversal:
   - `IPasswordHasher` — hash/verificação de senha (Argon2id por trás).
   - `IJwtTokenService` — gera access token + refresh token.
   - `IAgentAuthenticator` — valida a chave rotativa que o agente apresenta.
@@ -298,10 +298,12 @@ trás tem EF Core ou Argon2.
   - `IEndpointConnectionRegistry` — quem está online agora (RF08).
   - `ICommandDispatcher` — manda um `CommandDto` pro `AgentHub`.
   - `IDashboardNotifier` — empurra telemetria/alerta/status pro `DashboardHub`.
-- **`Abstractions/Repositories/`** — uma interface por agregado, cada uma só
+- **`Interfaces/Repositories/`** — uma interface por agregado, cada uma só
   com os métodos que o caso de uso realmente precisa (não é CRUD genérico):
   `IUserRepository`, `IDeviceRepository`, `IGroupRepository`,
-  `IMachineTaskRepository`, `ISoftwareRepository`, `IAuditLogRepository`.
+  `IMachineTaskRepository`, `ISoftwareRepository`, `IAuditLogRepository`, `IEnrollmentTokenRepository`.
+- **`Models/`** — DTOs e modelos de requisição/resposta da aplicação.
+- **`UseCases/`** — orquestração e fluxos de negócio da aplicação.
 
 > Ninguém implementa essas interfaces ainda (é a próxima tarefa do Pedro/
 > Guilherme) — hoje elas só *existem como contrato*. É esperado que o Server

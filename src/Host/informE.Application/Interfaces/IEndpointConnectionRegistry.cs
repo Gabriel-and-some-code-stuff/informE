@@ -1,4 +1,4 @@
-namespace informE.Application.Abstractions;
+namespace informE.Application.Interfaces;
 
 // RF08: garante 1 conexão SignalR por deviceId. Implementado em memória (Infrastructure).
 public interface IEndpointConnectionRegistry

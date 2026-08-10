@@ -1,4 +1,4 @@
-using informE.Application.Abstractions;
+using informE.Application.Interfaces;
 using informE.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 

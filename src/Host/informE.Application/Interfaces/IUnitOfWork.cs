@@ -1,4 +1,4 @@
-namespace informE.Application.Abstractions;
+namespace informE.Application.Interfaces;
 
 public interface IUnitOfWork
 {

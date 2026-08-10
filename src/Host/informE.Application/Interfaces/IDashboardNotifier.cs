@@ -1,7 +1,7 @@
 using informE.Contracts.Dtos;
 using informE.Domain.Enums;
 
-namespace informE.Application.Abstractions;
+namespace informE.Application.Interfaces;
 
 // Empurra eventos ao vivo para operadores via DashboardHub (SignalR).
 public interface IDashboardNotifier

@@ -1,4 +1,4 @@
-namespace informE.Application.Abstractions;
+namespace informE.Application.Interfaces;
 
 // Implementado em Infrastructure via Argon2id. Domain nunca hasha na mão.
 public interface IPasswordHasher

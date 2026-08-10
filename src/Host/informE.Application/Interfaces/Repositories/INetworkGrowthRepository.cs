@@ -1,6 +1,6 @@
 using informE.Domain.Entities;
 
-namespace informE.Application.Abstractions.Repositories;
+namespace informE.Application.Interfaces.Repositories;
 
 public interface INetworkGrowthRepository
 {
