@@ -13,7 +13,7 @@ public class Software
     public Software() { }
 
     // Construtor padrão
-    public Software(string name, string? version)
+    public Software(string name, string version)
     {
         if (ValidateName(name))
             Name = name;
