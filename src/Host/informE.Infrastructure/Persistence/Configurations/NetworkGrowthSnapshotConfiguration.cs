@@ -9,10 +9,10 @@ public class NetworkGrowthSnapshotConfiguration : IEntityTypeConfiguration<Netwo
     public void Configure(EntityTypeBuilder<NetworkGrowthSnapshot> builder)
     {
         builder.ToTable("network_growth_snapshots");
-        builder.HasKey(s => s.Id);
-        builder.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(network => network.Id);
+        builder.Property(network => network.Id).HasDefaultValueSql("gen_random_uuid()");
 
         // Uma linha por dia (grão do tenant, não do device).
-        builder.HasIndex(s => s.Date).IsUnique();
+        builder.HasIndex(network => network.Date).IsUnique();
     }
 }

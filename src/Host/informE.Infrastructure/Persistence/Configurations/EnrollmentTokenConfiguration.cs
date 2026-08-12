@@ -9,10 +9,10 @@ public class EnrollmentTokenConfiguration : IEntityTypeConfiguration<EnrollmentT
     public void Configure(EntityTypeBuilder<EnrollmentToken> builder)
     {
         builder.ToTable("enrollment_tokens");
-        builder.HasKey(t => t.Id);
-        builder.Property(t => t.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(enrollment => enrollment.Id);
+        builder.Property(enrollment => enrollment.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(t => t.Token).HasMaxLength(255).IsRequired();
-        builder.HasIndex(t => t.Token).IsUnique();
+        builder.Property(enrollment => enrollment.Token).HasMaxLength(255).IsRequired();
+        builder.HasIndex(enrollment => enrollment.Token).IsUnique();
     }
 }

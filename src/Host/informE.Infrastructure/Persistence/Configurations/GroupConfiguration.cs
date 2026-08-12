@@ -9,13 +9,13 @@ public class GroupConfiguration : IEntityTypeConfiguration<Group>
     public void Configure(EntityTypeBuilder<Group> builder)
     {
         builder.ToTable("groups");
-        builder.HasKey(g => g.Id);
-        builder.Property(g => g.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(group => group.Id);
+        builder.Property(group => group.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(g => g.Name).HasMaxLength(45).IsRequired();
-        builder.Property(g => g.Description).HasMaxLength(100);
-        builder.Property(g => g.CreatedAt).HasDefaultValueSql("now()");
+        builder.Property(group => group.Name).HasMaxLength(45).IsRequired();
+        builder.Property(group => group.Description).HasMaxLength(100);
+        builder.Property(group => group.CreatedAt).HasDefaultValueSql("now()");
 
-        builder.HasIndex(g => g.Name).IsUnique();
+        builder.HasIndex(group => group.Name).IsUnique();
     }
 }

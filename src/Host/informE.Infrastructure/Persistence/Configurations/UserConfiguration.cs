@@ -6,22 +6,22 @@ namespace informE.Infrastructure.Persistence.Configurations;
 
 public class UserConfiguration : IEntityTypeConfiguration<User>
 {
-    public void Configure(EntityTypeBuilder<User> b)
+    public void Configure(EntityTypeBuilder<User> builder)
     {
-        b.ToTable("users");
-        b.HasKey(u => u.Id);
-        b.Property(u => u.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.ToTable("users");
+        builder.HasKey(user => user.Id);
+        builder.Property(user => user.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        b.Property(u => u.Username).HasMaxLength(25).IsRequired();
-        b.Property(u => u.Email).HasMaxLength(60).IsRequired();
-        b.Property(u => u.PasswordHash).HasMaxLength(255).IsRequired();
-        b.Property(u => u.Role).HasConversion<string>().HasMaxLength(20); // enum como texto legível
-        b.Property(u => u.CreatedAt).HasDefaultValueSql("now()");
+        builder.Property(user => user.Username).HasMaxLength(25).IsRequired();
+        builder.Property(user => user.Email).HasMaxLength(60).IsRequired();
+        builder.Property(user => user.PasswordHash).HasMaxLength(255).IsRequired();
+        builder.Property(user => user.Role).HasConversion<string>().HasMaxLength(20); // enum como texto legível
+        builder.Property(user => user.CreatedAt).HasDefaultValueSql("now()");
 
-        b.HasIndex(u => u.Email).IsUnique();
-        b.HasIndex(u => u.Username).IsUnique();
+        builder.HasIndex(user => user.Email).IsUnique();
+        builder.HasIndex(user => user.Username).IsUnique();
 
-        b.HasMany(u => u.Sessions).WithOne(s => s.User)
-            .HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(user => user.Sessions).WithOne(session => session.User)
+            .HasForeignKey(session => session.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }

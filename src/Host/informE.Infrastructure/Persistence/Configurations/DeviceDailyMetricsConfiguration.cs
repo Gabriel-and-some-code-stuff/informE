@@ -9,13 +9,13 @@ public class DeviceDailyMetricsConfiguration : IEntityTypeConfiguration<DeviceDa
     public void Configure(EntityTypeBuilder<DeviceDailyMetrics> builder)
     {
         builder.ToTable("device_daily_metrics");
-        builder.HasKey(m => m.Id);
-        builder.Property(m => m.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(deviceMetrics => deviceMetrics.Id);
+        builder.Property(deviceMetrics => deviceMetrics.Id).HasDefaultValueSql("gen_random_uuid()");
 
         // Uma linha por (device, dia) — upsert incremental do agente bate nessa constraint.
-        builder.HasIndex(m => new { m.DeviceId, m.Date }).IsUnique();
+        builder.HasIndex(deviceMetrics => new { deviceMetrics.DeviceId, deviceMetrics.Date }).IsUnique();
 
-        builder.HasOne(m => m.Device).WithMany(d => d.DailyMetrics)
-            .HasForeignKey(m => m.DeviceId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(deviceMetrics => deviceMetrics.Device).WithMany(device => device.DailyMetrics)
+            .HasForeignKey(deviceMetrics => deviceMetrics.DeviceId).OnDelete(DeleteBehavior.Cascade);
     }
 }
