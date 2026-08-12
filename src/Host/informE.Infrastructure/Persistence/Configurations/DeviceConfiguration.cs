@@ -6,33 +6,31 @@ namespace informE.Infrastructure.Persistence.Configurations;
 
 public class DeviceConfiguration : IEntityTypeConfiguration<Device>
 {
-    public void Configure(EntityTypeBuilder<Device> b)
+    public void Configure(EntityTypeBuilder<Device> builder)
     {
-        b.ToTable("devices");
-        b.HasKey(d => d.Id);
-        b.Property(d => d.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.ToTable("devices");
+        builder.HasKey(device => device.Id);
+        builder.Property(device => device.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        b.Property(d => d.Hostname).HasMaxLength(100).IsRequired();
-        b.Property(d => d.LastIp).HasMaxLength(30).IsRequired();
-        b.Property(d => d.MacAddress).HasMaxLength(20).IsRequired();
-        b.Property(d => d.Os).HasMaxLength(40).IsRequired();
-        b.Property(d => d.OsUser).HasMaxLength(40).IsRequired();
-        b.Property(d => d.Status).HasConversion<string>().HasMaxLength(20);
-        b.Property(d => d.AgentKeyHash).HasMaxLength(255);
-        b.Property(d => d.RegisteredAt).HasDefaultValueSql("now()");
+        builder.Property(device => device.Hostname).HasMaxLength(100).IsRequired();
+        builder.Property(device => device.LastIp).HasMaxLength(30).IsRequired();
+        builder.Property(device => device.MacAddress).HasMaxLength(20).IsRequired();
+        builder.Property(device => device.Os).HasMaxLength(40).IsRequired();
+        builder.Property(device => device.OsUser).HasMaxLength(40).IsRequired();
+        builder.Property(device => device.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(device => device.AgentKeyHash).HasMaxLength(255);
+        builder.Property(device => device.RegisteredAt).HasDefaultValueSql("now()");
 
-        b.HasIndex(d => d.Hostname).IsUnique();
-        b.HasIndex(d => d.MacAddress).IsUnique();
+        builder.HasIndex(device => device.Hostname).IsUnique();
+        builder.HasIndex(device => device.MacAddress).IsUnique();
 
-        b.HasOne(d => d.Group).WithMany(g => g.Devices)
-            .HasForeignKey(d => d.GroupId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne(device => device.Group).WithMany(group => group.Devices)
+            .HasForeignKey(device => device.GroupId).OnDelete(DeleteBehavior.SetNull);
 
-        // 1-1 com DeviceInfo (o hardware).
-        b.HasOne(d => d.Info).WithOne(i => i.Device)
-            .HasForeignKey<DeviceInfo>(i => i.DeviceId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(device => device.DeviceInfo).WithOne(info => info.Device)
+            .HasForeignKey<DeviceInfo>(info => info.DeviceId).OnDelete(DeleteBehavior.Cascade);
 
-        // Inventário de software (M-N via join implícita devices_softwares).
-        b.HasMany(d => d.InstalledSoftwares).WithMany(s => s.Devices)
-            .UsingEntity(j => j.ToTable("devices_softwares"));
+        builder.HasMany(device => device.InstalledSoftwares).WithMany(software => software.Devices)
+            .UsingEntity(join => join.ToTable("devices_softwares"));
     }
 }
