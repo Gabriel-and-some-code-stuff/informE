@@ -6,15 +6,15 @@ namespace informE.Infrastructure.Persistence.Configurations;
 
 public class SoftwareConfiguration : IEntityTypeConfiguration<Software>
 {
-    public void Configure(EntityTypeBuilder<Software> b)
+    public void Configure(EntityTypeBuilder<Software> builder)
     {
-        b.ToTable("softwares");
-        b.HasKey(s => s.Id);
-        b.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.ToTable("softwares");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        b.Property(s => s.Name).HasMaxLength(120).IsRequired();
-        b.Property(s => s.Version).HasMaxLength(45);
+        builder.Property(s => s.Name).HasMaxLength(120).IsRequired();
+        builder.Property(s => s.Version).HasMaxLength(45);
 
-        b.HasIndex(s => s.Name).IsUnique();
+        builder.HasIndex(s => s.Name).IsUnique();
     }
 }
