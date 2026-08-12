@@ -6,17 +6,17 @@ namespace informE.Infrastructure.Persistence.Configurations;
 
 public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
 {
-    public void Configure(EntityTypeBuilder<AuditLog> b)
+    public void Configure(EntityTypeBuilder<AuditLog> builder)
     {
-        b.ToTable("audit_logs");
-        b.HasKey(a => a.Id);
-        b.Property(a => a.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.ToTable("audit_logs");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        b.Property(a => a.Action).HasMaxLength(30).IsRequired();
-        b.Property(a => a.IpAddress).HasMaxLength(30).IsRequired();
-        b.Property(a => a.CreatedAt).HasDefaultValueSql("now()");
+        builder.Property(a => a.Action).HasMaxLength(30).IsRequired();
+        builder.Property(a => a.IpAddress).HasMaxLength(30).IsRequired();
+        builder.Property(a => a.CreatedAt).HasDefaultValueSql("now()");
 
-        b.HasOne(a => a.User).WithMany(u => u.AuditLogs)
+        builder.HasOne(a => a.User).WithMany(u => u.AuditLogs)
             .HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }
