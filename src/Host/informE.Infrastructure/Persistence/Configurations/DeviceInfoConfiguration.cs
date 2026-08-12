@@ -9,14 +9,14 @@ public class DeviceInfoConfiguration : IEntityTypeConfiguration<DeviceInfo>
     public void Configure(EntityTypeBuilder<DeviceInfo> builder)
     {
         builder.ToTable("info_devices");
-        builder.HasKey(i => i.Id);
-        builder.Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(deviceInfo => deviceInfo.Id);
+        builder.Property(deviceInfo => deviceInfo.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(i => i.Cpu).HasMaxLength(45).IsRequired();
-        builder.Property(i => i.Gpu).HasMaxLength(45).IsRequired();
-        builder.Property(i => i.Bios).HasMaxLength(45).IsRequired();
-        builder.Property(i => i.RamType).HasConversion<string>().HasMaxLength(10);
-        builder.Property(i => i.StorageType).HasConversion<string>().HasMaxLength(10);
-        builder.Property(i => i.CollectedAt).HasDefaultValueSql("now()");
+        builder.Property(deviceInfo => deviceInfo.Cpu).HasMaxLength(45).IsRequired();
+        builder.Property(deviceInfo => deviceInfo.Gpu).HasMaxLength(45).IsRequired();
+        builder.Property(deviceInfo => deviceInfo.Bios).HasMaxLength(45).IsRequired();
+        builder.Property(deviceInfo => deviceInfo.RamType).HasConversion<string>().HasMaxLength(10);
+        builder.Property(deviceInfo => deviceInfo.StorageType).HasConversion<string>().HasMaxLength(10);
+        builder.Property(deviceInfo => deviceInfo.CollectedAt).HasDefaultValueSql("now()");
     }
 }

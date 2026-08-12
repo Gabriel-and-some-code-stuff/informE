@@ -9,16 +9,16 @@ public class TaskExecutionLogConfiguration : IEntityTypeConfiguration<TaskExecut
     public void Configure(EntityTypeBuilder<TaskExecutionLog> builder)
     {
         builder.ToTable("task_execution_logs");
-        builder.HasKey(l => l.Id);
-        builder.Property(l => l.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(task => task.Id);
+        builder.Property(task => task.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(l => l.ActionType).HasMaxLength(45).IsRequired();
-        builder.Property(l => l.Status).HasConversion<string>().HasMaxLength(20);
-        builder.Property(l => l.OutputLog).HasMaxLength(255);
-        builder.Property(l => l.ExecutedAt).HasDefaultValueSql("now()");
+        builder.Property(task => task.ActionType).HasMaxLength(45).IsRequired();
+        builder.Property(task => task.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(task => task.OutputLog).HasMaxLength(255);
+        builder.Property(task => task.ExecutedAt).HasDefaultValueSql("now()");
 
         // id_device: liga o log à máquina (a coluna que faltava no schema original).
-        builder.HasOne(l => l.Device).WithMany(d => d.ExecutionLogs)
-            .HasForeignKey(l => l.DeviceId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(task => task.Device).WithMany(d => d.ExecutionLogs)
+            .HasForeignKey(task => task.DeviceId).OnDelete(DeleteBehavior.Restrict);
     }
 }

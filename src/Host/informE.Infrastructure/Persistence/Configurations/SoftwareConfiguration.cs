@@ -9,12 +9,12 @@ public class SoftwareConfiguration : IEntityTypeConfiguration<Software>
     public void Configure(EntityTypeBuilder<Software> builder)
     {
         builder.ToTable("softwares");
-        builder.HasKey(s => s.Id);
-        builder.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(software => software.Id);
+        builder.Property(software => software.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(s => s.Name).HasMaxLength(120).IsRequired();
-        builder.Property(s => s.Version).HasMaxLength(45);
+        builder.Property(software => software.Name).HasMaxLength(120).IsRequired();
+        builder.Property(software => software.Version).HasMaxLength(45);
 
-        builder.HasIndex(s => s.Name).IsUnique();
+        builder.HasIndex(software => software.Name).IsUnique();
     }
 }

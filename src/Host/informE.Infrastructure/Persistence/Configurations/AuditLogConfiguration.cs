@@ -9,14 +9,14 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
     public void Configure(EntityTypeBuilder<AuditLog> builder)
     {
         builder.ToTable("audit_logs");
-        builder.HasKey(a => a.Id);
-        builder.Property(a => a.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(audit => audit.Id);
+        builder.Property(audit => audit.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(a => a.Action).HasMaxLength(30).IsRequired();
-        builder.Property(a => a.IpAddress).HasMaxLength(30).IsRequired();
-        builder.Property(a => a.CreatedAt).HasDefaultValueSql("now()");
+        builder.Property(audit => audit.Action).HasMaxLength(30).IsRequired();
+        builder.Property(audit => audit.IpAddress).HasMaxLength(30).IsRequired();
+        builder.Property(audit => audit.CreatedAt).HasDefaultValueSql("now()");
 
-        builder.HasOne(a => a.User).WithMany(u => u.AuditLogs)
-            .HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(audit => audit.User).WithMany(user => user.AuditLogs)
+            .HasForeignKey(audit => audit.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }

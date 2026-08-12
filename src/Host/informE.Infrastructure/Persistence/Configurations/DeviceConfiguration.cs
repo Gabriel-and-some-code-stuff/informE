@@ -28,7 +28,7 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
             .HasForeignKey(device => device.GroupId).OnDelete(DeleteBehavior.SetNull);
 
         builder.HasOne(device => device.DeviceInfo).WithOne(info => info.Device)
-            .HasForeignKey<DeviceInfo>(info => info.DeviceId).OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey<DeviceInfo>(deviceInfo => deviceInfo.DeviceId).OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(device => device.InstalledSoftwares).WithMany(software => software.Devices)
             .UsingEntity(join => join.ToTable("devices_softwares"));

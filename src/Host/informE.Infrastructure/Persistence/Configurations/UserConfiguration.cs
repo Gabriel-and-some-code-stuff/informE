@@ -9,19 +9,19 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.ToTable("users");
-        builder.HasKey(u => u.Id);
-        builder.Property(u => u.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(user => user.Id);
+        builder.Property(user => user.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(u => u.Username).HasMaxLength(25).IsRequired();
-        builder.Property(u => u.Email).HasMaxLength(60).IsRequired();
-        builder.Property(u => u.PasswordHash).HasMaxLength(255).IsRequired();
-        builder.Property(u => u.Role).HasConversion<string>().HasMaxLength(20); // enum como texto legível
-        builder.Property(u => u.CreatedAt).HasDefaultValueSql("now()");
-         
-        builder.HasIndex(u => u.Email).IsUnique();
-        builder.HasIndex(u => u.Username).IsUnique();
+        builder.Property(user => user.Username).HasMaxLength(25).IsRequired();
+        builder.Property(user => user.Email).HasMaxLength(60).IsRequired();
+        builder.Property(user => user.PasswordHash).HasMaxLength(255).IsRequired();
+        builder.Property(user => user.Role).HasConversion<string>().HasMaxLength(20); // enum como texto legível
+        builder.Property(user => user.CreatedAt).HasDefaultValueSql("now()");
 
-        builder.HasMany(u => u.Sessions).WithOne(s => s.User)
-            .HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(user => user.Email).IsUnique();
+        builder.HasIndex(user => user.Username).IsUnique();
+
+        builder.HasMany(user => user.Sessions).WithOne(session => session.User)
+            .HasForeignKey(session => session.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }

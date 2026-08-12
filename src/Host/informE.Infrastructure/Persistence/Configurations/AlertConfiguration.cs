@@ -19,7 +19,7 @@ public class AlertConfiguration : IEntityTypeConfiguration<Alert>
         // Sustenta o GROUP BY DATE(occurred_at), type do gráfico "Histórico de Alertas".
         builder.HasIndex(alert => new { alert.DeviceId, alert.OccurredAt });
 
-        builder.HasOne(alert => alert.Device).WithMany(d => d.Alerts)
+        builder.HasOne(alert => alert.Device).WithMany(device => device.Alerts)
             .HasForeignKey(alert => alert.DeviceId).OnDelete(DeleteBehavior.Cascade);
     }
 }

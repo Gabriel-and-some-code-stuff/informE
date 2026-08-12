@@ -9,19 +9,19 @@ public class MachineTaskConfiguration : IEntityTypeConfiguration<MachineTask>
     public void Configure(EntityTypeBuilder<MachineTask> builder)
     {
         builder.ToTable("tasks");
-        builder.HasKey(t => t.Id);
-        builder.Property(t => t.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(machine => machine.Id);
+        builder.Property(machine => machine.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(t => t.Name).HasMaxLength(45).IsRequired();
-        builder.Property(t => t.SourceScript).HasMaxLength(255).IsRequired();
-        builder.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
-        builder.Property(t => t.ScheduledAt).HasDefaultValueSql("now()");
+        builder.Property(machine => machine.Name).HasMaxLength(45).IsRequired();
+        builder.Property(machine => machine.SourceScript).HasMaxLength(255).IsRequired();
+        builder.Property(machine => machine.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(machine => machine.ScheduledAt).HasDefaultValueSql("now()");
 
         // Alvos do disparo (M-N via join devices_tasks).
-        builder.HasMany(t => t.TargetDevices).WithMany(d => d.Tasks)
-            .UsingEntity(j => j.ToTable("devices_tasks"));
+        builder.HasMany(machine => machine.TargetDevices).WithMany(device => device.Tasks)
+            .UsingEntity(join => join.ToTable("devices_tasks"));
 
-        builder.HasMany(t => t.ExecutionLogs).WithOne(l => l.MachineTask)
-            .HasForeignKey(l => l.MachineTaskId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(machine => machine.ExecutionLogs).WithOne(task => task.MachineTask)
+            .HasForeignKey(task => task.MachineTaskId).OnDelete(DeleteBehavior.Cascade);
     }
 }
