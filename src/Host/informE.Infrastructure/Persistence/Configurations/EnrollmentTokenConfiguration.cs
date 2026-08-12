@@ -6,13 +6,13 @@ namespace informE.Infrastructure.Persistence.Configurations;
 
 public class EnrollmentTokenConfiguration : IEntityTypeConfiguration<EnrollmentToken>
 {
-    public void Configure(EntityTypeBuilder<EnrollmentToken> b)
+    public void Configure(EntityTypeBuilder<EnrollmentToken> builder)
     {
-        b.ToTable("enrollment_tokens");
-        b.HasKey(t => t.Id);
-        b.Property(t => t.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.ToTable("enrollment_tokens");
+        builder.HasKey(t => t.Id);
+        builder.Property(t => t.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        b.Property(t => t.Token).HasMaxLength(255).IsRequired();
-        b.HasIndex(t => t.Token).IsUnique();
+        builder.Property(t => t.Token).HasMaxLength(255).IsRequired();
+        builder.HasIndex(t => t.Token).IsUnique();
     }
 }

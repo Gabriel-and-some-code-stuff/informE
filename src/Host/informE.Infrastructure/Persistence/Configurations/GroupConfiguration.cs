@@ -6,16 +6,16 @@ namespace informE.Infrastructure.Persistence.Configurations;
 
 public class GroupConfiguration : IEntityTypeConfiguration<Group>
 {
-    public void Configure(EntityTypeBuilder<Group> b)
+    public void Configure(EntityTypeBuilder<Group> builder)
     {
-        b.ToTable("groups");
-        b.HasKey(g => g.Id);
-        b.Property(g => g.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.ToTable("groups");
+        builder.HasKey(g => g.Id);
+        builder.Property(g => g.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        b.Property(g => g.Name).HasMaxLength(45).IsRequired();
-        b.Property(g => g.Description).HasMaxLength(100);
-        b.Property(g => g.CreatedAt).HasDefaultValueSql("now()");
+        builder.Property(g => g.Name).HasMaxLength(45).IsRequired();
+        builder.Property(g => g.Description).HasMaxLength(100);
+        builder.Property(g => g.CreatedAt).HasDefaultValueSql("now()");
 
-        b.HasIndex(g => g.Name).IsUnique();
+        builder.HasIndex(g => g.Name).IsUnique();
     }
 }

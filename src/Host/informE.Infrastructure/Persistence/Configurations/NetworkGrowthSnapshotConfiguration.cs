@@ -6,13 +6,13 @@ namespace informE.Infrastructure.Persistence.Configurations;
 
 public class NetworkGrowthSnapshotConfiguration : IEntityTypeConfiguration<NetworkGrowthSnapshot>
 {
-    public void Configure(EntityTypeBuilder<NetworkGrowthSnapshot> b)
+    public void Configure(EntityTypeBuilder<NetworkGrowthSnapshot> builder)
     {
-        b.ToTable("network_growth_snapshots");
-        b.HasKey(s => s.Id);
-        b.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.ToTable("network_growth_snapshots");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
 
         // Uma linha por dia (grão do tenant, não do device).
-        b.HasIndex(s => s.Date).IsUnique();
+        builder.HasIndex(s => s.Date).IsUnique();
     }
 }

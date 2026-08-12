@@ -6,20 +6,20 @@ namespace informE.Infrastructure.Persistence.Configurations;
 
 public class AlertConfiguration : IEntityTypeConfiguration<Alert>
 {
-    public void Configure(EntityTypeBuilder<Alert> b)
+    public void Configure(EntityTypeBuilder<Alert> builder)
     {
-        b.ToTable("alerts");
-        b.HasKey(a => a.Id);
-        b.Property(a => a.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.ToTable("alerts");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        b.Property(a => a.Type).HasConversion<string>().HasMaxLength(30);
-        b.Property(a => a.Message).HasMaxLength(255).IsRequired();
-        b.Property(a => a.OccurredAt).HasDefaultValueSql("now()");
+        builder.Property(a => a.Type).HasConversion<string>().HasMaxLength(30);
+        builder.Property(a => a.Message).HasMaxLength(255).IsRequired();
+        builder.Property(a => a.OccurredAt).HasDefaultValueSql("now()");
 
         // Sustenta o GROUP BY DATE(occurred_at), type do gráfico "Histórico de Alertas".
-        b.HasIndex(a => new { a.DeviceId, a.OccurredAt });
+        builder.HasIndex(a => new { a.DeviceId, a.OccurredAt });
 
-        b.HasOne(a => a.Device).WithMany(d => d.Alerts)
+        builder.HasOne(a => a.Device).WithMany(d => d.Alerts)
             .HasForeignKey(a => a.DeviceId).OnDelete(DeleteBehavior.Cascade);
     }
 }
