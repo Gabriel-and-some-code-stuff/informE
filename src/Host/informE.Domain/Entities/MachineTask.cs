@@ -51,7 +51,7 @@ public class MachineTask
     private static bool ValidateSourceScript(string script)
     {
         if (string.IsNullOrWhiteSpace(script))
-            throw new ArgumentException("O script não pode ser vazio.");
+            throw new ArgumentException("O script não pode ser vazio ou conter espaços.");
 
         return true;
     }
