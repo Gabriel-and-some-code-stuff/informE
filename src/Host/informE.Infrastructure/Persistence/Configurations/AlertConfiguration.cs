@@ -9,17 +9,17 @@ public class AlertConfiguration : IEntityTypeConfiguration<Alert>
     public void Configure(EntityTypeBuilder<Alert> builder)
     {
         builder.ToTable("alerts");
-        builder.HasKey(a => a.Id);
-        builder.Property(a => a.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.HasKey(alert => alert.Id);
+        builder.Property(alert => alert.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(a => a.Type).HasConversion<string>().HasMaxLength(30);
-        builder.Property(a => a.Message).HasMaxLength(255).IsRequired();
-        builder.Property(a => a.OccurredAt).HasDefaultValueSql("now()");
+        builder.Property(alert => alert.Type).HasConversion<string>().HasMaxLength(30);
+        builder.Property(alert => alert.Message).HasMaxLength(255).IsRequired();
+        builder.Property(alert => alert.OccurredAt).HasDefaultValueSql("now()");
 
         // Sustenta o GROUP BY DATE(occurred_at), type do gráfico "Histórico de Alertas".
-        builder.HasIndex(a => new { a.DeviceId, a.OccurredAt });
+        builder.HasIndex(alert => new { alert.DeviceId, alert.OccurredAt });
 
-        builder.HasOne(a => a.Device).WithMany(d => d.Alerts)
-            .HasForeignKey(a => a.DeviceId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(alert => alert.Device).WithMany(d => d.Alerts)
+            .HasForeignKey(alert => alert.DeviceId).OnDelete(DeleteBehavior.Cascade);
     }
 }
