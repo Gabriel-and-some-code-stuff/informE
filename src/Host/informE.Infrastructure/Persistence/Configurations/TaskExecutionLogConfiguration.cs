@@ -18,7 +18,7 @@ public class TaskExecutionLogConfiguration : IEntityTypeConfiguration<TaskExecut
         builder.Property(task => task.ExecutedAt).HasDefaultValueSql("now()");
 
         // id_device: liga o log à máquina (a coluna que faltava no schema original).
-        builder.HasOne(task => task.Device).WithMany(d => d.ExecutionLogs)
+        builder.HasOne(task => task.Device).WithMany(device => device.ExecutionLogs)
             .HasForeignKey(task => task.DeviceId).OnDelete(DeleteBehavior.Restrict);
     }
 }
