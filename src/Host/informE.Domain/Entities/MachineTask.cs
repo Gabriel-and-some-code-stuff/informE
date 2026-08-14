@@ -61,5 +61,37 @@ public class MachineTask
         return Enum.IsDefined(typeof(TaskStatus), status);
     }
 
-    // Nenhum método de domínio porque depois da execução não terá como alterar nada
+    // Transições de ciclo de vida — Application layer é responsável por chamar na ordem correta.
+    // Status final (Succeeded/Failed) é decidido pelo Application com base nos ExecutionLogs.
+    public void Queue()
+    {
+        if (Status != TaskStatus.Pending)
+            throw new InvalidOperationException("Apenas tarefas pendentes podem ser enfileiradas.");
+
+        Status = TaskStatus.Queued;
+    }
+
+    public void MarkRunning()
+    {
+        if (Status != TaskStatus.Queued)
+            throw new InvalidOperationException("Apenas tarefas enfileiradas podem ser marcadas como em execução.");
+
+        Status = TaskStatus.Running;
+    }
+
+    public void Finish(bool succeeded)
+    {
+        if (Status != TaskStatus.Running)
+            throw new InvalidOperationException("Apenas tarefas em execução podem ser finalizadas.");
+
+        Status = succeeded ? TaskStatus.Succeeded : TaskStatus.Failed;
+    }
+
+    public void Cancel()
+    {
+        if (Status is TaskStatus.Running or TaskStatus.Succeeded or TaskStatus.Failed)
+            throw new InvalidOperationException("Não é possível cancelar uma tarefa em execução ou já finalizada.");
+
+        Status = TaskStatus.Canceled;
+    }
 }

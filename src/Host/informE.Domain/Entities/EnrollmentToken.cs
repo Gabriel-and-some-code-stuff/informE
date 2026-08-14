@@ -27,8 +27,12 @@ public class EnrollmentToken
     public bool IsValid() => !IsUsed && ExpiresAt > DateTimeOffset.Now;
 
     // Métodos de domínio
-    public void UpdateStatus(bool isUsed)
+    public void Redeem(Guid deviceId)
     {
-        IsUsed = isUsed;
+        if (!IsValid())
+            throw new InvalidOperationException("Token inválido: já utilizado ou expirado.");
+
+        IsUsed = true;
+        RedeemedByDeviceId = deviceId;
     }
 }

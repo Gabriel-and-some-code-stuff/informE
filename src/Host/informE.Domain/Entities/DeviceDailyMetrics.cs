@@ -29,34 +29,24 @@ public class DeviceDailyMetrics
         Date = DateOnly.FromDateTime(DateTime.Today);
     }
 
-    // Métodos de domínio
-    public void UpdateUptime(int uptimeSeconds)
+    // Chamado a cada leitura de telemetria — agrega os picos do dia.
+    // UptimeSeconds é substituído (valor cumulativo desde o boot, não um pico).
+    // ActiveUsersCount é substituído (valor corrente, não pico).
+    public void ApplyReading(int uptimeSeconds, float cpuPercent, float ramPercent, float diskPercent, int activeUsersCount)
     {
-        if (uptimeSeconds > 0)
+        if (uptimeSeconds >= 0)
             UptimeSeconds = uptimeSeconds;
-    }
 
-    public void UpdatePeakCpu(float peakCpuPercent)
-    {
-        if (peakCpuPercent > 0)
-            PeakCpuPercent = peakCpuPercent;
-    }
+        if (cpuPercent > PeakCpuPercent)
+            PeakCpuPercent = cpuPercent;
 
-    public void UpdatePeakRam(float peakRamPercent)
-    {
-        if (peakRamPercent > 0)
-            PeakRamPercent = peakRamPercent;
-    }
+        if (ramPercent > PeakRamPercent)
+            PeakRamPercent = ramPercent;
 
-    public void UpdatePeakDisk(float peakDiskPercent)
-    {
-        if (peakDiskPercent > 0)
-            PeakDiskPercent = peakDiskPercent;
-    }
+        if (diskPercent > PeakDiskPercent)
+            PeakDiskPercent = diskPercent;
 
-    public void UpdateActiveUsersCount(int activeUsersCount)
-    {
-        if (activeUsersCount > 0)
+        if (activeUsersCount >= 0)
             ActiveUsersCount = activeUsersCount;
     }
 }

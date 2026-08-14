@@ -41,7 +41,20 @@ public class Session
         if (string.IsNullOrWhiteSpace(ipAddress))
             return false;
 
-        // Aceita tanto IPv4 quanto IPv6 sem depender da System.Net
         return IPv4Regex.IsMatch(ipAddress) || IPv6Regex.IsMatch(ipAddress);
+    }
+
+    // Métodos de domínio
+    public void Revoke()
+    {
+        IsActive = false;
+    }
+
+    // Compara com Now — ExpiresAt é definido pelo servidor no construtor, não pelo client.
+    public bool IsExpired() => DateTimeOffset.Now > ExpiresAt;
+
+    public void Touch(DateTimeOffset now)
+    {
+        LastSeenAt = now;
     }
 }

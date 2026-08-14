@@ -76,4 +76,13 @@ public class User
         if (ValidateEmail(email))
             Email = email;
     }
+
+    // Recebe o hash já calculado — a responsabilidade de hashar é do IPasswordHasher na Application.
+    public void ChangePassword(string newHash)
+    {
+        if (string.IsNullOrWhiteSpace(newHash))
+            throw new ArgumentException("O hash da senha não pode ser vazio.");
+
+        PasswordHash = newHash;
+    }
 }
