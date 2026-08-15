@@ -524,7 +524,7 @@ dias"* é o mesmo mecanismo, só lendo um número diferente.
 
 - **Senhas: Argon2id** via lib mantida (`Isopoh.Cryptography.Argon2` ou `Konscious.Security.Cryptography.Argon2`). `IPasswordHasher` guarda a string encoded (inclui salt+params). Nunca hash na mão.
 - **Login: JWT**. Access token curto (~15 min) com claim de `role`; **refresh token** persistido (tabela RefreshToken). `[Authorize(Roles="Admin")]` lê o claim.
-- **Sessões**: máx. 3 refresh tokens ativos/usuário (no 4º login, revoga o mais antigo); não usado em 7 dias → expira. Um `BackgroundService` varre e revoga ociosos.
+- **Sessões**: máx. 3 refresh tokens ativos/usuário (no 4º login, revoga o mais antigo); não usado em 7 dias → expira. Um `BackgroundService` varre e revoga ociosos. **Revisado por [`docs/politica-login-sessao.md`](./politica-login-sessao.md)** — a regra de sessão passa a variar por `UserRole` (bloqueio do 4º dispositivo para Admin/SuperAdmin, kick automático para Usuário Comum-empresa, sem limite para Usuário Comum-escola); esta linha descreve o comportamento genérico anterior, hoje substituído.
 - **IDs UUID**: `Guid` PK em tudo, evita enumeração sequencial. `ponytail: Guid aleatório basta na escala de escola; não se preocupar com fragmentação de índice.`
 - **Agente**: admin gera EnrollmentToken (uso único, expira) → agente chama `/enroll` → server cria Endpoint + emite chave por-máquina → agente guarda com **DPAPI**. Chave rotaciona periodicamente (server manda `RotateKey` pelo hub). AgentHub e REST validam via `IAgentAuthenticator`.
 - **HTTPS** obrigatório mesmo na LAN.
