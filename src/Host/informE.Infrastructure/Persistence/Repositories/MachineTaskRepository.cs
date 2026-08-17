@@ -20,10 +20,11 @@ public class MachineTaskRepository(AppDbContext db) : IMachineTaskRepository
         await db.TaskExecutionLogs.AddRangeAsync(logs, ct);
     }
 
-    public Task UpdateLogStatusAsync(Guid logId, TaskStatus status, string? output, CancellationToken ct = default) =>
+    public Task UpdateLogStatusAsync(Guid logId, TaskStatus status, string? output, DateTimeOffset executedAt, CancellationToken ct = default) =>
         db.TaskExecutionLogs
             .Where(l => l.Id == logId)
             .ExecuteUpdateAsync(l => l
                 .SetProperty(x => x.Status, status)
-                .SetProperty(x => x.OutputLog, output), ct);
+                .SetProperty(x => x.OutputLog, output)
+                .SetProperty(x => x.ExecutedAt, executedAt), ct);
 }
