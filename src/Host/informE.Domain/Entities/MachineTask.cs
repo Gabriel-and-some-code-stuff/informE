@@ -9,6 +9,7 @@ public class MachineTask
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string SourceScript { get; set; } = string.Empty; // ponytail: inline por ora; extrair tabela SCRIPTS no sprint 3-4
+    public ScriptKind Kind { get; set; }
     public DateTimeOffset ScheduledAt { get; set; }
     public TaskStatus Status { get; set; } = TaskStatus.Pending;
 
@@ -20,7 +21,7 @@ public class MachineTask
 
     // Construtor padrão
 
-    public MachineTask(string name, string sourceScript, DateTimeOffset scheduledAt, TaskStatus status, Guid createdByUserId)
+    public MachineTask(string name, string sourceScript, ScriptKind kind, DateTimeOffset scheduledAt, TaskStatus status, Guid createdByUserId)
     {
         if (ValidateName(name))
             Name = name;
@@ -28,6 +29,7 @@ public class MachineTask
         if (ValidateSourceScript(sourceScript))
             SourceScript = sourceScript;
 
+        Kind = kind;
         ScheduledAt = scheduledAt; // Hora não automática pois o usuário pode programar
 
         if (ValidateStatus(status))

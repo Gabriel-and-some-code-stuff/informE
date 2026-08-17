@@ -181,4 +181,12 @@ public class Device
     {
         Status = EndpointStatus.Offline;
     }
+
+    // RF04: heartbeat recebido, mas uso de recurso acima do limiar aceitável —
+    // ainda está "vivo" (atualiza LastSeenAt), só não está saudável.
+    public void MarkDegraded(DateTimeOffset now)
+    {
+        LastSeenAt = now;
+        Status = EndpointStatus.Degraded;
+    }
 }
