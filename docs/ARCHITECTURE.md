@@ -284,8 +284,10 @@ SignalR: nomes de método e formato de dado, sem lógica nenhuma.
     o que o Agent manda a cada ping.
   - `CommandDto(TaskId, LogId, Script, Kind)` — o que o Server manda pro Agent
     executar.
-  - `CommandResultDto(LogId, Succeeded, Output, ExecutedAt)` — a resposta do
-    Agent depois de rodar o comando.
+  - `CommandResultDto(TaskId, LogId, Succeeded, Output, ExecutedAt, DurationMs)` —
+    a resposta do Agent depois de rodar o comando. `TaskId` evita um round-trip
+    pra descobrir de qual `MachineTask` o log é; `DurationMs` é medido pelo
+    próprio Agent (o Host não sabe quando ele começou, só quando despachou).
   - `AlertDto(DeviceId, AlertType, Message, Timestamp)` — um alerta pra exibir
     ao vivo no Desktop.
 - **`Hubs/`** — as interfaces que descrevem os métodos que cada lado pode
@@ -294,7 +296,9 @@ SignalR: nomes de método e formato de dado, sem lógica nenhuma.
   - `IAgentClient` — métodos que o **Server chama no Agent**: `RunCommand`,
     `RotateKey`.
   - `IDashboardClient` — métodos que o **Server chama no operador**:
-    `EndpointStatusChanged`, `TelemetryUpdated`, `AlertRaised`, `TaskProgress`.
+    `EndpointStatusChanged(deviceId, status, health)`, `TelemetryUpdated`,
+    `AlertRaised`, `TaskProgress`. Status e saúde viajam juntos porque mudam no
+    mesmo heartbeat e são colunas separadas na tela de Equipamentos.
 
 #### `informE.Domain` — o centro, as regras que não mudam
 
@@ -303,7 +307,12 @@ ASP.NET, nada. Só C# puro. Se você abrir esse projeto daqui a 2 anos e trocar
 Postgres por outro banco, ou SignalR por outra coisa, **nada aqui muda**.
 
 - **`Enums/`** — `UserRole`, `TaskStatus`, `RamType`, `StorageType`,
-  `EndpointStatus`, `AlertType`. São os "vocabulários fechados" do domínio.
+  `EndpointStatus`, `HealthStatus`, `DeviceRole`, `ScriptKind`,
+  `MachineActionKind`, `AlertType`. São os "vocabulários fechados" do domínio
+  (ver §3.1 para os valores e o que cada um mapeia).
+- **`MachineActionCatalog.cs`** — o catálogo de ações executáveis. Fica no
+  Domain porque "quais ações o informE sabe fazer" é regra de negócio; continua
+  C# puro (o script é só string), então é testável sem mock.
 - **`Entities/`** — os objetos que o negócio entende, cada um com `Guid Id` e
   datas em `DateTimeOffset` (UTC): `User`, `Session`, `Device`, `DeviceInfo`,
   `Group`, `EnrollmentToken`, `MachineTask`, `TaskExecutionLog`, `Software`,
@@ -330,13 +339,27 @@ trás tem EF Core ou Argon2.
 - **`Interfaces/Repositories/`** — uma interface por agregado, cada uma só
   com os métodos que o caso de uso realmente precisa (não é CRUD genérico):
   `IUserRepository`, `IDeviceRepository`, `IGroupRepository`,
-  `IMachineTaskRepository`, `ISoftwareRepository`, `IAuditLogRepository`, `IEnrollmentTokenRepository`.
-- **`Models/`** — DTOs e modelos de requisição/resposta da aplicação.
-- **`UseCases/`** — orquestração e fluxos de negócio da aplicação.
+  `IMachineTaskRepository`, `ISoftwareRepository`, `IAuditLogRepository`,
+  `IEnrollmentTokenRepository`, `IDeviceDailyMetricsRepository`,
+  `IAlertRepository`, `INetworkGrowthRepository`. **Todas implementadas.**
+- **`Exceptions/`** — exceções de aplicação que a API traduz em status HTTP:
+  `InvalidCredentialsException`, `AccountDisabledException`,
+  `DeviceLimitReachedException`, `EnrollmentTokenInvalidException`.
+- **`Models/`** — records de requisição/resposta por caso de uso
+  (`LoginRequest`/`LoginResponse`, `EnrollDeviceRequest`/`Response`,
+  `DispatchTaskRequest`/`Response`, `CreateUserRequest`, …).
+- **`UseCases/`** — orquestração. Auth/usuários: `LoginUseCase`,
+  `CreateUserUseCase`, `SetUserActiveUseCase`. Agentes: `EnrollDeviceUseCase`,
+  `RecordDeviceHeartbeatUseCase`. Tarefas: `DispatchTaskUseCase`,
+  `CancelTaskUseCase`, `RecordCommandResultUseCase`.
+- **`DependencyInjection.cs`** — `AddApplication()` registra os use cases como
+  Scoped (todos dependem de `IUnitOfWork`, que é o `AppDbContext` scoped —
+  registrar como Singleton capturaria um DbContext morto entre requests).
 
-> Ninguém implementa essas interfaces ainda (é a próxima tarefa do Pedro/
-> Guilherme) — hoje elas só *existem como contrato*. É esperado que o Server
-> ainda não injete nada além do `AppDbContext`.
+> Leitura (listar devices, montar dashboard) ainda **não** tem use case: as
+> queries dependem da forma exata que cada tela consome, e criar um caso de uso
+> por consulta antes disso é adivinhação. O Server chama o repositório direto
+> nessas rotas até as telas fecharem o formato.
 
 #### `informE.Infrastructure` — onde a tecnologia mora
 
@@ -361,9 +384,26 @@ trás tem EF Core ou Argon2.
   (`AddInfrastructure(config)`) que registra tudo isso no container de DI.
   O `Server` chama essa única linha no `Program.cs` — ele não sabe (nem
   precisa saber) o que tem dentro.
-- **Ainda não implementado aqui** (próximas tarefas): `Argon2PasswordHasher`
-  (implementa `IPasswordHasher`), `JwtTokenService`, os repositórios
-  concretos, e os Hubs (`AgentHub`, `DashboardHub`).
+- **`Persistence/Repositories/`** — as 10 implementações concretas dos ports de
+  repositório. EF Core puro, LINQ, sem SQL à mão.
+- **`Security/`** — `PasswordHasher` (Argon2id via Konscious),
+  `JwtTokenService` (access + refresh), `JwtOptions` (bind da seção `Jwt` do
+  appsettings), `AgentAuthenticator` (valida a chave rotativa do agente).
+- **`Realtime/`** — o tempo real:
+  - `AgentHub` — RF05–08. O agente **não** usa JWT: autentica com a chave
+    rotativa apresentada no handshake, validada no `OnConnectedAsync` (por isso
+    o hub não tem `[Authorize]`). Recebe telemetria e resultado de comando.
+  - `DashboardHub` — só saída, autenticado por JWT (`[Authorize]`). O dashboard
+    consulta por REST e apenas **escuta** aqui.
+  - `EndpointConnectionRegistry` — `ConcurrentDictionary` em memória, Singleton.
+  - `SignalRDashboardNotifier` / `SignalRCommandDispatcher` — os adaptadores que
+    publicam via `IHubContext`.
+
+> **Por que os Hubs ficam aqui e não no Server:** `SignalRCommandDispatcher`
+> precisa de `IHubContext<AgentHub>`, ou seja, do tipo concreto do hub. Como o
+> Server depende da Infrastructure (e não o contrário), o hub tem que estar
+> nesta camada. Daí o `<FrameworkReference Include="Microsoft.AspNetCore.App" />`
+> no `.csproj`. O Server só faz o `MapHub<>` das rotas.
 
 #### `informE.Server` / `informE.Desktop` / `informE.Agent.Worker` — os executáveis
 

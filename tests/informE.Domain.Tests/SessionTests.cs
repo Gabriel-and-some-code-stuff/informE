@@ -2,49 +2,92 @@ using informE.Domain.Entities;
 
 namespace informE.Domain.Tests;
 
-// Placeholder — mesmo padrão do UserTests, entidade diferente.
 public class SessionTests
 {
     [Fact]
     public void Construtor_DeveIniciarComoAtiva()
     {
-        var session = new Session("192.168.0.10", DateTimeOffset.Now, "hash-fake", Guid.NewGuid());
-
-        Assert.True(session.IsActive);
+        Assert.True(NovaSessao().IsActive);
     }
 
     [Fact]
     public void Construtor_DeveDefinirLoginAt()
     {
         var antes = DateTimeOffset.Now;
-        var session = new Session("192.168.0.10", DateTimeOffset.Now, "hash-fake", Guid.NewGuid());
+        var session = NovaSessao();
         var depois = DateTimeOffset.Now;
 
         Assert.InRange(session.LoginAt, antes, depois);
     }
 
     [Fact]
-    public void Construtor_ExpiresAtDeveSerMaiorQueLoginAt()
+    public void Construtor_DeveUsarOExpiresAtInformado()
     {
-        var session = new Session("192.168.0.10", DateTimeOffset.Now, "hash-fake", Guid.NewGuid());
+        // Antes o construtor fixava Now.AddHours(6), o que fazia a sessão morrer
+        // antes do refresh token de 7 dias. Agora quem cria decide.
+        var expiraEm = DateTimeOffset.Now.AddDays(7);
 
-        Assert.True(session.ExpiresAt > session.LoginAt);
+        var session = new Session("192.168.0.10", expiraEm, "hash-fake", Guid.NewGuid());
+
+        Assert.Equal(expiraEm, session.ExpiresAt);
+    }
+
+    [Fact]
+    public void Construtor_LastSeenAtDeveNascerIgualAoLoginAt()
+    {
+        var session = NovaSessao();
+
+        Assert.Equal(session.LoginAt, session.LastSeenAt);
     }
 
     [Fact]
     public void Construtor_DeveDefinirDadosInformados()
     {
         var userId = Guid.NewGuid();
-        var lastSeenAt = DateTimeOffset.Now;
 
-        var session = new Session("192.168.0.10", lastSeenAt, "hash-fake", userId);
+        var session = new Session("192.168.0.10", DateTimeOffset.Now.AddDays(7), "hash-fake", userId, "Chrome — Windows 11");
 
         Assert.Equal("192.168.0.10", session.IpAddress);
-        Assert.Equal(lastSeenAt, session.LastSeenAt);
         Assert.Equal("hash-fake", session.RefreshTokenHash);
         Assert.Equal(userId, session.UserId);
+        Assert.Equal("Chrome — Windows 11", session.DeviceLabel);
     }
 
-    // TODO: quando Session.Revoke() existir, testar que IsActive vira false.
-    // TODO: quando Session.IsExpired() existir, testar com ExpiresAt no passado.
+    [Fact]
+    public void Revoke_DeveDesativarASessao()
+    {
+        var session = NovaSessao();
+
+        session.Revoke();
+
+        Assert.False(session.IsActive);
+    }
+
+    [Fact]
+    public void IsExpired_ComExpiresAtNoPassadoDeveSerTrue()
+    {
+        var session = new Session("192.168.0.10", DateTimeOffset.Now.AddMinutes(-1), "hash-fake", Guid.NewGuid());
+
+        Assert.True(session.IsExpired());
+    }
+
+    [Fact]
+    public void IsExpired_ComExpiresAtNoFuturoDeveSerFalse()
+    {
+        Assert.False(NovaSessao().IsExpired());
+    }
+
+    [Fact]
+    public void Touch_DeveAtualizarLastSeenAt()
+    {
+        var session = NovaSessao();
+        var depois = DateTimeOffset.Now.AddMinutes(5);
+
+        session.Touch(depois);
+
+        Assert.Equal(depois, session.LastSeenAt);
+    }
+
+    private static Session NovaSessao() =>
+        new("192.168.0.10", DateTimeOffset.Now.AddDays(7), "hash-fake", Guid.NewGuid());
 }
