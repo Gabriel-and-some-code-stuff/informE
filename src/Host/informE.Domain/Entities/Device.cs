@@ -27,8 +27,17 @@ public class Device
     public string Os { get; set; } = string.Empty;
     public string OsUser { get; set; } = string.Empty;
     public DateTimeOffset RegisteredAt { get; set; }
+
+    // Duas dimensões independentes — colunas "Conexão" e "Saúde" da tela de
+    // Equipamentos. Status responde "o agente fala com o Host?", Health responde
+    // "os recursos da máquina estão bem?".
     public EndpointStatus Status { get; set; } = EndpointStatus.Unknown;
+    public HealthStatus Health { get; set; } = HealthStatus.Erro;
     public DateTimeOffset? LastSeenAt { get; set; }
+
+    // Máquina do professor vs. do aluno na tela de Grupos. Designado pelo admin
+    // depois do enroll, não reportado pelo agente.
+    public DeviceRole Role { get; set; } = DeviceRole.Aluno;
 
     // Auth do agente: chave rotativa guardada com DPAPI no agente, hash aqui.
     public string AgentKeyHash { get; set; } = string.Empty;
@@ -170,23 +179,40 @@ public class Device
        }
     }
 
-    // Métodos de domínio — status do endpoint
-    public void MarkSeen(DateTimeOffset now)
+    public void AssignRole(DeviceRole role)
+    {
+        if (Enum.IsDefined(typeof(DeviceRole), role))
+            Role = role;
+    }
+
+    // Métodos de domínio — conexão e saúde
+    public void MarkSeen(DateTimeOffset now, HealthStatus health)
     {
         LastSeenAt = now;
         Status = EndpointStatus.Online;
+        Health = health;
     }
 
+    // Sem telemetria não há como avaliar saúde — a tela mostra "—" em
+    // RAM/Disco/Uptime e Saúde = Erro em toda linha Offline.
     public void MarkOffline()
     {
         Status = EndpointStatus.Offline;
+        Health = HealthStatus.Erro;
     }
 
-    // RF04: heartbeat recebido, mas uso de recurso acima do limiar aceitável —
-    // ainda está "vivo" (atualiza LastSeenAt), só não está saudável.
-    public void MarkDegraded(DateTimeOffset now)
+    // Limiares calibrados pelos dados da tela de Equipamentos: PC-05 com disco
+    // em 82% aparece como Aviso, PC-03 com disco em 90% aparece como Crítico.
+    // Recebe primitivos (não o TelemetryDto) para o Domain não depender de Contracts.
+    public static HealthStatus EvaluateHealth(float cpuPercent, float ramPercent, float diskPercent)
     {
-        LastSeenAt = now;
-        Status = EndpointStatus.Degraded;
+        var pior = Math.Max(cpuPercent, Math.Max(ramPercent, diskPercent));
+
+        return pior switch
+        {
+            >= 90f => HealthStatus.Critico,
+            >= 80f => HealthStatus.Aviso,
+            _ => HealthStatus.Saudavel
+        };
     }
 }

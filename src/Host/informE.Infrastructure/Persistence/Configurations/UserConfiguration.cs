@@ -16,6 +16,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.Email).HasMaxLength(60).IsRequired();
         builder.Property(user => user.PasswordHash).HasMaxLength(255).IsRequired();
         builder.Property(user => user.Role).HasConversion<string>().HasMaxLength(20); // enum como texto legível
+        builder.Property(user => user.IsActive).HasDefaultValue(true);
         builder.Property(user => user.CreatedAt).HasDefaultValueSql("now()");
 
         builder.HasIndex(user => user.Email).IsUnique();

@@ -5,5 +5,6 @@ public record CommandResultDto(
     Guid LogId,
     bool Succeeded,
     string Output,
-    DateTimeOffset ExecutedAt
+    DateTimeOffset ExecutedAt,
+    int DurationMs // medido pelo agente com Stopwatch — alimenta a coluna "Duração"
 );

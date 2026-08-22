@@ -13,7 +13,10 @@ public class MachineTaskConfiguration : IEntityTypeConfiguration<MachineTask>
         builder.Property(machine => machine.Id).HasDefaultValueSql("gen_random_uuid()");
 
         builder.Property(machine => machine.Name).HasMaxLength(45).IsRequired();
-        builder.Property(machine => machine.SourceScript).HasMaxLength(255).IsRequired();
+        // 255 não cabia: o script de Diagnóstico de Rede do catálogo passa de 400 chars.
+        builder.Property(machine => machine.SourceScript).HasMaxLength(4000).IsRequired();
+        builder.Property(machine => machine.Action).HasConversion<string>().HasMaxLength(30);
+        builder.Property(machine => machine.Kind).HasConversion<string>().HasMaxLength(20);
         builder.Property(machine => machine.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(machine => machine.ScheduledAt).HasDefaultValueSql("now()");
 
