@@ -16,6 +16,9 @@ public class User
     public UserRole Role { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 
+    // Coluna "Status" (Ativo/Inativo) da tela de Administração de Contas.
+    public bool IsActive { get; set; } = true;
+
     public ICollection<Session> Sessions { get; set; } = [];
     public ICollection<AuditLog> AuditLogs { get; set; } = [];
 
@@ -76,6 +79,15 @@ public class User
         if (ValidateEmail(email))
             Email = email;
     }
+
+    // Só troca o flag. A revogação das sessões ativas NÃO acontece aqui de
+    // propósito: depende das Sessions estarem carregadas, e um método de domínio
+    // que falha silencioso quando a coleção não veio no Include é uma armadilha.
+    // Quem desativa é responsável por revogar as sessões via IUserRepository —
+    // ver docs/politica-login-sessao.md §3.5.
+    public void Deactivate() => IsActive = false;
+
+    public void Activate() => IsActive = true;
 
     // Recebe o hash já calculado — a responsabilidade de hashar é do IPasswordHasher na Application.
     public void ChangePassword(string newHash)

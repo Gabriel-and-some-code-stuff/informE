@@ -12,6 +12,12 @@ public class TaskExecutionLog
     public string? OutputLog { get; set; }
     public DateTimeOffset ExecutedAt { get; set; }
 
+    // Coluna "Duração" da tela de Execuções. Medido pelo AGENTE (Stopwatch
+    // local), não calculado no servidor: o Host não sabe quando o agente
+    // realmente começou, só quando despachou. Null enquanto Pending/Queued —
+    // a tela mostra "—" nessas linhas.
+    public int? DurationMs { get; set; }
+
     public Guid MachineTaskId { get; set; }
     public MachineTask MachineTask { get; set; } = null!;
 

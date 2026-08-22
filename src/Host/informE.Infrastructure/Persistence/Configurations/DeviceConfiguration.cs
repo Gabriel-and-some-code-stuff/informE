@@ -18,6 +18,8 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.Property(device => device.Os).HasMaxLength(40).IsRequired();
         builder.Property(device => device.OsUser).HasMaxLength(40).IsRequired();
         builder.Property(device => device.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(device => device.Health).HasConversion<string>().HasMaxLength(20);
+        builder.Property(device => device.Role).HasConversion<string>().HasMaxLength(20);
         builder.Property(device => device.AgentKeyHash).HasMaxLength(255);
         builder.Property(device => device.RegisteredAt).HasDefaultValueSql("now()");
 

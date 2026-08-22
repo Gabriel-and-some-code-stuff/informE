@@ -3,13 +3,21 @@ using TaskStatus = informE.Domain.Enums.TaskStatus;
 
 namespace informE.Domain.Entities;
 
-// O disparo: "rodar este script nestes N endpoints".
+// O disparo: "rodar esta ação nestes N endpoints".
 public class MachineTask
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string SourceScript { get; set; } = string.Empty; // ponytail: inline por ora; extrair tabela SCRIPTS no sprint 3-4
+
+    // A ação escolhida no dropdown. É a fonte da verdade: SourceScript e Kind
+    // são derivados dela pelo catálogo, nunca vêm do cliente.
+    public MachineActionKind Action { get; set; }
+
+    // Script resolvido no momento do disparo. Persistido para auditoria — se o
+    // catálogo mudar depois, o log continua mostrando o que de fato rodou.
+    public string SourceScript { get; set; } = string.Empty;
     public ScriptKind Kind { get; set; }
+
     public DateTimeOffset ScheduledAt { get; set; }
     public TaskStatus Status { get; set; } = TaskStatus.Pending;
 
@@ -19,17 +27,18 @@ public class MachineTask
 
     public MachineTask() { }
 
-    // Construtor padrão
-
-    public MachineTask(string name, string sourceScript, ScriptKind kind, DateTimeOffset scheduledAt, TaskStatus status, Guid createdByUserId)
+    // Construtor padrão — recebe a AÇÃO, não o script. Isso torna impossível
+    // criar uma task com script arbitrário vindo da UI (RF14).
+    public MachineTask(string name, MachineActionKind action, DateTimeOffset scheduledAt, TaskStatus status, Guid createdByUserId)
     {
         if (ValidateName(name))
             Name = name;
 
-        if (ValidateSourceScript(sourceScript))
-            SourceScript = sourceScript;
+        var definition = MachineActionCatalog.Get(action);
+        Action = action;
+        SourceScript = definition.Script;
+        Kind = definition.ScriptKind;
 
-        Kind = kind;
         ScheduledAt = scheduledAt; // Hora não automática pois o usuário pode programar
 
         if (ValidateStatus(status))
@@ -46,14 +55,6 @@ public class MachineTask
 
         if (name.Length > 100)
             throw new ArgumentException("O nome da tarefa ultrapassou o limite de caracteres.");
-
-        return true;
-    }
-
-    private static bool ValidateSourceScript(string script)
-    {
-        if (string.IsNullOrWhiteSpace(script))
-            throw new ArgumentException("O script não pode ser vazio ou conter espaços.");
 
         return true;
     }
@@ -89,10 +90,12 @@ public class MachineTask
         Status = succeeded ? TaskStatus.Succeeded : TaskStatus.Failed;
     }
 
+    // Running É cancelável: a tela de Execuções mostra botão de parar na linha
+    // "Executando" (EX-2846). Só tarefa já finalizada não pode ser cancelada.
     public void Cancel()
     {
-        if (Status is TaskStatus.Running or TaskStatus.Succeeded or TaskStatus.Failed)
-            throw new InvalidOperationException("Não é possível cancelar uma tarefa em execução ou já finalizada.");
+        if (Status is TaskStatus.Succeeded or TaskStatus.Failed or TaskStatus.Canceled)
+            throw new InvalidOperationException("Não é possível cancelar uma tarefa já finalizada.");
 
         Status = TaskStatus.Canceled;
     }

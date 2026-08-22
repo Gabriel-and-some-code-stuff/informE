@@ -21,7 +21,7 @@ public class RecordCommandResultUseCase(
     {
         var logStatus = result.Succeeded ? TaskStatus.Succeeded : TaskStatus.Failed;
 
-        await machineTaskRepository.UpdateLogStatusAsync(result.LogId, logStatus, result.Output, result.ExecutedAt, ct);
+        await machineTaskRepository.UpdateLogStatusAsync(result.LogId, logStatus, result.Output, result.ExecutedAt, result.DurationMs, ct);
 
         var task = await machineTaskRepository.GetByIdAsync(result.TaskId, ct)
             ?? throw new InvalidOperationException($"MachineTask {result.TaskId} não encontrado.");
