@@ -40,10 +40,17 @@ public static class DependencyInjection
         services.AddScoped<IEnrollmentTokenRepository, EnrollmentTokenRepository>();
         services.AddScoped<IGroupRepository, GroupRepository>();
         services.AddScoped<IMachineTaskRepository, MachineTaskRepository>();
+        services.AddScoped<ISoftwareRepository, SoftwareRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IDeviceDailyMetricsRepository, DeviceDailyMetricsRepository>();
+        services.AddScoped<IAlertRepository, AlertRepository>();
+        services.AddScoped<INetworkGrowthRepository, NetworkGrowthRepository>();
 
-        // IDashboardNotifier e ICommandDispatcher ainda não têm implementação --
-        // dependem de AgentHub/DashboardHub (SignalR), que ainda não existem no Server.
-        // Registrar aqui assim que os hubs forem criados (feat/agent-hub, feat/dashboard-hub).
+        // Adaptadores SignalR dos ports de tempo real. Os Hubs em si são mapeados
+        // pelo Server (app.MapHub<AgentHub>/<DashboardHub>) — aqui só entram as
+        // implementações que publicam via IHubContext.
+        services.AddScoped<IDashboardNotifier, SignalRDashboardNotifier>();
+        services.AddScoped<ICommandDispatcher, SignalRCommandDispatcher>();
 
         return services;
     }

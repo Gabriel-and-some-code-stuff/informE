@@ -6,13 +6,23 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Necessário para os Hubs SignalR (AgentHub/DashboardHub) e IHubContext.
+         ARCHITECTURE.md §2 coloca os hubs nesta camada, não no Server: as
+         implementações de ICommandDispatcher/IDashboardNotifier precisam do tipo
+         concreto do Hub para IHubContext<THub>, e o Server depende da
+         Infrastructure (não o contrário). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.11" />
+    <!-- Options.ConfigurationExtensions saiu daqui: o FrameworkReference
+         Microsoft.AspNetCore.App abaixo já o fornece, e mantê-lo virava NU1510. -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
   </ItemGroup>
