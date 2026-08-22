@@ -128,14 +128,29 @@ informE/
 
 ```csharp
 public enum UserRole   { Viewer, Admin, SuperAdmin }          // ROLES.name ENUM('V','A','SA')
-public enum TaskStatus { Pending, Queued, Running, Succeeded, Failed, Canceled } // hoje VARCHAR no schema
+public enum TaskStatus { Pending, Queued, Running, Succeeded, Failed, Canceled } // devices_tasks.status, string no banco
 public enum RamType    { DDR3, DDR4 }                          // INFO_DEVICES.ram_type
 public enum StorageType{ HD, SSD }                             // INFO_DEVICES.storage_type
-public enum EndpointStatus { Online, Offline, Unknown }        // SEM coluna hoje — derivar do connection registry/last_seen
-public enum ScriptKind { PowerShell, Batch }                   // só se extrairmos tabela SCRIPTS (hoje inline em TASKS.source_script)
-public enum AlertType  { HighRam, DiskFull, HighNetwork, HighPing, PendingUpdates,
-                         ServiceStopped, HighCpuProcess, MissingProcess, FirewallOff } // só se criarmos ALERTS
+public enum ScriptKind { PowerShell, Batch }                   // tasks.kind — derivado do MachineActionCatalog
+public enum AlertType  { HighCpu, HighRam, DiskFull, HighNetwork, HighPing, PendingUpdates,
+                         ServiceStopped, HighCpuProcess, MissingProcess, FirewallOff }
+
+// As DUAS dimensões de estado do endpoint — colunas separadas na tela de
+// Equipamentos, não um enum só. Um device pode ser Online + Critico.
+public enum EndpointStatus { Online, Offline, Unknown }        // devices.status — "Conexão"
+public enum HealthStatus   { Saudavel, Aviso, Critico, Erro }  // devices.health — "Saúde"
+
+public enum DeviceRole       { Aluno, Professor }              // devices.role — seção da tela de Grupos
+public enum MachineActionKind { LimpezaDeDisco, AtualizacaoWinGet, AtualizacaoWindows,
+                                Reinicializacao, Desligamento, DiagnosticoDeRede } // tasks.action
 ```
+
+> **`MachineActionCatalog`** (`informE.Domain/MachineActionCatalog.cs`) traduz
+> `MachineActionKind` → script + `ScriptKind` + nome de exibição. O construtor de
+> `MachineTask` resolve pelo catálogo, então **é impossível criar uma task com
+> script arbitrário vindo da UI** — o cliente manda a ação, nunca o script (RF14).
+> `tasks.source_script` continua persistido, mas agora é o script *resolvido*,
+> guardado para auditoria: se o catálogo mudar, o log ainda mostra o que rodou.
 
 ### 3.2 Entidades (`informE.Domain/Entities`)
 

@@ -2,6 +2,7 @@ using informE.Application.Interfaces;
 using informE.Application.Interfaces.Repositories;
 using informE.Application.Models;
 using informE.Contracts.Dtos;
+using informE.Domain;
 using informE.Domain.Entities;
 using TaskStatus = informE.Domain.Enums.TaskStatus;
 
@@ -25,16 +26,21 @@ public class DispatchTaskUseCase(
         if (request.TargetDeviceIds.Count == 0)
             throw new ArgumentException("A tarefa precisa de ao menos um dispositivo alvo.");
 
-        var task = new MachineTask(request.Name, request.SourceScript, request.Kind, request.ScheduledAt, TaskStatus.Pending, request.CreatedByUserId);
+        // O construtor resolve o script pelo catálogo — nada de script do cliente.
+        var task = new MachineTask(request.Name, request.Action, request.ScheduledAt, TaskStatus.Pending, request.CreatedByUserId);
 
         // Id gerado no cliente (não pelo gen_random_uuid() do Postgres) porque
         // os TaskExecutionLog abaixo precisam do MachineTaskId ANTES do primeiro
         // SaveChanges — o default do banco só resolveria depois do insert.
         task.Id = Guid.NewGuid();
 
+        // Nome de exibição da ação ("Atualização WinGet") — é o que a coluna
+        // "Ação Executada" da tela de Execuções mostra.
+        var actionName = MachineActionCatalog.Get(request.Action).DisplayName;
+
         var logs = request.TargetDeviceIds
             .Select(deviceId => new TaskExecutionLog(
-                actionType: request.Kind.ToString(),
+                actionType: actionName,
                 status: TaskStatus.Pending,
                 outputLog: null,
                 executedAt: DateTimeOffset.Now, // placeholder — sobrescrito pelo ExecutedAt real quando o resultado chegar (ver RecordCommandResultUseCase)

@@ -14,7 +14,10 @@ public class TaskExecutionLogConfiguration : IEntityTypeConfiguration<TaskExecut
 
         builder.Property(task => task.ActionType).HasMaxLength(45).IsRequired();
         builder.Property(task => task.Status).HasConversion<string>().HasMaxLength(20);
-        builder.Property(task => task.OutputLog).HasMaxLength(255);
+        // Sem HasMaxLength: vira `text` no Postgres. RF09 pede stdout+stderr, e
+        // 255 chars truncava a saída de qualquer script real (o Diagnóstico de
+        // Rede sozinho imprime tabela de adaptadores + DNS).
+        builder.Property(task => task.OutputLog);
         builder.Property(task => task.ExecutedAt).HasDefaultValueSql("now()");
 
         // id_device: liga o log à máquina (a coluna que faltava no schema original).

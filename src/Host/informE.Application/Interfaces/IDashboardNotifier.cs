@@ -8,6 +8,8 @@ public interface IDashboardNotifier
 {
     Task TelemetryAsync(TelemetryDto telemetry, CancellationToken ct = default);
     Task AlertAsync(AlertDto alert, CancellationToken ct = default);
-    Task DeviceStatusChangedAsync(Guid deviceId, EndpointStatus status, CancellationToken ct = default);
+    // Conexão e saúde são colunas separadas na tela de Equipamentos — as duas
+    // mudam no mesmo heartbeat, então viajam no mesmo evento.
+    Task DeviceStatusChangedAsync(Guid deviceId, EndpointStatus status, HealthStatus health, CancellationToken ct = default);
     Task TaskProgressAsync(Guid taskId, Domain.Enums.TaskStatus status, CancellationToken ct = default);
 }
