@@ -21,6 +21,9 @@ public class UserRepository(AppDbContext db) : IUserRepository
     public Task<List<Session>> GetActiveSessionsAsync(Guid userId, CancellationToken ct = default) =>
         db.Sessions.Where(s => s.UserId == userId && s.IsActive).ToListAsync(ct);
 
+    public Task<Session?> GetSessionByIdAsync(Guid sessionId, CancellationToken ct = default) =>
+        db.Sessions.FirstOrDefaultAsync(s => s.Id == sessionId, ct);
+
     // Bypass do Domain confirmado com o time -- update direto por Id, sem
     // carregar a entidade. Session.Revoke() fica sem uso neste caminho.
     public Task RevokeSessionAsync(Guid sessionId, CancellationToken ct = default) =>

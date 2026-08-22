@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddScoped<LoginUseCase>();
         services.AddScoped<CreateUserUseCase>();
         services.AddScoped<SetUserActiveUseCase>();
+        services.AddScoped<RevokeSessionUseCase>();
 
         services.AddScoped<EnrollDeviceUseCase>();
         services.AddScoped<RecordDeviceHeartbeatUseCase>();

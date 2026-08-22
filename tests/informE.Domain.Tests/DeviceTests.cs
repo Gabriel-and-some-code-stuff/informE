@@ -49,6 +49,41 @@ public class DeviceTests
         Assert.Equal(DeviceRole.Aluno, NovoDevice().Role);
     }
 
+    [Fact]
+    public void MarkSeen_DeveGuardarOUptimeDoSnapshot()
+    {
+        var device = NovoDevice();
+
+        device.MarkSeen(DateTimeOffset.Now, HealthStatus.Saudavel, uptimeSeconds: 302_400); // 3d 12h
+
+        Assert.Equal(302_400, device.UptimeSeconds);
+    }
+
+    [Fact]
+    public void MarkSeen_SemUptimeNaoDeveApagarOValorAnterior()
+    {
+        // O OnConnectedAsync do AgentHub marca Online antes de existir snapshot;
+        // não pode zerar o uptime que já estava lá.
+        var device = NovoDevice();
+        device.MarkSeen(DateTimeOffset.Now, HealthStatus.Saudavel, uptimeSeconds: 1000);
+
+        device.MarkSeen(DateTimeOffset.Now, HealthStatus.Saudavel);
+
+        Assert.Equal(1000, device.UptimeSeconds);
+    }
+
+    [Fact]
+    public void MarkOffline_DeveLimparOUptime()
+    {
+        // Máquina desligada não tem uptime — a tela mostra "—" nessas linhas.
+        var device = NovoDevice();
+        device.MarkSeen(DateTimeOffset.Now, HealthStatus.Saudavel, uptimeSeconds: 1000);
+
+        device.MarkOffline();
+
+        Assert.Null(device.UptimeSeconds);
+    }
+
     private static Device NovoDevice() =>
         new("PC-01", "192.168.1.10", "AA:BB:CC:DD:EE:FF", "Windows 11", "aluno", "hash-fake", null, null);
 }

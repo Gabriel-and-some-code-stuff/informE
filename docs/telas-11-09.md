@@ -146,12 +146,12 @@ Também mock, conforme a lista de funcionalidades acordada:
 
 | Lacuna | Por que ficou de fora |
 |---|---|
-| **Uptime ao vivo** (`3d 12h` em Equipamentos) | RF02 diz só CPU/RAM/disco. `DeviceDailyMetrics.UptimeSeconds` é agregado **diário**, não valor corrente. Precisa decidir: o agente reporta uptime no heartbeat (campo novo no `TelemetryDto`) ou a tela deriva de `LastSeenAt`? |
-| **ID legível** (`EX-2847`, `USR-0001`) | Hoje é `Guid`. ID sequencial legível precisa de estratégia (sequence do Postgres? contador por tabela?) e a decisão de manter os dois lados (Guid interno + código legível). |
-| **Ações com parâmetro** ("Instalação de Software", "Backup Automático") | Aparecem na tela de Execuções mas exigem argumento (qual pacote? destino?). Argumento de ação é um modelo que ainda não existe — o catálogo hoje só tem ações sem parâmetro. |
+| ~~**Uptime ao vivo**~~ | ✅ **RESOLVIDO 22/08.** O agente manda snapshot ao abrir e a cada 30 min. `TelemetryDto.UptimeSeconds` + `Device.UptimeSeconds` (valor corrente, não histórico). `MarkOffline()` limpa — máquina desligada não tem uptime. |
+| ~~**ID legível**~~ | ✅ **RESOLVIDO 22/08.** Guid + código. Sequence do Postgres gerando no INSERT: `EX-1000`, `USR-0001`. Guid continua a chave (anti-enumeração), o código é o rótulo humano. Verificado com insert real no banco. |
+| ~~**Ações com parâmetro**~~ | ✅ **FORA DO MVP 22/08.** Decisão do time: "não vai ter no MVP, nosso objetivo é rodar comandos predefinidos em massa". As duas saem da tela. |
 | **Campos de perfil** (Cargo, Organização, Fuso horário) | Visíveis em "Meu Perfil" / "Informações Pessoais", nenhum existe em `User`. Aditivos e baratos, mas nenhuma tela de 11/09 *depende* deles funcionando. |
 | **Viewer escopado a um grupo** ("Dashboard \| Grupo 3") | `docs/politica-login-sessao.md` já classificou escopo por Group como Fase 2 — `Group.OwnerId` é 1-para-1 hoje, escopo real exige associação N-N. Para 11/09 o Viewer pode ter o grupo fixo no mock. |
-| **Taxonomia do gráfico de alertas** (Hardware, Armazenamento, Rede, Offline, Agente, Windows) | 6 categorias na legenda vs. 10 valores técnicos em `AlertType`. Precisa de um mapa categoria→tipos, ou de um campo de categoria. Como o gráfico é mock, não bloqueia. |
+| ~~**Taxonomia do gráfico de alertas**~~ | ✅ **RESOLVIDO 22/08.** As 6 faixas vêm do documento de análise do Figma. `AlertCategory` + `AlertCategoryMap` no Domain, derivado na leitura (sem coluna nova — `alerts.type` guarda o tipo técnico). Entrou `AlertType.DeviceOffline`, que faltava pra faixa Offline. |
 | **2FA** ("Autenticação em 2 fatores: Não configurado") | Já classificado como Fase 2 em `docs/politica-login-sessao.md`. Como a tela mostra justamente o estado *"não configurado"*, o mock é fiel ao MVP. |
 | **RN03 — Offline por timeout** | É ausência de evento, não reação a evento. Precisa de `BackgroundService` varrendo `Device.LastSeenAt`; não cabe em use case reativa. |
 | **RF11 — controle de concorrência** | Responsabilidade do Agent, não do Host. |
@@ -172,3 +172,65 @@ cada). Dá ~3h por tela, incluindo aprender Blazor.
 A decisão de deixar Dashboard/Grupos/Chamados como mock é o que torna isso
 viável — as telas ficam prontas visualmente e só Execução Remota + Login/CRUD
 precisam de backend real ligado.
+
+---
+
+## Rodada de comentários do Figma — 22/08
+
+Comentários #227–#243, mapeados por tela.
+
+### O que mudou de decisão
+
+**Chamados sai do dashboard.** Comentários #228 e #229 dizem literalmente
+"tirar chamados". A decisão anterior era manter como mock no frontend — agora é
+**remover** do Dashboard (BigNumber + painel "Chamados Recentes"). A Central de
+Suporte continua existindo como tela do Viewer, mas o Dashboard do Admin não
+mostra mais chamado.
+
+**Admin não cria Admin.** O documento de análise do Figma diz "o ADMIN pode
+criar ADMIN E VIEWER", mas foi corrigido pelo time: **Super Admin cria Admin e
+Viewer; Admin cria somente Viewer.** Isso confirma o que a política já dizia —
+ver `politica-login-sessao.md §1`, agora com a matriz explícita.
+
+### O que virou código
+
+| Comentário | O que pedia | O que entrou |
+|---|---|---|
+| #242 | "desconectar sessão/dispositivo, em cada um deles" | `RevokeSessionUseCase` — dono revoga a própria; Admin/SuperAdmin revogam de terceiro (é o que destrava alguém preso no limite de 3 dispositivos). Idempotente. |
+| #241 | "informações de acesso: ip da máquina + qdo o último login foi efetuado" | Já existia: `Session.IpAddress` e `Session.LoginAt`. Nada a fazer no backend. |
+| Doc Figma | "na Ação ter uma lista das ações, apresentar uma breve descrição" | `MachineActionDefinition.Description` — uma frase por ação, alimentando o dropdown. |
+| Doc Figma | "Em vez de Dispositivo de destino, colocar dispositivos **ou grupo** de destino" | `DispatchTaskRequest.TargetGroupIds`. O use case une dispositivo + grupo num `HashSet`, então máquina que aparece nas duas listas não recebe o comando duas vezes. |
+| Doc Figma | "PADRÕES DE ALERTA" (6 faixas) | `AlertCategory` + `AlertCategoryMap`. |
+| Doc Figma | "precisamos de um setor que diga se a máquina está LIGADA ou NÃO. no STATUS subdivisões que definam o estado atual" | Confirma a separação Conexão × Saúde que já foi feita. |
+
+### ⚠️ Precisa de decisão: "esqueci a senha" (#227)
+
+O comentário pede uma tela nova de recuperação de senha. **Não implementei
+porque não dá pra decidir sozinho:** o informE é on-premise numa rede de escola,
+e auto-atendimento de senha exige um canal de entrega.
+
+- **Se houver SMTP disponível na rede do cliente:** token de reset com validade
+  curta, enviado por e-mail. É o fluxo padrão.
+- **Se não houver** (provável numa Etec): a tela não pode ser self-service. Vira
+  "procure um administrador", e o reset é feito pelo Admin gerando senha
+  temporária — que é o que `politica-login-sessao.md §1` já descreve.
+
+A escolha muda a tela e o backend. Preciso saber se existe SMTP acessível.
+
+### Achados do documento de análise ainda não endereçados
+
+Todos fora do escopo do MVP até decisão em contrário:
+
+- **"PROCESSOS DE EXECUÇÃO: armazenar histórico de 1h-2h dos processos rodando
+  em cada máquina"** — entidade nova, nada parecido existe.
+- **"Ter um botão para cancelar a execução e um para interromper caso já esteja
+  rodando"** — são duas ações distintas. `CancelTaskUseCase` cobre as duas do
+  lado do Host, mas **interromper de verdade** exige um método novo no contrato
+  `IAgentClient` (hoje só tem `RunCommand` e `RotateKey`).
+- **"clique no estado → logs → scripts"** — fluxo de navegação que exige ligar
+  alerta ao log específico. Nenhuma FK entre `Alert` e `TaskExecutionLog` hoje.
+- **"Botão para excluir os logs" + retenção configurável (1, 3, 5 dias)** —
+  `PurgeOlderThanAsync` já existe para métricas; auditoria não tem equivalente.
+- **"média de softwares por máquina"** em vez de total — questão de consulta.
+- **"quem abre o chamado são os visualizadores (professores)"** — relevante só
+  se Chamados virar real.

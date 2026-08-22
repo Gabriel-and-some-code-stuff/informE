@@ -35,6 +35,11 @@ public class Device
     public HealthStatus Health { get; set; } = HealthStatus.Erro;
     public DateTimeOffset? LastSeenAt { get; set; }
 
+    // Coluna "Uptime" da tela de Equipamentos. Valor CORRENTE, sobrescrito a cada
+    // snapshot do agente (a cada 30 min) — não é histórico. Null enquanto a
+    // máquina nunca reportou; a tela mostra "—" nessas linhas.
+    public int? UptimeSeconds { get; set; }
+
     // Máquina do professor vs. do aluno na tela de Grupos. Designado pelo admin
     // depois do enroll, não reportado pelo agente.
     public DeviceRole Role { get; set; } = DeviceRole.Aluno;
@@ -186,19 +191,25 @@ public class Device
     }
 
     // Métodos de domínio — conexão e saúde
-    public void MarkSeen(DateTimeOffset now, HealthStatus health)
+    // uptimeSeconds é opcional porque a conexão do agente (OnConnectedAsync) marca
+    // Online antes de existir snapshot; o valor chega na primeira telemetria.
+    public void MarkSeen(DateTimeOffset now, HealthStatus health, int? uptimeSeconds = null)
     {
         LastSeenAt = now;
         Status = EndpointStatus.Online;
         Health = health;
+
+        if (uptimeSeconds is >= 0)
+            UptimeSeconds = uptimeSeconds;
     }
 
-    // Sem telemetria não há como avaliar saúde — a tela mostra "—" em
+    // Sem telemetria não há como avaliar saúde nem uptime — a tela mostra "—" em
     // RAM/Disco/Uptime e Saúde = Erro em toda linha Offline.
     public void MarkOffline()
     {
         Status = EndpointStatus.Offline;
         Health = HealthStatus.Erro;
+        UptimeSeconds = null;
     }
 
     // Limiares calibrados pelos dados da tela de Equipamentos: PC-05 com disco
