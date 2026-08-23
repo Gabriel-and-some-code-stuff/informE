@@ -25,6 +25,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Sequences dos códigos legíveis (EX-2847, USR-0001). Sequence do Postgres
+        // em vez de contador na aplicação: o banco garante unicidade sem race entre
+        // requests concorrentes, e o valor é gerado no próprio INSERT.
+        modelBuilder.HasSequence<int>("task_code_seq").StartsAt(1000);
+        modelBuilder.HasSequence<int>("user_code_seq").StartsAt(1);
+
         // Aplica todas as classes IEntityTypeConfiguration deste assembly.
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         base.OnModelCreating(modelBuilder);

@@ -31,8 +31,16 @@ política abaixo diferencia por papel — ver Seção 4 para o detalhamento da m
 
 | Quem | Pode gerenciar (CRUD) | Pode ver senha? |
 |---|---|---|
-| Super Admin | Qualquer perfil, inclusive Administradores | Nunca |
-| Administrador | Usuários Comuns desta instância | Nunca |
+| Super Admin | Cria e gerencia **Administrador** e **Usuário Comum** | Nunca |
+| Administrador | Cria e gerencia **apenas Usuário Comum** | Nunca |
+| Usuário Comum | Ninguém | Nunca |
+
+> **Administrador não promove ninguém ao próprio nível.** Só o Super Admin cria
+> Administrador. Implementado em `CreateUserUseCase.PodeCriar` e coberto por
+> teste (a matriz inteira, permitido e recusado).
+>
+> Em aberto: Super Admin pode criar outro Super Admin? Hoje **não** — a regra
+> ditada foi "Admin e Viewer". É uma linha se mudar.
 
 Todo reset de senha feito por terceiros (Super Admin sobre Admin, ou Admin sobre
 Usuário Comum) gera uma **senha temporária ou link de definição** — a senha atual do

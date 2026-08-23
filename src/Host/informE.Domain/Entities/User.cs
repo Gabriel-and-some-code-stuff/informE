@@ -10,6 +10,11 @@ public class User
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public Guid Id { get; set; }
+
+    // "ID da conta: USR-0001" na tela de Meu Perfil. Mesma ideia do MachineTask.Code:
+    // Guid é a chave, isto é o rótulo humano.
+    public string Code { get; set; } = string.Empty;
+
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty; // Argon2id via IPasswordHasher

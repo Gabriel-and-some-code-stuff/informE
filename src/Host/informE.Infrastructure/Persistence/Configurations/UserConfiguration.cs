@@ -12,6 +12,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasKey(user => user.Id);
         builder.Property(user => user.Id).HasDefaultValueSql("gen_random_uuid()");
 
+        // lpad pra sair "USR-0001" e não "USR-1" — a tela mostra 4 dígitos.
+        builder.Property(user => user.Code)
+            .HasMaxLength(20)
+            .HasDefaultValueSql("'USR-' || lpad(nextval('user_code_seq')::text, 4, '0')")
+            .ValueGeneratedOnAdd();
+        builder.HasIndex(user => user.Code).IsUnique();
+
         builder.Property(user => user.Username).HasMaxLength(25).IsRequired();
         builder.Property(user => user.Email).HasMaxLength(60).IsRequired();
         builder.Property(user => user.PasswordHash).HasMaxLength(255).IsRequired();

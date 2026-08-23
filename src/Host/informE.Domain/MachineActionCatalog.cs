@@ -7,6 +7,7 @@ namespace informE.Domain;
 public record MachineActionDefinition(
     MachineActionKind Kind,
     string DisplayName,
+    string Description, // "apresentar uma breve descrição" no dropdown de Nova Execução
     ScriptKind ScriptKind,
     string Script
 );
@@ -26,6 +27,7 @@ public static class MachineActionCatalog
         [MachineActionKind.LimpezaDeDisco] = new(
             MachineActionKind.LimpezaDeDisco,
             "Limpeza de Disco",
+            "Apaga arquivos temporários do usuário e do Windows. Não toca em documentos.",
             ScriptKind.PowerShell,
             """
             $alvos = @($env:TEMP, "$env:SystemRoot\Temp")
@@ -40,12 +42,14 @@ public static class MachineActionCatalog
         [MachineActionKind.AtualizacaoWinGet] = new(
             MachineActionKind.AtualizacaoWinGet,
             "Atualização WinGet",
+            "Atualiza todos os programas instalados que o WinGet gerencia, em silêncio.",
             ScriptKind.PowerShell,
             "winget upgrade --all --silent --accept-source-agreements --accept-package-agreements"),
 
         [MachineActionKind.AtualizacaoWindows] = new(
             MachineActionKind.AtualizacaoWindows,
             "Atualização do Windows",
+            "Dispara busca, download e instalação de atualizações do Windows.",
             ScriptKind.PowerShell,
             """
             # UsoClient nao devolve progresso — dispara e o resultado real
@@ -59,6 +63,7 @@ public static class MachineActionCatalog
         [MachineActionKind.Reinicializacao] = new(
             MachineActionKind.Reinicializacao,
             "Reinicialização",
+            "Reinicia a máquina em 30 segundos, avisando quem estiver usando.",
             ScriptKind.PowerShell,
             // Delay pro agente conseguir confirmar o resultado antes da máquina cair.
             "shutdown /r /t 30 /c \"Reinicializacao agendada pelo informE\""),
@@ -66,12 +71,14 @@ public static class MachineActionCatalog
         [MachineActionKind.Desligamento] = new(
             MachineActionKind.Desligamento,
             "Desligamento",
+            "Desliga a máquina em 30 segundos, avisando quem estiver usando.",
             ScriptKind.PowerShell,
             "shutdown /s /t 30 /c \"Desligamento agendado pelo informE\""),
 
         [MachineActionKind.DiagnosticoDeRede] = new(
             MachineActionKind.DiagnosticoDeRede,
             "Diagnóstico de Rede",
+            "Coleta adaptadores ativos, teste de gateway e resolução de DNS.",
             ScriptKind.PowerShell,
             """
             Write-Output "=== Adaptadores ativos ==="

@@ -12,4 +12,8 @@ public enum AlertType
     HighCpuProcess,
     MissingProcess,
     FirewallOff,
+
+    // A legenda do gráfico "Histórico de Alertas" tem a faixa "Offline (cinza)",
+    // e nenhum tipo existente cobria "a máquina parou de responder".
+    DeviceOffline,
 }

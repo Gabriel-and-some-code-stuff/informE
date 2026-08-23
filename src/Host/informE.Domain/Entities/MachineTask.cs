@@ -7,6 +7,12 @@ namespace informE.Domain.Entities;
 public class MachineTask
 {
     public Guid Id { get; set; }
+
+    // Código legível pro humano ("EX-2847" na coluna ID da tela de Execuções).
+    // Gerado pelo banco via sequence — o Guid continua sendo a chave de verdade
+    // (anti-enumeração); este é só o rótulo que o técnico fala no telefone.
+    public string Code { get; set; } = string.Empty;
+
     public string Name { get; set; } = string.Empty;
 
     // A ação escolhida no dropdown. É a fonte da verdade: SourceScript e Kind

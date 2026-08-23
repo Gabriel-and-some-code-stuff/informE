@@ -18,12 +18,15 @@ namespace informE.Application.UseCases;
 // não implementado aqui.
 public class DispatchTaskUseCase(
     IMachineTaskRepository machineTaskRepository,
+    IDeviceRepository deviceRepository,
     ICommandDispatcher commandDispatcher,
     IUnitOfWork unitOfWork)
 {
     public async Task<DispatchTaskResponse> ExecuteAsync(DispatchTaskRequest request, CancellationToken ct = default)
     {
-        if (request.TargetDeviceIds.Count == 0)
+        var alvos = await ResolverAlvosAsync(request, ct);
+
+        if (alvos.Count == 0)
             throw new ArgumentException("A tarefa precisa de ao menos um dispositivo alvo.");
 
         // O construtor resolve o script pelo catálogo — nada de script do cliente.
@@ -38,7 +41,7 @@ public class DispatchTaskUseCase(
         // "Ação Executada" da tela de Execuções mostra.
         var actionName = MachineActionCatalog.Get(request.Action).DisplayName;
 
-        var logs = request.TargetDeviceIds
+        var logs = alvos
             .Select(deviceId => new TaskExecutionLog(
                 actionType: actionName,
                 status: TaskStatus.Pending,
@@ -67,5 +70,22 @@ public class DispatchTaskUseCase(
         }
 
         return new DispatchTaskResponse(task.Id, logs.Count);
+    }
+
+    // Une dispositivos escolhidos um a um + os dispositivos dos grupos escolhidos.
+    // O HashSet garante que máquina presente nas duas listas não receba o comando
+    // duas vezes (nem gere dois TaskExecutionLog).
+    private async Task<List<Guid>> ResolverAlvosAsync(DispatchTaskRequest request, CancellationToken ct)
+    {
+        var alvos = new HashSet<Guid>(request.TargetDeviceIds);
+
+        foreach (var groupId in request.TargetGroupIds ?? [])
+        {
+            var doGrupo = await deviceRepository.ListByGroupAsync(groupId, ct);
+            foreach (var device in doGrupo)
+                alvos.Add(device.Id);
+        }
+
+        return [.. alvos];
     }
 }

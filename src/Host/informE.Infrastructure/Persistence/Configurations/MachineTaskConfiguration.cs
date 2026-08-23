@@ -12,6 +12,13 @@ public class MachineTaskConfiguration : IEntityTypeConfiguration<MachineTask>
         builder.HasKey(machine => machine.Id);
         builder.Property(machine => machine.Id).HasDefaultValueSql("gen_random_uuid()");
 
+        // Gerado no INSERT pelo banco; EF omite da query e lê o valor de volta.
+        builder.Property(machine => machine.Code)
+            .HasMaxLength(20)
+            .HasDefaultValueSql("'EX-' || nextval('task_code_seq')")
+            .ValueGeneratedOnAdd();
+        builder.HasIndex(machine => machine.Code).IsUnique();
+
         builder.Property(machine => machine.Name).HasMaxLength(45).IsRequired();
         // 255 não cabia: o script de Diagnóstico de Rede do catálogo passa de 400 chars.
         builder.Property(machine => machine.SourceScript).HasMaxLength(4000).IsRequired();
