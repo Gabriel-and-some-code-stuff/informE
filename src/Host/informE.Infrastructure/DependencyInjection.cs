@@ -1,5 +1,6 @@
 using informE.Application.Interfaces;
 using informE.Application.Interfaces.Repositories;
+using informE.Infrastructure.Email;
 using informE.Infrastructure.Persistence;
 using informE.Infrastructure.Persistence.Repositories;
 using informE.Infrastructure.Realtime;
@@ -28,7 +29,9 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
+        services.Configure<SmtpOptions>(config.GetSection(SmtpOptions.SectionName));
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAgentAuthenticator, AgentAuthenticator>();
 
@@ -45,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IDeviceDailyMetricsRepository, DeviceDailyMetricsRepository>();
         services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<INetworkGrowthRepository, NetworkGrowthRepository>();
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 
         // Adaptadores SignalR dos ports de tempo real. Os Hubs em si são mapeados
         // pelo Server (app.MapHub<AgentHub>/<DashboardHub>) — aqui só entram as

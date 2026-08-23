@@ -28,6 +28,7 @@ public class CreateUserUseCaseTests
 
     // SuperAdmin cria Admin e Viewer. Admin cria SOMENTE Viewer.
     [Theory]
+    [InlineData(UserRole.SuperAdmin, UserRole.SuperAdmin)]
     [InlineData(UserRole.SuperAdmin, UserRole.Admin)]
     [InlineData(UserRole.SuperAdmin, UserRole.Viewer)]
     [InlineData(UserRole.Admin, UserRole.Viewer)]
@@ -42,7 +43,6 @@ public class CreateUserUseCaseTests
     [Theory]
     [InlineData(UserRole.Admin, UserRole.Admin)]        // Admin não promove ao próprio nível
     [InlineData(UserRole.Admin, UserRole.SuperAdmin)]   // nem acima
-    [InlineData(UserRole.SuperAdmin, UserRole.SuperAdmin)] // regra ditada foi "Admin e Viewer"
     [InlineData(UserRole.Viewer, UserRole.Viewer)]      // Viewer não cria ninguém
     [InlineData(UserRole.Viewer, UserRole.Admin)]
     public async Task Deve_recusar_o_que_esta_fora_da_regra(UserRole criador, UserRole alvo)

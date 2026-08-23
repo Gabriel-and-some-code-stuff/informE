@@ -13,18 +13,14 @@ public class CreateUserUseCase(
     IPasswordHasher passwordHasher,
     IUnitOfWork unitOfWork)
 {
-    // SuperAdmin cria Admin e Viewer. Admin cria SOMENTE Viewer.
+    // SuperAdmin cria qualquer papel, inclusive outro SuperAdmin.
+    // Admin cria SOMENTE Viewer — não promove ninguém ao próprio nível.
     //
     // O documento de análise do Figma diz "o ADMIN pode criar ADMIN E VIEWER",
-    // mas isso foi corrigido pelo time: Admin não promove ninguém ao próprio
-    // nível. Bate com docs/politica-login-sessao.md §1, que já dizia que Admin
-    // gerencia apenas Usuários Comuns.
-    //
-    // Em aberto: SuperAdmin pode criar outro SuperAdmin? Hoje NÃO — a regra
-    // ditada foi "ADMIN E VIEWER". Se puder, é uma linha aqui.
+    // mas o time corrigiu. Bate com docs/politica-login-sessao.md §1.
     private static readonly Dictionary<UserRole, UserRole[]> PodeCriar = new()
     {
-        [UserRole.SuperAdmin] = [UserRole.Admin, UserRole.Viewer],
+        [UserRole.SuperAdmin] = [UserRole.SuperAdmin, UserRole.Admin, UserRole.Viewer],
         [UserRole.Admin] = [UserRole.Viewer],
         [UserRole.Viewer] = [],
     };

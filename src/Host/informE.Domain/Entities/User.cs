@@ -94,6 +94,16 @@ public class User
 
     public void Activate() => IsActive = true;
 
+    // Promoção/rebaixamento. Quem PODE fazer isso é decidido na Application
+    // (ChangeUserRoleUseCase) — o Domain só garante que o papel existe.
+    public void ChangeRole(UserRole role)
+    {
+        if (!ValidateRole(role))
+            throw new ArgumentException($"Papel {role} não existe.");
+
+        Role = role;
+    }
+
     // Recebe o hash já calculado — a responsabilidade de hashar é do IPasswordHasher na Application.
     public void ChangePassword(string newHash)
     {
