@@ -14,6 +14,11 @@ public class Session
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset LastSeenAt { get; set; }
     public string RefreshTokenHash { get; set; } = string.Empty; // Argon2id do refresh token
+
+    // Qual dispositivo abriu esta sessão ("Chrome — Windows 11"). A tela de Meu
+    // Perfil mostra isso em "Sessões ativas: 3 sessões / 2 dispositivos".
+    public string? DeviceLabel { get; set; }
+
     public bool IsActive { get; set; }
 
     public Guid UserId { get; set; }
@@ -21,16 +26,22 @@ public class Session
 
     public Session() { }
 
-    // Construtor padrão
-    public Session(string ipAddress, DateTimeOffset lastSeenAt, string refreshTokenHash, Guid userId)
+    // ExpiresAt entra como PARÂMETRO em vez de Now.AddHours(6) fixo: quem cria a
+    // sessão é o login, que já recebeu a validade do refresh token do
+    // IJwtTokenService (7 dias por config). Com as 6h hardcoded, a sessão morria
+    // antes do refresh token e o token de 7 dias nunca era usado.
+    public Session(string ipAddress, DateTimeOffset expiresAt, string refreshTokenHash, Guid userId, string? deviceLabel = null)
     {
         if (ValidateIpAddress(ipAddress))
             IpAddress = ipAddress;
 
-        LoginAt = DateTimeOffset.Now;
-        ExpiresAt = (DateTimeOffset.Now).AddHours(6);// resolver pois em uma má intenção, há a possibilidade de se colocar o horário da máquina + 6 horas e burlar isso
-        LastSeenAt = lastSeenAt;
+        var agora = DateTimeOffset.Now;
+
+        LoginAt = agora;
+        LastSeenAt = agora; // acabou de nascer: último acesso é o próprio login
+        ExpiresAt = expiresAt;
         RefreshTokenHash = refreshTokenHash;
+        DeviceLabel = deviceLabel;
         IsActive = true;
         UserId = userId;
     }

@@ -33,10 +33,12 @@ jobs:
       - name: Build Server (Domain + Application + Infrastructure + Contracts)
         run: dotnet build src/Host/informE.Server/informE.Server.csproj -c Release --nologo
 
-      # - name: Build UI
-       # run: dotnet build src/Host/informE.UI/informE.UI.csproj -c Release --nologo
+      - name: Build UI
+        run: dotnet build src/Host/informE.UI/informE.UI.csproj -c Release --nologo
 
-      # - name: Test
-       # run: |
-         # dotnet test tests/informE.Domain.Tests -c Release --nologo
-         # dotnet test tests/informE.Application.Tests -c Release --nologo
+      # Reativado: estavam comentados e os 50 testes não rodavam em push nenhum.
+      # Ambos verificados em Release antes de destravar (34 Domain + 16 Application).
+      - name: Test
+        run: |
+          dotnet test tests/informE.Domain.Tests -c Release --nologo
+          dotnet test tests/informE.Application.Tests -c Release --nologo
