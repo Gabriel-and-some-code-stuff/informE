@@ -481,3 +481,4 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 dados_bd/data/base/1/112
+/dados_bd
