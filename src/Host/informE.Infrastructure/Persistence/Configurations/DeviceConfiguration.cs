@@ -12,16 +12,16 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.HasKey(device => device.Id);
         builder.Property(device => device.Id).HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(device => device.Hostname).HasMaxLength(100).IsRequired();
-        builder.Property(device => device.LastIp).HasMaxLength(30).IsRequired();
-        builder.Property(device => device.MacAddress).HasMaxLength(20).IsRequired();
-        builder.Property(device => device.Os).HasMaxLength(40).IsRequired();
-        builder.Property(device => device.OsUser).HasMaxLength(40).IsRequired();
-        builder.Property(device => device.Status).HasConversion<string>().HasMaxLength(20);
-        builder.Property(device => device.Health).HasConversion<string>().HasMaxLength(20);
-        builder.Property(device => device.Role).HasConversion<string>().HasMaxLength(20);
-        builder.Property(device => device.AgentKeyHash).HasMaxLength(255);
-        builder.Property(device => device.RegisteredAt).HasDefaultValueSql("now()");
+        builder.Property(device => device.Hostname).HasColumnName("hostname").HasMaxLength(100).IsRequired();
+        builder.Property(device => device.LastIp).HasColumnName("last_ip").HasMaxLength(30).IsRequired();
+        builder.Property(device => device.MacAddress).HasColumnName("mac_address").HasMaxLength(20).IsRequired();
+        builder.Property(device => device.Os).HasColumnName("os").HasMaxLength(40).IsRequired();
+        builder.Property(device => device.OsUser).HasColumnName("os_user").HasMaxLength(40).IsRequired();
+        builder.Property(device => device.Status).HasConversion<string>().HasMaxLength(20);//
+        builder.Property(device => device.Health).HasConversion<string>().HasMaxLength(20);//
+        builder.Property(device => device.Role).HasConversion<string>().HasMaxLength(20);//
+        builder.Property(device => device.AgentKeyHash).HasColumnName("agent_key_hash").HasMaxLength(255);
+        builder.Property(device => device.RegisteredAt).HasColumnName("registered_at").HasDefaultValueSql("now()");
 
         builder.HasIndex(device => device.Hostname).IsUnique();
         builder.HasIndex(device => device.MacAddress).IsUnique();
