@@ -35,7 +35,7 @@ public class Session
         if (ValidateIpAddress(ipAddress))
             IpAddress = ipAddress;
 
-        var agora = DateTimeOffset.Now;
+        var agora = DateTimeOffset.UtcNow;
 
         LoginAt = agora;
         LastSeenAt = agora; // acabou de nascer: último acesso é o próprio login
@@ -62,7 +62,7 @@ public class Session
     }
 
     // Compara com Now — ExpiresAt é definido pelo servidor no construtor, não pelo client.
-    public bool IsExpired() => DateTimeOffset.Now > ExpiresAt;
+    public bool IsExpired() => DateTimeOffset.UtcNow > ExpiresAt;
 
     public void Touch(DateTimeOffset now)
     {

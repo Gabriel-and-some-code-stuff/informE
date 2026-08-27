@@ -21,7 +21,7 @@ public class Alert
     public Alert(Guid deviceId, AlertType type, string? message)
     {
         DeviceId = deviceId;
-        OccurredAt = DateTimeOffset.Now;
+        OccurredAt = DateTimeOffset.UtcNow;
 
         if (ValidateType(type))
             Type = type;

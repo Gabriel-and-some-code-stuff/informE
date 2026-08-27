@@ -13,7 +13,11 @@ public class User
 
     // "ID da conta: USR-0001" na tela de Meu Perfil. Mesma ideia do MachineTask.Code:
     // Guid é a chave, isto é o rótulo humano.
-    public string Code { get; set; } = string.Empty;
+    // `null!` e nao `string.Empty`: o valor vem do banco (sequence). O EF so
+    // OMITE a coluna do INSERT quando ve o sentinel de nao-preenchido, que
+    // para string e `null`. Com string.Empty ele mandava '' em toda linha e o
+    // indice unico rejeitava a segunda.
+    public string Code { get; set; } = null!;
 
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
@@ -43,7 +47,7 @@ public class User
             Role = role;
 
         PasswordHash = passwordHash;
-        CreatedAt = DateTimeOffset.Now;
+        CreatedAt = DateTimeOffset.UtcNow;
     }
 
     // Criação dos métodos

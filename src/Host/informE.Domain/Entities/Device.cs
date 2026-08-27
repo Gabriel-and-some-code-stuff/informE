@@ -78,8 +78,8 @@ public class Device
         AgentKeyHash = agentKeyHash;
         GroupId = groupId;
         DeviceInfo = deviceInfo;
-        RegisteredAt = DateTimeOffset.Now;
-        KeyRotatedAt = DateTimeOffset.Now;
+        RegisteredAt = DateTimeOffset.UtcNow;
+        KeyRotatedAt = DateTimeOffset.UtcNow;
     }
 
     // Métodos de validação
@@ -180,7 +180,7 @@ public class Device
        if (ValidateHashKey(hashKey))
        {
            AgentKeyHash = hashKey;
-           KeyRotatedAt = DateTimeOffset.Now;
+           KeyRotatedAt = DateTimeOffset.UtcNow;
        }
     }
 

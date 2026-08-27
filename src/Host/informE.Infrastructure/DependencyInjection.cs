@@ -1,8 +1,10 @@
 using informE.Application.Interfaces;
 using informE.Application.Interfaces.Repositories;
+using informE.Infrastructure.BackgroundJobs;
 using informE.Infrastructure.Email;
 using informE.Infrastructure.Persistence;
 using informE.Infrastructure.Persistence.Repositories;
+using informE.Infrastructure.Persistence.Seeding;
 using informE.Infrastructure.Realtime;
 using informE.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
@@ -53,8 +55,23 @@ public static class DependencyInjection
         // Adaptadores SignalR dos ports de tempo real. Os Hubs em si são mapeados
         // pelo Server (app.MapHub<AgentHub>/<DashboardHub>) — aqui só entram as
         // implementações que publicam via IHubContext.
+        // AddSignalR() mora AQUI, e não no Server, porque é esta camada que
+        // registra os adaptadores abaixo — e eles dependem de IHubContext<>, que
+        // só existe depois desta chamada. Sem isso, a Infrastructure registrava
+        // algo que ela mesma não conseguia satisfazer e a aplicação nem subia.
+        services.AddSignalR();
+
         services.AddScoped<IDashboardNotifier, SignalRDashboardNotifier>();
         services.AddScoped<ICommandDispatcher, SignalRCommandDispatcher>();
+
+        // Migration + seed. Scoped porque depende do AppDbContext.
+        services.AddScoped<DatabaseBootstrapper>();
+
+        // Varreduras periódicas — o que é "ausência de evento" e por isso não cabe
+        // num caso de uso reativo. Ver comentários nas classes.
+        services.Configure<MonitoringOptions>(config.GetSection(MonitoringOptions.SectionName));
+        services.AddHostedService<DeviceOfflineSweeper>();
+        services.AddHostedService<ExpiredSessionSweeper>();
 
         return services;
     }

@@ -30,12 +30,12 @@ public class PasswordResetToken
 
         UserId = userId;
         TokenHash = tokenHash;
-        CreatedAt = DateTimeOffset.Now;
-        ExpiresAt = DateTimeOffset.Now.AddHours(ValidadeEmHoras);
+        CreatedAt = DateTimeOffset.UtcNow;
+        ExpiresAt = DateTimeOffset.UtcNow.AddHours(ValidadeEmHoras);
         IsUsed = false;
     }
 
-    public bool IsValid() => !IsUsed && ExpiresAt > DateTimeOffset.Now;
+    public bool IsValid() => !IsUsed && ExpiresAt > DateTimeOffset.UtcNow;
 
     public void Redeem()
     {

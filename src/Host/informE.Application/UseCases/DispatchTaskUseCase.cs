@@ -46,7 +46,7 @@ public class DispatchTaskUseCase(
                 actionType: actionName,
                 status: TaskStatus.Pending,
                 outputLog: null,
-                executedAt: DateTimeOffset.Now, // placeholder — sobrescrito pelo ExecutedAt real quando o resultado chegar (ver RecordCommandResultUseCase)
+                executedAt: DateTimeOffset.UtcNow, // placeholder — sobrescrito pelo ExecutedAt real quando o resultado chegar (ver RecordCommandResultUseCase)
                 machineTaskId: task.Id,
                 deviceId: deviceId))
             .ToList();
