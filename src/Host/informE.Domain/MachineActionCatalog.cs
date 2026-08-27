@@ -24,6 +24,22 @@ public static class MachineActionCatalog
 {
     private static readonly Dictionary<MachineActionKind, MachineActionDefinition> Definitions = new()
     {
+        [MachineActionKind.InformacoesDoSistema] = new(
+            MachineActionKind.InformacoesDoSistema,
+            "Informações do Sistema",
+            "Só consulta e devolve o estado atual da máquina. Não altera nada.",
+            ScriptKind.PowerShell,
+            """
+            $os = Get-CimInstance Win32_OperatingSystem
+            $disco = Get-PSDrive C
+            Write-Output "Maquina......: $env:COMPUTERNAME"
+            Write-Output "Usuario......: $env:USERNAME"
+            Write-Output "Sistema......: $($os.Caption) build $($os.BuildNumber)"
+            Write-Output ("Ligada desde.: {0:dd/MM/yyyy HH:mm}" -f $os.LastBootUpTime)
+            Write-Output ("RAM livre....: {0:N1} GB de {1:N1} GB" -f ($os.FreePhysicalMemory/1MB), ($os.TotalVisibleMemorySize/1MB))
+            Write-Output ("Disco C:.....: {0:N1} GB livres de {1:N1} GB" -f ($disco.Free/1GB), (($disco.Used + $disco.Free)/1GB))
+            """),
+
         [MachineActionKind.LimpezaDeDisco] = new(
             MachineActionKind.LimpezaDeDisco,
             "Limpeza de Disco",

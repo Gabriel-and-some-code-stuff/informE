@@ -12,6 +12,17 @@ public class MachineTaskRepository(AppDbContext db) : IMachineTaskRepository
             .Include(t => t.ExecutionLogs)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
 
+    // AsSplitQuery: sem isso, Include de duas coleções (logs + device de cada log)
+    // vira produto cartesiano e o Postgres devolve linha repetida.
+    public Task<List<MachineTask>> ListRecentAsync(int limite, CancellationToken ct = default) =>
+        db.MachineTasks
+            .Include(t => t.ExecutionLogs)
+                .ThenInclude(l => l.Device)
+            .OrderByDescending(t => t.ScheduledAt)
+            .Take(limite)
+            .AsSplitQuery()
+            .ToListAsync(ct);
+
     // Task + logs (um por device alvo) persistidos juntos -- o commit real
     // acontece quando o Use Case chamar IUnitOfWork.SaveChangesAsync().
     public async Task AddWithLogsAsync(MachineTask task, IEnumerable<TaskExecutionLog> logs, CancellationToken ct = default)

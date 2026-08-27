@@ -160,6 +160,55 @@ public class LoginUseCaseTests
         Assert.Equal("access-token", resposta.AccessToken);
     }
 
+    // O limite é de DISPOSITIVOS, não de sessões. Sem esta distinção, fechar o
+    // navegador e entrar de novo 3 vezes trancava o admin fora da própria conta.
+    [Fact]
+    public async Task Relogin_do_mesmo_dispositivo_nao_consome_slot()
+    {
+        var user = Usuario(UserRole.Admin);
+        _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(user);
+        _hasher.Verify(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+        // 3 sessões vigentes, TODAS do mesmo dispositivo do request.
+        var mesmo = Request().DeviceLabel;
+        _users.GetActiveSessionsAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns([SessaoDe(mesmo), SessaoDe(mesmo), SessaoDe(mesmo)]);
+
+        var resposta = await CriarUseCase().ExecuteAsync(Request());
+
+        Assert.Equal("access-token", resposta.AccessToken);
+    }
+
+    [Fact]
+    public async Task Relogin_do_mesmo_dispositivo_revoga_a_sessao_anterior()
+    {
+        var user = Usuario(UserRole.Admin);
+        var anterior = SessaoDe(Request().DeviceLabel);
+        _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(user);
+        _hasher.Verify(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+        _users.GetActiveSessionsAsync(user.Id, Arg.Any<CancellationToken>()).Returns([anterior]);
+
+        await CriarUseCase().ExecuteAsync(Request());
+
+        // Não fica sessão órfã do mesmo aparelho acumulando no banco.
+        Assert.False(anterior.IsActive);
+    }
+
+    [Fact]
+    public async Task Tres_dispositivos_DIFERENTES_ainda_bloqueiam_o_quarto()
+    {
+        var user = Usuario(UserRole.Admin);
+        _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(user);
+        _hasher.Verify(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+        _users.GetActiveSessionsAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns([SessaoDe("Chrome — Windows"), SessaoDe("Firefox — Linux"), SessaoDe("Safari — macOS")]);
+
+        await Assert.ThrowsAsync<DeviceLimitReachedException>(() => CriarUseCase().ExecuteAsync(Request()));
+    }
+
+    private static Session SessaoDe(string? deviceLabel) =>
+        new("192.168.0.11", DateTimeOffset.UtcNow.AddDays(7), "hash", Guid.NewGuid(), deviceLabel);
+
     private static Session SessaoVigente() =>
         new("192.168.0.11", DateTimeOffset.Now.AddDays(7), "hash", Guid.NewGuid());
 

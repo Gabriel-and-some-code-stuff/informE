@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<ResetPasswordUseCase>();
 
         services.AddScoped<EnrollDeviceUseCase>();
+        services.AddScoped<CreateEnrollmentTokenUseCase>();
         services.AddScoped<RecordDeviceHeartbeatUseCase>();
 
         services.AddScoped<DispatchTaskUseCase>();

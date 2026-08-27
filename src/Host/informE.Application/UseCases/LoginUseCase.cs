@@ -48,7 +48,23 @@ public class LoginUseCase(
         // com kick automático da anterior.
         if (user.Role is UserRole.Admin or UserRole.SuperAdmin)
         {
-            if (vigentes.Count >= LimiteDeSessoesPrivilegiadas)
+            // Login do MESMO dispositivo é substituição, não dispositivo novo.
+            //
+            // Sem isto o limite conta SESSÕES, não dispositivos: fechar o navegador
+            // e entrar de novo três vezes trancava o usuário fora da própria conta
+            // sem ele nunca ter usado mais de uma máquina. A política fala em "3
+            // dispositivos" (docs/politica-login-sessao.md §2.1) — é o DeviceLabel
+            // que decide, não a contagem de linhas.
+            var doMesmoDispositivo = vigentes
+                .Where(s => s.DeviceLabel == request.DeviceLabel)
+                .ToList();
+
+            foreach (var anterior in doMesmoDispositivo)
+                anterior.Revoke();
+
+            var outrosDispositivos = vigentes.Count - doMesmoDispositivo.Count;
+
+            if (outrosDispositivos >= LimiteDeSessoesPrivilegiadas)
             {
                 await RegistrarAuditoria("login_blocked", request.IpAddress, user.Id, ct);
                 throw new DeviceLimitReachedException(LimiteDeSessoesPrivilegiadas);
