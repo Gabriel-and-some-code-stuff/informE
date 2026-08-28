@@ -31,6 +31,30 @@ apontavam para nada.
 
 ## Como rodar
 
+### Automático — `enroll-agent.ps1`
+
+Com o Server no ar, da raiz do repo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File enroll-agent.ps1 -ServerUrl http://localhost:5021 -Run
+```
+
+Faz login como Admin/SuperAdmin (`admin@etec.sp.gov.br` / `informe123` por
+padrão — dá pra sobrescrever com `-Email`/`-Password`), gera o token de
+registro, grava em `src/Agent/informE.Agent.Worker/appsettings.json` e, com
+`-Run`, já sobe o agente. Sem `-Run`, só grava o token e imprime o `dotnet run`
+pra você rodar na hora que quiser.
+
+> ⚠️ **Salve este arquivo como UTF-8 **com BOM**.** O Windows PowerShell 5.1
+> lê `.ps1` sem BOM usando o codepage ANSI do sistema — os acentos do script
+> (`único`, `à`, `não`) viram bytes errados e isso corrompe o parsing de um
+> jeito que quebra o header `Authorization` da chamada HTTP silenciosamente
+> (erro 401 sem pista nenhuma do motivo). Rodar via editor/ferramenta que salva
+> sem BOM reproduz o bug — `[System.IO.File]::WriteAllText(caminho, conteúdo,
+> [System.Text.UTF8Encoding]::new($true))` resolve.
+
+### Manual
+
 **1. Gere um token de registro** (Server no ar, logado como Admin/SuperAdmin):
 
 ```bash
@@ -61,7 +85,8 @@ O token vale 2 horas e é de uso único. Depois do primeiro boot ele é ignorado
 a identidade fica em disco.
 
 > ⚠️ O `EnrollmentToken` fica **vazio no repositório**. Preencher e commitar
-> colocaria uma credencial no git.
+> colocaria uma credencial no git — o `enroll-agent.ps1` grava local, nunca
+> commite o `appsettings.json` com token preenchido.
 
 ---
 
