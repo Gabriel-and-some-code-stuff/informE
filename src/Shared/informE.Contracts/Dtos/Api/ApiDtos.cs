@@ -19,6 +19,15 @@ public record LoginResponseDto(
     string Username,
     string Role);
 
+// ── Usuários ──────────────────────────────────────────────────────────────────
+
+// "+ Novo Usuário" da tela de Administração de Contas. Role em texto: quem
+// chama é o próprio front, que já sabe os valores do enum ("Viewer"/"Admin"/
+// "SuperAdmin") — evita depender da ordem numérica do enum no JSON.
+public record CreateUserRequestDto(string Username, string Email, string Password, string Role);
+
+public record CreateUserResponseDto(Guid UserId);
+
 // ── Equipamentos ──────────────────────────────────────────────────────────────
 
 // Uma linha da tabela de Equipamentos. RAM/Disco/Uptime são nullable porque

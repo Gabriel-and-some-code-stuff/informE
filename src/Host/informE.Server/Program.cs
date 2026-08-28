@@ -4,6 +4,7 @@ using informE.Infrastructure.Persistence.Seeding;
 using informE.Infrastructure.Realtime;
 using informE.Server.Auth;
 using informE.Server.Endpoints;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,13 +16,17 @@ builder.Services.AddInformEAuthentication(builder.Configuration);
 builder.Services.AddExceptionHandler<ExcecaoParaHttpHandler>();
 builder.Services.AddProblemDetails();
 
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+    options.AddOperationTransformer<BearerSecurityRequirementTransformer>();
+});
 
 // O Blazor roda em outra porta no desenvolvimento, então precisa de CORS.
 // AllowCredentials é obrigatório para o SignalR (o handshake manda cookie/token).
 const string PoliticaCorsDev = "dev";
 builder.Services.AddCors(options => options.AddPolicy(PoliticaCorsDev, policy => policy
-    .WithOrigins("http://localhost:5000", "https://localhost:5001", "http://localhost:5173")
+    .WithOrigins("http://localhost:5000", "https://localhost:5001", "http://localhost:5173", "http://localhost:5021")
     .AllowAnyHeader()
     .AllowAnyMethod()
     .AllowCredentials()));
@@ -53,6 +58,13 @@ app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // UI interativa em /scalar/v1 — testa os endpoints (inclusive o do agente)
+    // sem precisar montar curl na mão. Ver docs/scalar.md.
+    // HideModels: a seção "Models" lista os DTOs (schemas) soltos na barra
+    // lateral, no mesmo estilo visual dos endpoints — gera confusão de que
+    // seriam rotas. Escondida porque o corpo de cada endpoint já mostra o
+    // schema que ele usa.
+    app.MapScalarApiReference(options => options.HideModels = true);
     app.UseCors(PoliticaCorsDev);
 }
 
@@ -63,6 +75,7 @@ app.UseAuthorization();
 app.MapGet("/", () => "informE.Server online").AllowAnonymous().ExcludeFromDescription();
 
 app.MapAuthEndpoints();
+app.MapUserEndpoints();
 app.MapDeviceEndpoints();
 app.MapExecutionEndpoints();
 app.MapAgentEndpoints();

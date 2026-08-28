@@ -1,10 +1,13 @@
 # API do Server
 
-> Endpoints REST + hubs SignalR. Atualizado em 27/08/2026.
+> Endpoints REST + hubs SignalR. Atualizado em 28/08/2026.
 > Base de desenvolvimento: `http://localhost:5000`
 
 Para explorar interativamente, suba o Server em Development e abra
-`/openapi/v1.json` — a especificação sai gerada dos próprios endpoints.
+**`/scalar/v1`** no navegador — UI que lê `/openapi/v1.json` (gerado dos
+próprios endpoints) e deixa testar cada rota clicando, com o `Authorize`
+guardando o Bearer token entre chamadas. Substitui o curl imenso pra rodar
+o agente (`/agent/enroll`, `/tasks`, etc.) — ver `docs/scalar.md`.
 
 ---
 
@@ -39,6 +42,7 @@ IP, o log de auditoria e o painel de dispositivos viravam ficção.
 | Método | Rota | Quem pode | O quê |
 |---|---|---|---|
 | `POST` | `/auth/login` | anônimo | Autentica |
+| `POST` | `/users` | Admin, SuperAdmin | Cria usuário |
 | `GET` | `/devices` | autenticado | Lista equipamentos (+ resumo) |
 | `GET` | `/devices/{id}` | autenticado | Um equipamento |
 | `GET` | `/actions` | autenticado | Catálogo de ações (dropdown) |
@@ -81,6 +85,29 @@ Devolve o `code` legível (`EX-1000`) além do `taskId`.
 
 O grão é **por máquina**, não por tarefa: uma ação disparada em 20 devices vira
 20 linhas — que é como a tela de Execuções mostra.
+
+### `POST /users`
+
+```json
+{
+  "username": "professor01",
+  "email": "professor01@etec.sp.gov.br",
+  "password": "senha-forte",
+  "role": "Viewer"
+}
+```
+
+`role` em texto (`"Viewer"`, `"Admin"` ou `"SuperAdmin"`) — 400 se não bater com
+o enum. Quem pode criar quem é decidido pelo `CreateUserUseCase` a partir do
+papel de quem está logado (claim do JWT), não pelo corpo da requisição:
+
+- **SuperAdmin** cria qualquer papel, inclusive outro SuperAdmin;
+- **Admin** cria **só** Viewer — não promove ninguém ao próprio nível;
+- **Viewer** não cria ninguém (barrado no endpoint, `RequireRole` nem deixa
+  chegar no use case).
+
+E-mail duplicado devolve 409, não 400 — a requisição está bem formada, o
+estado do banco que não permite.
 
 ### `POST /agent/enroll` — por que é anônimo
 
@@ -189,8 +216,8 @@ curl -s -X POST http://localhost:5000/admin/enrollment-tokens -H "Authorization:
 
 - **`POST /auth/refresh`** — sem ele, sessão de 15 min na prática
 - **Logout** — `RevokeSessionUseCase` existe, endpoint não
-- **CRUD de usuário** — os use cases existem (`CreateUser`, `SetUserActive`,
-  `ChangeUserRole`), faltam as rotas
+- **Resto do CRUD de usuário** — `POST /users` existe; `SetUserActive` e
+  `ChangeUserRole` têm use case pronto, faltam as rotas
 - **Redefinição de senha** — idem (`RequestPasswordReset`, `ResetPassword`)
 - **Dashboard e alertas** — nenhuma rota de leitura de alerta ou métrica diária
 - **Paginação** — `/devices` devolve tudo. Com 105 máquinas passa; com 1000, não
