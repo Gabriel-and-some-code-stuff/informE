@@ -1,3 +1,4 @@
+using informE.Application;
 using informE.Application.Exceptions;
 using informE.Application.Interfaces;
 using informE.Application.Interfaces.Repositories;
@@ -21,7 +22,10 @@ public class CreateUserUseCaseTests
         _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((User?)null);
     }
 
-    private CreateUserUseCase CriarUseCase() => new(_users, _hasher, _uow);
+    // Lista vazia = sem restricao de dominio. Os testes de papel nao devem
+    // depender do dominio do e-mail; a regra tem teste proprio em
+    // DominioDeEmailPolicyTests.
+    private CreateUserUseCase CriarUseCase() => new(_users, _hasher, new DominioDeEmailPolicy([]), _uow);
 
     private static CreateUserRequest Request(UserRole papel) =>
         new("prof", "prof@etec.sp.gov.br", "senha", papel);

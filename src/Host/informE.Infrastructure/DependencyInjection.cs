@@ -1,3 +1,4 @@
+using informE.Application;
 using informE.Application.Interfaces;
 using informE.Application.Interfaces.Repositories;
 using informE.Infrastructure.BackgroundJobs;
@@ -31,6 +32,23 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
+
+        // A politica de dominio de e-mail vive na Application (nao le config),
+        // entao a lista e resolvida AQUI e injetada pronta. Singleton: e uma
+        // lista imutavel lida do appsettings no boot.
+        //
+        // A distincao entre "chave ausente" e "lista vazia" e intencional: ausente
+        // cai no padrao institucional (a regra nao pode falhar aberta), vazia
+        // desliga a restricao de propósito.
+        var secaoAuth = config.GetSection(AuthOptions.SectionName);
+        var auth = secaoAuth.Get<AuthOptions>() ?? new AuthOptions();
+
+        var dominios = secaoAuth.GetSection(nameof(AuthOptions.DominiosPermitidos)).Exists()
+            ? auth.DominiosPermitidos
+            : AuthOptions.PadraoInstitucional;
+
+        services.AddSingleton(new DominioDeEmailPolicy(dominios));
+
         services.Configure<SmtpOptions>(config.GetSection(SmtpOptions.SectionName));
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();

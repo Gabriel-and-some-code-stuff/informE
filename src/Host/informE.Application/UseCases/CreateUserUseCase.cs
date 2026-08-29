@@ -11,6 +11,7 @@ namespace informE.Application.UseCases;
 public class CreateUserUseCase(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
+    DominioDeEmailPolicy dominioDeEmail,
     IUnitOfWork unitOfWork)
 {
     // SuperAdmin cria qualquer papel, inclusive outro SuperAdmin.
@@ -29,6 +30,11 @@ public class CreateUserUseCase(
     {
         if (!PodeCriar.TryGetValue(criadoPor, out var permitidos) || !permitidos.Contains(request.Role))
             throw new ForbiddenRoleAssignmentException(criadoPor, request.Role);
+
+        // Só e-mail institucional. Antes da checagem de duplicidade porque é mais
+        // barata e a mensagem é mais útil: "não é institucional" explica o erro
+        // melhor do que um 409 de e-mail que o usuário nem deveria poder usar.
+        dominioDeEmail.Validar(request.Email);
 
         var jaExiste = await userRepository.GetByEmailAsync(request.Email, ct);
         if (jaExiste is not null)

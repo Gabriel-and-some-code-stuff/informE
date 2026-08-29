@@ -13,7 +13,9 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<LoginUseCase>();
+        services.AddScoped<RefreshTokenUseCase>();
         services.AddScoped<CreateUserUseCase>();
+        services.AddScoped<UpdateUserProfileUseCase>();
         services.AddScoped<SetUserActiveUseCase>();
         services.AddScoped<RevokeSessionUseCase>();
         services.AddScoped<ChangeUserRoleUseCase>();
