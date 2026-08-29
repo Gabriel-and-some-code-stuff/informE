@@ -37,14 +37,20 @@ public class User
 
     public User(string username, string email, string passwordHash, UserRole role)
     {
-        if (ValidateUsername(username))
-            Username = username;
+        // Os tres validadores LANCAM quando o valor e invalido — por isso a
+        // atribuicao e direta. Antes, ValidateEmail e ValidateRole devolviam
+        // `false` e o `if` simplesmente NAO atribuia: e-mail invalido virava
+        // string.Empty em silencio. Como `users.email` e UNIQUE e NOT NULL, o
+        // primeiro usuario ruim nascia sem e-mail (e sem conseguir logar) e o
+        // segundo estourava 23505 -> 500.
+        ValidateUsername(username);
+        Username = username;
 
-        if (ValidateEmail(email))
-            Email = email;
+        ValidateEmail(email);
+        Email = email;
 
-        if (ValidateRole(role))
-            Role = role;
+        ValidateRole(role);
+        Role = role;
 
         PasswordHash = passwordHash;
         CreatedAt = DateTimeOffset.UtcNow;
@@ -54,11 +60,11 @@ public class User
 
     public void UpdateUsername(string username)
     {
-        if (ValidateUsername(username))
-            Username = username;
+        ValidateUsername(username);
+        Username = username;
     }
 
-    private static bool ValidateUsername(string username)
+    private static void ValidateUsername(string username)
     {
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("O nome de usuário não pode ser vazio.");
@@ -68,25 +74,29 @@ public class User
 
         if (!username.All(char.IsLetterOrDigit))
             throw new ArgumentException("O nome de usuário contém caracteres inválidos.");
-
-        return true;
     }
 
-    private static bool ValidateEmail(string email)
+    // Valida só o FORMATO. A restrição de domínio institucional (@cps.sp.gov.br)
+    // é da Application, não daqui: a lista de domínios permitidos vem de
+    // configuração e varia por instalação, e o Domain não lê configuração.
+    // Ver DominioDeEmailPolicy e AuthOptions.
+    private static void ValidateEmail(string email)
     {
-        return EmailRegex.IsMatch(email);
+        if (!EmailRegex.IsMatch(email))
+            throw new ArgumentException($"E-mail inválido: '{email}'.");
     }
 
-    private bool ValidateRole(UserRole role)
+    private static void ValidateRole(UserRole role)
     {
-        return Enum.IsDefined(typeof(UserRole), role);
+        if (!Enum.IsDefined(role))
+            throw new ArgumentException($"Papel {role} não existe.");
     }
 
     // Métodos de domínio
     public void UpdateEmail(string email)
     {
-        if (ValidateEmail(email))
-            Email = email;
+        ValidateEmail(email);
+        Email = email;
     }
 
     // Só troca o flag. A revogação das sessões ativas NÃO acontece aqui de
@@ -102,9 +112,7 @@ public class User
     // (ChangeUserRoleUseCase) — o Domain só garante que o papel existe.
     public void ChangeRole(UserRole role)
     {
-        if (!ValidateRole(role))
-            throw new ArgumentException($"Papel {role} não existe.");
-
+        ValidateRole(role);
         Role = role;
     }
 
