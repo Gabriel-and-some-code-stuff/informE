@@ -3,6 +3,20 @@
 > Atualizado em **28/08/2026**. Fontes: `docs/api-server.md`, `docs/ARCHITECTURE.md`,
 > leitura direta de `src/Host/` e do DI (`DependencyInjection.cs`). Branch de trabalho: `prs-acumuladas`.
 
+> ⚠️ **Parcialmente superado em 28/08 (noite).** Este levantamento foi escrito antes do merge
+> da revisão do servidor (`428c786`) e continua valioso como diagnóstico — a análise das três
+> lacunas por camada estava certa e é exatamente o que foi atacado. O que mudou desde então:
+>
+> - as **10 rotas** viraram **26**; o "MVP ausente" listado aqui (refresh, logout, sessões,
+>   CRUD de users, detalhe de task, grupos) **foi entregue**;
+> - a Application ganhou `RefreshTokenUseCase` e `UpdateUserProfileUseCase` (14 use cases);
+> - a Infrastructure ganhou reset de conexões no boot e `HasPendingLogsAsync`.
+>
+> Continuam abertos, como este documento previu: rotas de dashboard/alerta/métrica, rotação de
+> chave (`RotateKey` inerte), purga de auditoria e reentrega de comando offline.
+>
+> Estado atual em **`docs/situacao-atual.md`** e **`docs/plano-revisao-servidor.md`**.
+
 ## Visão geral
 
 | Camada | Estado | O que falta (resumo) |
