@@ -7,9 +7,17 @@ namespace informE.Infrastructure.Persistence.Repositories;
 
 public class MachineTaskRepository(AppDbContext db) : IMachineTaskRepository
 {
+    public Task<bool> HasPendingLogsAsync(Guid taskId, CancellationToken ct = default) =>
+        db.TaskExecutionLogs
+            .AnyAsync(l => l.MachineTaskId == taskId
+                        && (l.Status == TaskStatus.Pending || l.Status == TaskStatus.Running), ct);
+
+    // ThenInclude do Device: GET /tasks/{id} mostra o hostname de cada máquina.
+    // Sem ele a coluna sairia "—" para todas.
     public Task<MachineTask?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         db.MachineTasks
             .Include(t => t.ExecutionLogs)
+                .ThenInclude(l => l.Device)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
 
     // AsSplitQuery: sem isso, Include de duas coleções (logs + device de cada log)
