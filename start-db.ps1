@@ -1,4 +1,4 @@
-# start-db.ps1 — sobe só o Postgres. Abre o Docker Desktop se estiver fechado.
+﻿# start-db.ps1 — sobe só o Postgres. Abre o Docker Desktop se estiver fechado.
 # Uso: powershell -ExecutionPolicy Bypass -File start-db.ps1
 #
 # Este script NÃO aplica migrations nem popula dados — quem faz isso é o próprio
@@ -11,12 +11,29 @@
 
 $ErrorActionPreference = 'Stop'
 
-if (-not (docker info 2>$null)) {
+# BUG CORRIGIDO: antes a checagem era `docker info 2>$null` direto no `if`. No
+# Windows PowerShell 5.1, redirecionar o stderr de um executavel NATIVO embrulha
+# cada linha num ErrorRecord (NativeCommandError); com $ErrorActionPreference =
+# 'Stop' la em cima, o script morria exatamente no caso para o qual foi escrito —
+# o Docker fechado. A checagem certa e o codigo de saida.
+function Test-DockerNoAr {
+    $anterior = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        docker info 2>&1 | Out-Null
+        return $LASTEXITCODE -eq 0
+    }
+    finally {
+        $ErrorActionPreference = $anterior
+    }
+}
+
+if (-not (Test-DockerNoAr)) {
     Write-Host "Docker Desktop fechado — abrindo..." -ForegroundColor Yellow
     Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
 
     $tentativas = 0
-    while (-not (docker info 2>$null)) {
+    while (-not (Test-DockerNoAr)) {
         Start-Sleep -Seconds 3
         $tentativas++
 
@@ -37,9 +54,12 @@ accessed by the system'), veja a secao 'Docker nao sobe' em docs/ambiente-banco.
 docker compose -f "$PSScriptRoot\docker-compose.yml" up -d
 
 Write-Host "Aguardando Postgres ficar pronto..." -ForegroundColor Cyan
-while ((docker inspect --format '{{.State.Health.Status}}' informe-postgres 2>$null) -ne 'healthy') {
+$ErrorActionPreference = 'Continue'  # mesmo motivo do Test-DockerNoAr
+while ((docker inspect --format '{{.State.Health.Status}}' informe-postgres 2>&1) -ne 'healthy') {
     Start-Sleep -Seconds 2
 }
+
+$ErrorActionPreference = 'Stop'
 
 Write-Host "Postgres no ar (informe-postgres)." -ForegroundColor Green
 Write-Host ""
