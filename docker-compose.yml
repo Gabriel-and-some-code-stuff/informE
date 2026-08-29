@@ -12,8 +12,15 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # - informe_pgdata:/var/lib/postgresql/data
-      - ./database:/var/lib/postgresql/data
+      # Volume NOMEADO, gerenciado pelo Docker (vive no WSL2, nao no repositorio).
+      # Sobrevive a `docker compose down` e a reboot; so `down -v` apaga.
+      #
+      # Ja foi bind-mount `./database` — o que colocava 1341 arquivos binarios do
+      # PGDATA (incluindo postmaster.pid e os hashes de senha do seed) dentro do
+      # git. Portabilidade nao dependia disso: o Server aplica as migrations e
+      # semeia sozinho no boot (ver DatabaseBootstrapper), entao em maquina nova
+      # `start-db.ps1` + `dotnet run` ja entrega o banco completo.
+      - informe_pgdata:/var/lib/postgresql/data
     # Healthcheck para o setup-dev.ps1 saber quando o banco aceita conexão.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U informe -d informe"]
