@@ -45,6 +45,11 @@ public class ExcecaoParaHttpHandler(ILogger<ExcecaoParaHttpHandler> logger) : IE
     {
         InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Credenciais inválidas"),
 
+        // Refresh token vencido, revogado ou adulterado. 401 e não 400: o
+        // problema é a credencial, e é 401 que o cliente sabe traduzir em
+        // "faça login de novo".
+        InvalidRefreshTokenException => (StatusCodes.Status401Unauthorized, "Sessão expirada"),
+
         AccountDisabledException => (StatusCodes.Status403Forbidden, "Conta desativada"),
         ForbiddenRoleAssignmentException => (StatusCodes.Status403Forbidden, "Operação não permitida"),
         UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "Operação não permitida"),

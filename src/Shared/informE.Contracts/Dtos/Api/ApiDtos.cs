@@ -19,6 +19,14 @@ public record LoginResponseDto(
     string Username,
     string Role);
 
+// O refresh token viaja no corpo, não em header: é credencial de longa duração e
+// não deve aparecer em log de acesso nem em histórico de URL.
+public record RefreshRequestDto(string RefreshToken);
+
+public record ForgotPasswordRequestDto(string Email);
+
+public record ResetPasswordRequestDto(string Token, string NovaSenha);
+
 // ── Usuários ──────────────────────────────────────────────────────────────────
 
 // "+ Novo Usuário" da tela de Administração de Contas. Role em texto: quem
@@ -27,6 +35,34 @@ public record LoginResponseDto(
 public record CreateUserRequestDto(string Username, string Email, string Password, string Role);
 
 public record CreateUserResponseDto(Guid UserId);
+
+// Uma linha da tabela de Administração de Contas. `Code` é o rótulo humano
+// (USR-0001) gerado por sequence do Postgres; o Guid continua sendo a chave.
+public record UserListItemDto(
+    Guid Id,
+    string Code,
+    string Username,
+    string Email,
+    string Role,
+    bool IsActive,
+    DateTimeOffset CreatedAt);
+
+public record UpdateUserRequestDto(string? Username, string? Email);
+
+public record ChangeRoleRequestDto(string Role);
+
+public record SetActiveRequestDto(bool Ativo);
+
+// Painel "Sessões ativas" de Meu Perfil (comentário #241 do Figma: IP da máquina
+// + quando o último login foi feito).
+public record SessionListItemDto(
+    Guid Id,
+    string? DeviceLabel,
+    string IpAddress,
+    DateTimeOffset LoginAt,
+    DateTimeOffset LastSeenAt,
+    DateTimeOffset ExpiresAt,
+    bool EhSessaoAtual);
 
 // ── Equipamentos ──────────────────────────────────────────────────────────────
 
@@ -47,6 +83,16 @@ public record DeviceListItemDto(
 public record DeviceSummaryDto(int Total, int Online, int Offline, int ComProblema);
 
 public record DeviceListResponseDto(DeviceSummaryDto Resumo, IReadOnlyList<DeviceListItemDto> Itens);
+
+// ── Grupos (laboratórios) ─────────────────────────────────────────────────────
+
+// Alimenta a tela de Grupos e o seletor "dispositivos ou grupo de destino" da
+// tela de Nova Execução — que hoje exige GroupIds sem oferecer de onde tirá-los.
+public record GroupListItemDto(Guid Id, string Name, string? Description, int TotalDeDispositivos);
+
+public record CreateGroupRequestDto(string Name, string? Description);
+
+public record CreateGroupResponseDto(Guid GroupId);
 
 // ── Ações e execuções ─────────────────────────────────────────────────────────
 
@@ -72,6 +118,10 @@ public record ExecutionListItemDto(
     DateTimeOffset ExecutedAt,
     int? DurationMs,
     string? Output);
+
+// Detalhe de uma execução: o status da TAREFA mais as linhas por máquina. A
+// separação importa — a tarefa só fecha quando nenhum log está mais pendente.
+public record TaskDetailDto(Guid Id, string Code, string Status, IReadOnlyList<ExecutionListItemDto> Maquinas);
 
 // ── Agente ────────────────────────────────────────────────────────────────────
 

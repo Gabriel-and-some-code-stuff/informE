@@ -22,7 +22,7 @@ public class LoginUseCaseTests
 
     public LoginUseCaseTests()
     {
-        _jwt.CreateAccessToken(Arg.Any<User>()).Returns("access-token");
+        _jwt.CreateAccessToken(Arg.Any<User>(), Arg.Any<Guid>()).Returns("access-token");
         _jwt.CreateRefreshToken().Returns(("refresh-token", DateTimeOffset.Now.AddDays(7)));
         _hasher.Hash(Arg.Any<string>()).Returns("hash-fake");
     }
@@ -75,8 +75,14 @@ public class LoginUseCaseTests
         var resposta = await CriarUseCase().ExecuteAsync(Request());
 
         Assert.Equal("access-token", resposta.AccessToken);
-        Assert.Equal("refresh-token", resposta.RefreshToken);
         Assert.Equal(UserRole.Admin, resposta.Role);
+
+        // O refresh token vai no formato "{sessionId}.{segredo}" — o Id acha a
+        // linha e o segredo prova a posse, porque o hash Argon2id tem salt
+        // aleatório e não permite `WHERE refresh_token_hash = ?`.
+        // Ver RefreshTokenUseCase.
+        Assert.EndsWith(".refresh-token", resposta.RefreshToken);
+        Assert.True(Guid.TryParse(resposta.RefreshToken.Split('.')[0], out _));
         await _users.Received(1).AddSessionAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
