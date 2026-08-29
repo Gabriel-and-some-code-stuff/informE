@@ -43,7 +43,7 @@ catálogo de endpoints nem CSRF de teste pra fora.
 2. Abra no navegador:
 
    ```
-   http://localhost:5021/scalar/v1
+   https://localhost:5021/scalar/v1
    ```
 
    (a porta é a que aparecer em "Now listening on" no console — `5021` no

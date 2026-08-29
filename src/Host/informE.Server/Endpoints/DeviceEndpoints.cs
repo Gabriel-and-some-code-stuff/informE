@@ -50,7 +50,12 @@ public static class DeviceEndpoints
             return Results.Ok(new DeviceListResponseDto(resumo, itens));
         })
         .WithName("ListarDispositivos")
-        .WithSummary("Lista equipamentos com filtro de grupo, conexão e busca por nome/IP/SO.");
+        .WithSummary("Lista equipamentos com filtro de grupo, conexão e busca por nome/IP/SO.")
+        .WithDescription(
+            "O resumo (total/online/offline/comProblema) é calculado sobre os itens FILTRADOS, " +
+            "não sobre o banco inteiro — os big numbers têm que acompanhar o filtro aplicado. " +
+            "Status inválido na query vira \"sem filtro\" em vez de erro.")
+        .Produces<DeviceListResponseDto>();
 
         grupo.MapGet("/{id:guid}", async (
             Guid id,
@@ -66,7 +71,10 @@ public static class DeviceEndpoints
                     d.Status.ToString(), d.Health.ToString(), d.Role.ToString(),
                     d.UptimeSeconds, d.LastSeenAt));
         })
-        .WithName("ObterDispositivo");
+        .WithName("ObterDispositivo")
+        .WithSummary("Detalhe de um equipamento.")
+        .Produces<DeviceListItemDto>()
+        .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }

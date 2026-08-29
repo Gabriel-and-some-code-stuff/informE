@@ -1,7 +1,7 @@
 # API do Server
 
 > Endpoints REST + hubs SignalR. Atualizado em 28/08/2026.
-> Base de desenvolvimento: `http://localhost:5000`
+> Base de desenvolvimento: `https://localhost:5021`
 
 Para explorar interativamente, suba o Server em Development e abra
 **`/scalar/v1`** no navegador — UI que lê `/openapi/v1.json` (gerado dos
@@ -17,7 +17,7 @@ Tudo exige `Authorization: Bearer <access_token>`, exceto `/auth/login`,
 `/agent/enroll` e `/`.
 
 ```bash
-curl -X POST http://localhost:5000/auth/login \
+curl -X POST https://localhost:5021/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@etec.sp.gov.br","password":"informe123"}'
 ```
@@ -180,9 +180,12 @@ bloqueando o quarto. Coberto por três testes em `LoginUseCaseTests`.
 
 ## CORS
 
-Em Development libera `localhost:5000`, `localhost:5001` e `localhost:5173`, com
+Em Development libera **uma** origem, `https://localhost:5021`, com
 `AllowCredentials` — obrigatório para o SignalR, cujo handshake manda credencial.
 Em produção o Blazor é servido pelo próprio host e CORS deixa de ser necessário.
+
+A lista antiga tinha `5000`/`5001` (de um perfil de launch que não existe mais) e
+`5173`, que é a porta do Vite e nunca foi usada por projeto nenhum daqui.
 
 ---
 
@@ -190,34 +193,71 @@ Em produção o Blazor é servido pelo próprio host e CORS deixa de ser necess�
 
 ```bash
 # 1. login
-TOKEN=$(curl -s -X POST http://localhost:5000/auth/login \
+TOKEN=$(curl -s -X POST https://localhost:5021/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@etec.sp.gov.br","password":"informe123"}' \
   | python -c "import sys,json;print(json.load(sys.stdin)['accessToken'])")
 
 # 2. máquinas
-curl -s "http://localhost:5000/devices?status=Online" -H "Authorization: Bearer $TOKEN"
+curl -s "https://localhost:5021/devices?status=Online" -H "Authorization: Bearer $TOKEN"
 
 # 3. catálogo
-curl -s http://localhost:5000/actions -H "Authorization: Bearer $TOKEN"
+curl -s https://localhost:5021/actions -H "Authorization: Bearer $TOKEN"
 
 # 4. disparar a ação mais inofensiva do catálogo (só lê, não altera nada)
-curl -s -X POST http://localhost:5000/tasks -H "Authorization: Bearer $TOKEN" \
+curl -s -X POST https://localhost:5021/tasks -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"action":"InformacoesDoSistema","deviceIds":["<id>"],"groupIds":null,"scheduledAt":null}'
 
 # 5. token para registrar uma máquina
-curl -s -X POST http://localhost:5000/admin/enrollment-tokens -H "Authorization: Bearer $TOKEN"
+curl -s -X POST https://localhost:5021/admin/enrollment-tokens -H "Authorization: Bearer $TOKEN"
 ```
+
+---
+
+## Tempo real — conectar no DashboardHub
+
+WebSocket não manda header `Authorization`, então o JWT vai na query string. O
+servidor só lê `access_token` na rota do hub, para o token não vazar no log de
+acesso das outras rotas (ver `AuthenticationSetup.cs`).
+
+```csharp
+var hub = new HubConnectionBuilder()
+    .WithUrl($"https://localhost:5021/hubs/dashboard?access_token={accessToken}")
+    .WithAutomaticReconnect()
+    .Build();
+
+hub.On<Guid, string, string>("EndpointStatusChanged", (deviceId, status, health) => { /* ... */ });
+hub.On<TelemetryDto>("TelemetryUpdated", t => { /* ... */ });
+hub.On<AlertDto>("AlertRaised", a => { /* ... */ });
+hub.On<Guid, string>("TaskProgress", (taskId, status) => { /* ... */ });
+
+// Grão de MÁQUINA — é este que faz a execução em N máquinas aparecer avançando
+// em paralelo na tela. TaskProgress só dispara quando a tarefa inteira acaba.
+hub.On<Guid, Guid, string, int?, string?>("ExecutionLogUpdated",
+    (logId, taskId, status, durationMs, output) => { /* ... */ });
+
+await hub.StartAsync();
+```
+
+> ⚠️ Hoje o `SignalRDashboardNotifier` publica com `Clients.All`: **todo usuário
+> autenticado, inclusive Viewer, recebe telemetria e alerta do parque inteiro.**
+> Filtrar por grupo exige SignalR Groups + o escopo N-N Admin↔Group, classificado
+> como Fase 2 em `politica-login-sessao.md`. Precisa ser resolvido antes da tela
+> do Viewer ir a produção.
 
 ---
 
 ## O que a API ainda não tem
 
-- **`POST /auth/refresh`** — sem ele, sessão de 15 min na prática
-- **Logout** — `RevokeSessionUseCase` existe, endpoint não
-- **Resto do CRUD de usuário** — `POST /users` existe; `SetUserActive` e
-  `ChangeUserRole` têm use case pronto, faltam as rotas
-- **Redefinição de senha** — idem (`RequestPasswordReset`, `ResetPassword`)
 - **Dashboard e alertas** — nenhuma rota de leitura de alerta ou métrica diária
-- **Paginação** — `/devices` devolve tudo. Com 105 máquinas passa; com 1000, não
+- **Paginação** — `/devices` e `/users` devolvem tudo. Com 105 máquinas passa;
+  com 1000, não
+- **Reentrega de comando offline** — máquina desligada no disparo tem o log
+  fechado como `Failed`; quando reconecta, não recebe o que perdeu (RF10 modela
+  a fila no banco, falta o agente pedir os pendentes no `OnConnectedAsync`)
+- **Interromper execução em andamento** — `POST /tasks/{id}/cancel` cancela do
+  lado do Host; a máquina que já recebeu o comando continua executando. Exigiria
+  um método novo em `IAgentClient`
+- **Rotação de chave do agente** — `RotateKey` existe nas duas pontas e nada o
+  invoca (RF13 inerte)

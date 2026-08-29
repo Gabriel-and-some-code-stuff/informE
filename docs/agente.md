@@ -36,7 +36,7 @@ apontavam para nada.
 Com o Server no ar, da raiz do repo:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File enroll-agent.ps1 -ServerUrl http://localhost:5021 -Run
+powershell -ExecutionPolicy Bypass -File enroll-agent.ps1 -ServerUrl https://localhost:5021 -Run
 ```
 
 Faz login como Admin/SuperAdmin (`admin@etec.sp.gov.br` / `informe123` por
@@ -58,7 +58,7 @@ pra você rodar na hora que quiser.
 **1. Gere um token de registro** (Server no ar, logado como Admin/SuperAdmin):
 
 ```bash
-curl -X POST http://localhost:5000/admin/enrollment-tokens \
+curl -X POST https://localhost:5021/admin/enrollment-tokens \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -67,7 +67,7 @@ curl -X POST http://localhost:5000/admin/enrollment-tokens \
 ```json
 {
   "Agent": {
-    "ServerUrl": "http://localhost:5000",
+    "ServerUrl": "https://localhost:5021",
     "EnrollmentToken": "<o token gerado>",
     "GroupId": null,
     "SnapshotIntervalMinutes": 30
@@ -207,7 +207,7 @@ Testado com máquina real, não em teoria:
 ```
 Registrando NOTEBOOKSECO no Host...
 Registrado. DeviceId a6fee59a-...
-Conectado ao Host em http://localhost:5000.
+Conectado ao Host em https://localhost:5021.
 Snapshot enviado: CPU 35.9% | RAM 90.5% | Disco 89.1% | uptime 975448s
 ```
 
