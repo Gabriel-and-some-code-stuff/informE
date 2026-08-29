@@ -23,9 +23,16 @@ public class EnrollmentClient(
 
         var pedido = new EnrollRequestDto(
             _options.EnrollmentToken,
-            Environment.MachineName,
+            // `devices.hostname` é único: N agentes no mesmo Windows precisam de
+            // nomes distintos, senão o segundo enroll viola o índice. Fora do
+            // harness de teste isto é null e vale o nome real da máquina.
+            string.IsNullOrWhiteSpace(_options.HostnameOverride)
+                ? Environment.MachineName
+                : _options.HostnameOverride,
             ObterIpLocal(),
-            ObterMac(),
+            string.IsNullOrWhiteSpace(_options.MacAddressOverride)
+                ? ObterMac()
+                : _options.MacAddressOverride,
             Environment.OSVersion.VersionString,
             Environment.UserName,
             _options.GroupId);

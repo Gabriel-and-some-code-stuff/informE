@@ -68,7 +68,14 @@ public class AgentWorker(
                   $"?deviceId={identidade.DeviceId}&agentKey={Uri.EscapeDataString(identidade.AgentKey)}";
 
         return new HubConnectionBuilder()
-            .WithUrl(url)
+            .WithUrl(url, opcoesHttp =>
+            {
+                // Mesmo handler do enroll — ver CertificadoDeDesenvolvimento.
+                // Só tem efeito quando Agent:AceitarCertificadoNaoConfiavel = true.
+                if (_options.AceitarCertificadoNaoConfiavel)
+                    opcoesHttp.HttpMessageHandlerFactory = _ =>
+                        CertificadoDeDesenvolvimento.CriarHandler(_options);
+            })
             // RF06: retry nativo do SignalR, com backoff. Sem argumento ele
             // desiste depois de ~1 min; a lista explícita mantém tentando de
             // minuto em minuto para sempre — que é o certo numa máquina de lab

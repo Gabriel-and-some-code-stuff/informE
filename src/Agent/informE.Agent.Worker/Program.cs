@@ -4,8 +4,13 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection(AgentOptions.SectionName));
 
-var serverUrl = builder.Configuration[$"{AgentOptions.SectionName}:ServerUrl"] ?? "http://localhost:5000";
-builder.Services.AddHttpClient<EnrollmentClient>(c => c.BaseAddress = new Uri(serverUrl));
+var opcoes = builder.Configuration.GetSection(AgentOptions.SectionName).Get<AgentOptions>() ?? new AgentOptions();
+
+builder.Services.AddHttpClient<EnrollmentClient>(c => c.BaseAddress = new Uri(opcoes.ServerUrl))
+    // O bypass do certificado precisa valer para o enroll também, não só para o
+    // hub: o enroll é a PRIMEIRA chamada HTTPS que o agente faz, então sem isto
+    // ele nem chega a tentar conectar no AgentHub.
+    .ConfigurePrimaryHttpMessageHandler(() => CertificadoDeDesenvolvimento.CriarHandler(opcoes));
 
 builder.Services.AddSingleton<AgentIdentityStore>();
 builder.Services.AddSingleton<SystemSnapshotCollector>();
