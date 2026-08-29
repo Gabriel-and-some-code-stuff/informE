@@ -41,6 +41,12 @@ public class DeviceRepository(AppDbContext db) : IDeviceRepository
         return query.OrderBy(d => d.Hostname).ToListAsync(ct);
     }
 
+    // Comparação case-insensitive: o agente formata o MAC em maiúsculas, mas uma
+    // linha semeada ou vinda de outra origem pode estar em minúsculas — e o
+    // índice único do Postgres é sensível a caixa.
+    public Task<Device?> GetByMacAddressAsync(string macAddress, CancellationToken ct = default) =>
+        db.Devices.FirstOrDefaultAsync(d => d.MacAddress.ToUpper() == macAddress.ToUpper(), ct);
+
     public async Task AddAsync(Device device, CancellationToken ct = default) =>
         await db.Devices.AddAsync(device, ct);
 

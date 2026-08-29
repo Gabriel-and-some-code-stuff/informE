@@ -24,9 +24,14 @@ builder.Services.AddOpenApi(options =>
 
 // O Blazor roda em outra porta no desenvolvimento, então precisa de CORS.
 // AllowCredentials é obrigatório para o SignalR (o handshake manda cookie/token).
+//
+// Uma origem só: o Server agora tem um perfil de launch único (ver
+// launchSettings.json). A lista antiga carregava 5000/5001 — de um perfil http
+// que não existe mais — e 5173, que é a porta do Vite e nunca foi usada por
+// projeto nenhum daqui (o front é MAUI Blazor Hybrid).
 const string PoliticaCorsDev = "dev";
 builder.Services.AddCors(options => options.AddPolicy(PoliticaCorsDev, policy => policy
-    .WithOrigins("http://localhost:5000", "https://localhost:5001", "http://localhost:5173", "http://localhost:5021")
+    .WithOrigins("https://localhost:5021")
     .AllowAnyHeader()
     .AllowAnyMethod()
     .AllowCredentials()));
@@ -47,6 +52,10 @@ await using (var scope = app.Services.CreateAsyncScope())
 
     await bootstrapper.MigrateAsync();
 
+    // O registry de conexões é em memória: nenhum agente está conectado a este
+    // processo ainda, então nenhuma máquina pode estar Online.
+    await bootstrapper.ResetarConexoesAsync();
+
     // Massa de teste SÓ em desenvolvimento. Em produção o banco começa vazio e o
     // primeiro SuperAdmin é criado pelo instalador — nunca com senha conhecida.
     if (app.Environment.IsDevelopment())
@@ -54,6 +63,11 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.UseExceptionHandler();
+
+// HTTPS é o que faz os hubs negociarem wss:// em vez de ws://. Sem isso o
+// tráfego do agente (que carrega a agentKey na query string do handshake) sai
+// em texto claro na rede da escola.
+app.UseHttpsRedirection();
 
 if (app.Environment.IsDevelopment())
 {
@@ -66,6 +80,10 @@ if (app.Environment.IsDevelopment())
     // schema que ele usa.
     app.MapScalarApiReference(options => options.HideModels = true);
     app.UseCors(PoliticaCorsDev);
+
+    // Repõe a massa de desenvolvimento sem `docker compose down -v`. Só existe
+    // aqui: em produção a rota nem é mapeada.
+    app.MapSeedEndpoint();
 }
 
 // Ordem obrigatória: autenticação (quem é você) antes de autorização (pode?).
@@ -76,6 +94,7 @@ app.MapGet("/", () => "informE.Server online").AllowAnonymous().ExcludeFromDescr
 
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
+app.MapGroupEndpoints();
 app.MapDeviceEndpoints();
 app.MapExecutionEndpoints();
 app.MapAgentEndpoints();

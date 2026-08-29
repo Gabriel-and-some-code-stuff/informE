@@ -16,7 +16,11 @@ public class CreateEnrollmentTokenUseCase(
 {
     private const int TamanhoEmBytes = 24;
 
-    public async Task<string> ExecuteAsync(Guid criadoPorUserId, CancellationToken ct = default)
+    // Devolve a validade junto: antes o endpoint respondia
+    // `DateTimeOffset.UtcNow.AddHours(2)` hardcoded, duplicando a constante que
+    // vive no construtor de EnrollmentToken. Mudar a validade em um lugar fazia
+    // a API mentir no outro.
+    public async Task<(string Token, DateTimeOffset ExpiraEm)> ExecuteAsync(Guid criadoPorUserId, CancellationToken ct = default)
     {
         // Base64Url: sem '+', '/' e '=' — o token vai ser copiado à mão para o
         // instalador do agente, e esses caracteres atrapalham em linha de comando.
@@ -32,6 +36,6 @@ public class CreateEnrollmentTokenUseCase(
         await tokenRepository.AddAsync(token, ct);
         await unitOfWork.SaveChangesAsync(ct);
 
-        return valor;
+        return (valor, token.ExpiresAt);
     }
 }

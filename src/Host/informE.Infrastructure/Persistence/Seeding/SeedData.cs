@@ -38,18 +38,23 @@ public static class SeedData
 
     // senhaHash e agentKeyHash entram prontos: hashear 105 vezes com Argon2
     // (64 MB por chamada) travaria o boot. Um hash só, reaproveitado — é dev.
-    public static Semeadura Montar(string senhaHash, string agentKeyHash)
+    // ownerIdExistente: quando o banco JÁ tem usuários (alguém criou uma conta
+    // pelo Scalar antes do primeiro seed) os usuários semeados não entram, e
+    // grupos/tarefas precisam apontar para um dono que exista de verdade. Sem
+    // isso a FK quebraria — ou, pior, o seed inteiro seria pulado e o parque de
+    // 105 máquinas nunca apareceria. Ver DatabaseBootstrapper.
+    public static Semeadura Montar(string senhaHash, string agentKeyHash, Guid? ownerIdExistente = null)
     {
         var rng = new Random(SementeFixa);
         var agora = DateTimeOffset.UtcNow;
 
         var usuarios = MontarUsuarios(senhaHash);
-        var admin = usuarios[0];
+        var ownerId = ownerIdExistente ?? usuarios[0].Id;
 
-        var grupos = MontarGrupos(admin.Id);
+        var grupos = MontarGrupos(ownerId);
         var devices = MontarDevices(grupos, agentKeyHash, rng, agora);
         var alertas = MontarAlertas(devices, rng, agora);
-        var (tarefas, logs) = MontarTarefas(devices, admin.Id, agora);
+        var (tarefas, logs) = MontarTarefas(devices, ownerId, agora);
         var metricas = MontarMetricas(devices, rng, agora);
 
         return new Semeadura(usuarios, grupos, devices, alertas, tarefas, logs, metricas);

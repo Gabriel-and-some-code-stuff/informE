@@ -30,6 +30,31 @@ public class EnrollDeviceUseCase(
         // Chave em texto claro sai UMA vez, na resposta. Só o hash é persistido.
         var agentKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(TamanhoDaChaveEmBytes));
 
+        // ── Re-enroll ─────────────────────────────────────────────────────────
+        // A MESMA máquina pode voltar: reinstalação do agente, %LOCALAPPDATA%
+        // limpo, ou identidade ilegível (o AgentIdentityStore refaz o registro
+        // nesse caso, de propósito). Sem este caminho, o INSERT violava o índice
+        // único de mac_address e o agente recebia 500 sem explicação.
+        //
+        // O MAC é a identidade estável — hostname muda, IP muda por DHCP.
+        var existente = await deviceRepository.GetByMacAddressAsync(request.MacAddress, ct);
+
+        if (existente is not null)
+        {
+            // Chave nova e dados atualizados; histórico (execuções, alertas,
+            // métricas) preservado, que é justamente o motivo de não recriar.
+            existente.UpdateAgentHashKey(passwordHasher.Hash(agentKey));
+            existente.UpdateHostname(request.Hostname);
+            existente.UpdateLastIp(request.IpAddress);
+            existente.UpdateOs(request.Os);
+            existente.UpdateOsUser(request.OsUser);
+
+            token.Redeem(existente.Id);
+            await unitOfWork.SaveChangesAsync(ct);
+
+            return new EnrollDeviceResponse(existente.Id, agentKey);
+        }
+
         var device = new Device(
             request.Hostname,
             request.IpAddress,
