@@ -12,8 +12,13 @@
 > - a Application ganhou `RefreshTokenUseCase` e `UpdateUserProfileUseCase` (14 use cases);
 > - a Infrastructure ganhou reset de conexões no boot e `HasPendingLogsAsync`.
 >
-> Continuam abertos, como este documento previu: rotas de dashboard/alerta/métrica, rotação de
-> chave (`RotateKey` inerte), purga de auditoria e reentrega de comando offline.
+> **Atualizado em 01/09:** a rotação de chave deixou de estar inerte — o host agora
+> entrega `KeyRotationSweeper` (ver §4). É job de fundo, **não** endpoint, como o desenho
+> previa; as duas pontas (`RotateKeyAsync` no repositório + `RotateKey` no agente) já
+> existiam, faltava o disparo.
+>
+> Continuam abertos, como este documento previu: rotas de dashboard/alerta/métrica, purga de
+> auditoria e reentrega de comando offline.
 >
 > Estado atual em **`docs/situacao-atual.md`** e **`docs/plano-revisao-servidor.md`**.
 
@@ -23,7 +28,7 @@
 |---|---|---|
 | **informE.Server** | **10 rotas** REST + 2 hubs funcionando | **~24 rotas ausentes** (MVP: refresh/logout/sessões/users/tasks-detalhe; deferidas: dashboard/grupos) |
 | **informE.Application** | 12 use cases + ports completos | Leitura de dashboard, orquestração de rotação de chave, kick em tempo real |
-| **informE.Infrastructure** | Persistência + realtime + security + sweeps fechados | Sweeper de rotação de chave, purga de auditoria, time-out de tarefa pendente |
+| **informE.Infrastructure** | Persistência + realtime + security + sweeps fechados | Purga de auditoria, time-out de tarefa pendente (rotação de chave entregue em 01/09 — §4) |
 
 As três lacunas da **Application** têm raiz no mesmo lugar: a camada está 100% orientada a
 comando/escrita e nunca pediu "leia" ao banco. E as três da **Infraestrutura** são
@@ -215,9 +220,10 @@ SignalR, Argon2, SMTP, jobs. É a maior camada, e a mais preenchida.
 - `PasswordHasher` (Argon2id — `IPasswordHasher`), `JwtTokenService` (access + refresh),
   `JwtOptions` (bind da seção `Jwt`) e `AgentAuthenticator` (valida a chave rotativa).
 
-**BackgroundJobs** — varreduras periódicas (5 min por padrão, `MonitoringOptions`):
+**BackgroundJobs** — varreduras periódicas (`MonitoringOptions`):
 - `DeviceOfflineSweeper` — RN03: offline após `OfflineThresholdMinutes` (90 min padrão, múltiplo do snapshot de 30 min);
 - `ExpiredSessionSweeper` — sessões inativas.
+- `KeyRotationSweeper` — RF13 desde 01/09: rotaciona a chave de device antiga na idade `KeyMaxAgeDays`; ver §4.
 
 **E-mail**: `SmtpEmailSender` + `SmtpOptions` (base do reset de senha).
 
@@ -226,13 +232,10 @@ SignalR, Argon2, SMTP, jobs. É a maior camada, e a mais preenchida.
 
 ### ❌ O que falta
 
-1. **Driver de rotação de chave.** A Infra valida (`AgentAuthenticator`) e persiste hash
-   (`DeviceRepository.RotateKeyAsync`), mas **nada rotaciona**: não existe `HostedService` tipo
-   `KeyRotationSweeper`, nem config de intervalo. Mesmo com o use case da §2, alguém precisa chamá-lo.
-2. **Purga de audit log.** `ARCHITECTURE.md:542` marca "Purga automática: **ainda não**". Os
+1. **Purga de audit log.** `ARCHITECTURE.md:542` marca "Purga automática: **ainda não**". Os
    sweeps existem para device offline e sessão expirada, mas nada de retenção/expurgo do
    `AuditLog` — cresce sem limite.
-3. **Time-out de tarefa pendente.** Comando despachado com o agente offline deixa o
+2. **Time-out de tarefa pendente.** Comando despachado com o agente offline deixa o
    `TaskExecutionLog` em `Pending` (o agente ainda não pede os pendentes na reconexão —
    `agente.md:239`). O contraponto no Host também não existe: **nenhum job marca como falha**
    a tarefa que nunca rodou. Sem fila de reconexão num lado e expiração no outro, o log fica
@@ -242,15 +245,84 @@ SignalR, Argon2, SMTP, jobs. É a maior camada, e a mais preenchida.
 
 ## Prioridade sugerida (ordem de ataque)
 
-1. **Application — leituras de dashboard** (desbloqueia a rota de dashboard do Server; é a lacuna
-   com maior impacto visível).
-2. **Server — `/auth/refresh`** (o refresh já é emitido e persistido; é o furo mais estranho da API).
-3. **Rotação de chave** (use case na Application **+** sweeper na Infra, que são dois lados da
-   mesma estória; o agente já aceita `RotateKey`).
+~~1. **Application — leituras de dashboard**~~ — segue em aberto, é a lacuna de maior impacto.
+~~2. **Server — `/auth/refresh`**~~ — ✅ entregue.
+~~3. **Rotação de chave**~~ — ✅ entregue em 01/09 (sem use case na Application; é job de Infra — §4).
 4. **Server — rotas restantes** (`logout`, `set-user-active`, `change-role`, reset de senha):
-   use cases já existem, é só rotear.
+   ~~use cases já existem, é só rotear~~ — ✅ entregue.
 5. **Infra — purga de auditoria e time-out de tarefa pendente** (baixo risco, alto valor
    operacional; mesmo padrão dos sweeps já existentes).
 
+> A numeração original foi mantida nos itens riscados para preservar histórico; a ordem de ataque
+> efetiva hoje é: leituras de dashboard (§2) → purga/time-out (Infra §3).
+
 > Nota de honestidade: nada aqui é pré-requisito do que já está entregue. O MVP REST+hub do Host
 > está de pé e documentado; o listado acima é a segunda camada.
+
+---
+
+## 4. Implementação — `KeyRotationSweeper` (rotação de chave RF13)
+
+> **Entregue em 01/09.** Fecha a lacuna que este mesmo doc listava: a Infra validava a chave
+> (`AgentAuthenticator`) e persistia hash novo (`DeviceRepository.RotateKeyAsync`), e o agente já
+> aceitava `RotateKey` — mas **nada disparava**. Era job de fundo, não endpoint.
+
+### Arquivos envolvidos
+
+| Arquivo | Mudança |
+|---|---|
+| `src/Host/informE.Infrastructure/BackgroundJobs/KeyRotationSweeper.cs` | **novo** — o `BackgroundService` que orquestra a rotação |
+| `src/Host/informE.Infrastructure/BackgroundJobs/MonitoringOptions.cs` | 2 configs novas: `KeyRotationIntervalMinutes` (60) e `KeyMaxAgeDays` (30) |
+| `src/Host/informE.Infrastructure/DependencyInjection.cs` | `services.AddHostedService<KeyRotationSweeper>()` |
+| `src/Host/informE.Server/appsettings.json` | Seção `Monitoring` explícita (valores = defaults, só para o knob ficar visível/testável) |
+
+**O que NÃO mudou:** nada na Application (não há `KeyRotationUseCase` de propósito — rotação é
+orquestração de infraestrutura, mesmo padrão do `DeviceOfflineSweeper`/`ExpiredSessionSweeper`, que
+também não passam por use case). Nenhuma rota nova no Server.
+
+### Funcionalidades
+
+- Roda num `PeriodicTimer` de `KeyRotationIntervalMinutes` (padrão 1 h), varrendo uma vez no boot
+  e depois a cada tick — mesmo `do/while` do `DeviceOfflineSweeper`.
+- Seleciona `Device`s com `KeyRotatedAt < agora − KeyMaxAgeDays` (campo nasce preenchido no
+  construtor, então pega tanto nunca-rotacionado quanto vencido).
+- Para cada vencido **online** (resolvido no `EndpointConnectionRegistry`):
+  1. gera chave nova (32 bytes → Base64, mesmo RNG do `EnrollDeviceUseCase`);
+  2. persiste **hash** novo via `Device.UpdateAgentHashKey` (domínio, toca `KeyRotatedAt`);
+  3. empurra o **texto claro** pela conexão SignalR já autenticada (`IAgentClient.RotateKey` →
+     agente grava com DPAPI e usa na próxima conexão).
+- **Device offline é adiado, não rotacionado:** gravar o hash novo sem o agente receber a chave
+  travaria a máquina até re-enroll. O sweeper tenta de novo no próximo ciclo.
+- Falha de push não mata o resto do lote (`try/catch` por device) nem derruba o job (`catch`
+  externo para banco fora do ar).
+
+> Limitação assumida: o contrato `RotateKey` não tem ack. Se o push falhar no meio, o Host fica
+> com o hash novo e o agente com a chave velha (lockout na próxima conexão, resolvido por
+> re-enroll). É o preço de só-rotacionar-online; a janela é de milissegundos.
+
+### Como testar (devs)
+
+Pré-requisito: Server + Postgres de pé (`.start-db` / `start-db.ps1`) e ao menos 1 agente
+registrado e online (enroll + hub conectado).
+
+1. **Forçar rotação imediata** — em `src/Host/informE.Server/appsettings.json`, seção `Monitoring`:
+   `"KeyMaxAgeDays": 0` e `"KeyRotationIntervalMinutes": 1` (roda no boot e a cada minuto).
+2. Subir o Server e ver o log de boot:
+   `Rotação de chave ativa: a cada 1 min, rotacionando chaves com mais de 0 dias.`
+3. Nos logs do sweeper, esperar:
+   `Chave rotacionada para <hostname>.` (por device online) — os **offline** exibem
+   `rotacao adiada` e não gera `AgentKeyHash` novo.
+4. **Conferir no banco** que `AgentKeyHash` mudou e `KeyRotatedAt` foi atualizado:
+   ```sql
+   select id, hostname, "agent_key_hash", "key_rotated_at" from devices;
+   ```
+5. **Conferir no agente** que ele recebeu (`Chave rotacionada pelo Host.` no log do Worker) e que
+   **reconecta sem re-enroll** — derrube e suba o agente; ele volta `Online` com a chave nova
+   (prova de que o hash persistido bate com a chave guardada pelo agente).
+6. **Regressão:** `dotnet test informE.Host.slnx` (a rotação não toca em use case nem rota; nada
+   deve quebrar).
+7. Ao terminar, **reverter** `KeyMaxAgeDays` para 30 e `KeyRotationIntervalMinutes` para 60.
+
+> ⚠️ Com `KeyMaxAgeDays: 0`, **todo** device entra na fila — incluindo os offline, que serão
+> adiados, não rotacionados. Depois do teste, restaure a config para a rotina diária não trocar
+> chaves em excesso.

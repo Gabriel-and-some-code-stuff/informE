@@ -90,6 +90,7 @@ public static class DependencyInjection
         services.Configure<MonitoringOptions>(config.GetSection(MonitoringOptions.SectionName));
         services.AddHostedService<DeviceOfflineSweeper>();
         services.AddHostedService<ExpiredSessionSweeper>();
+        services.AddHostedService<KeyRotationSweeper>();
 
         return services;
     }

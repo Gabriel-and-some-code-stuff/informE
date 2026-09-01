@@ -18,4 +18,13 @@ public class MonitoringOptions
 
     // De quanto em quanto tempo as varreduras rodam.
     public int SweepIntervalMinutes { get; set; } = 5;
+
+    // RF13 — rotação de chave por máquina.
+    // De quanto em quanto tempo o KeyRotationSweeper roda (mais espaçado que os
+    // sweepers de estado: uma rotação diária não precisa de varredura a cada 5 min).
+    public int KeyRotationIntervalMinutes { get; set; } = 60;
+
+    // Idade da chave em dias a partir da qual o device entra na fila de rotação.
+    // Define a frequência de rotação: 30 d é o padrão de troca de segredo por máquina.
+    public int KeyMaxAgeDays { get; set; } = 30;
 }
