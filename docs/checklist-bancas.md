@@ -46,26 +46,26 @@ comentário explicando, não com `--delete-branch`.
 > ⚠️ **Nunca use `--delete-branch` numa PR que é base de outra.** Foi assim que
 > a #12 morreu sem poder ser reaberta.
 
-## 🔴 3. Decidir o que fazer com o Dashboard
+## ✅ 3. Dashboard fica mock — decisão tomada
 
-**`Dashboard.razor` é 100% mock** — `labs` e `adminAlerts` são listas fixas no
-`@code`, o gráfico é gerado por `ScaleChartValue` escalando números inventados,
-e a tela **não injeta o `InformEApiClient`**.
+`Dashboard.razor` é 100% mock: `labs` e `adminAlerts` são listas fixas no
+`@code`, o gráfico é gerado por `ScaleChartValue` e a tela não injeta o
+`InformEApiClient`.
 
-E ele é a **primeira tela depois do login**. Três opções, escolha uma hoje:
+**Decisão: fica assim para o dia 11.** É uma demonstração, e demonstração com
+dado de exemplo é prática normal — o que não pode é a tela **quebrar** ou travar
+na frente da banca.
 
-| Opção | Custo | Risco na banca |
-|---|---|---|
-| **A. Ligar no `/alerts` + `/devices`** | ~3h de front | nenhum, e é a resposta certa |
-| **B. Vídeo entra direto em Equipamentos** | 0 | ninguém pergunta se ninguém vê |
-| **C. Gravar com o mock** | 0 | **alto** — se perguntarem "esse dado é real?", a resposta é não |
+O requisito, então, não é "ser real": é **funcionar redondo**. Para o Dashboard
+isso significa carregar rápido, não dar erro no console, os filtros de
+laboratório responderem e o gráfico desenhar em qualquer período selecionado.
+Teste isso, não a procedência do dado.
 
-**Recomendação: A se houver mão de front hoje, B se não houver. Nunca C.** Uma
-tela a menos é defensável; uma tela falsa apresentada como real, não.
+Se alguém perguntar se é dado real, a resposta é que é massa de demonstração —
+e que o caminho real já existe: `GET /alerts?dias=7` devolve total, contagem por
+categoria, histórico diário e recentes numa chamada. Ver `docs/mapa-tela-api.md`.
 
-O endpoint está pronto e serve o Dashboard inteiro numa chamada:
-`GET /alerts?dias=7` devolve total, contagem por categoria, histórico diário e
-recentes. Ver `docs/mapa-tela-api.md`.
+Ligar de verdade está no plano de outubro (`docs/plano-outubro-novembro.md`).
 
 ## 🟡 4. Revalidar o agente numa máquina real
 
@@ -81,14 +81,17 @@ entregaram, e é a primeira vez que esse dado chega na interface.
 powershell -ExecutionPolicy Bypass -File enroll-agent.ps1 -ServerUrl https://localhost:5021 -Run
 ```
 
-## 🟡 5. Desabilitar o agendamento antes de gravar
+## ✅ 5. Agendamento desabilitado — feito
 
-A tela de Nova Execução **oferece** seletor de data e hora. O backend aceita o
-`ScheduledAt` e **despacha na hora, ignorando o valor**.
+A tela oferecia seletor de data e hora; o backend aceita o `ScheduledAt` e
+despacha na hora, ignorando o valor.
 
-Se alguém agendar durante a apresentação, a ação roda imediatamente e isso
-aparece. **Desabilite o seletor com a legenda "em breve".** Prometer menos e
-cumprir é melhor que o contrário.
+O toggle agora está **desligado na origem**, com selo "em breve".
+
+Antes ele abria os campos e o botão Executar apenas ficava inerte — quem
+ligasse achava que o app tinha travado. Bloquear na entrada é honesto;
+bloquear na saída parece defeito. Para reativar quando o sweeper existir:
+apague o `disabled` do checkbox.
 
 ## 🟡 6. Varrer a interface por becos sem saída
 
@@ -155,6 +158,9 @@ finge.
   e diga que é o notebook ali na mesa. É o que separa "demo" de "funciona".
 - **Escolha "Informações do Sistema"**, que é leitura pura. Não faça limpeza de
   disco em máquina de gravação.
+- **Assuma o dado de exemplo com naturalidade.** As 105 máquinas são massa de
+  demonstração e isso é normal; o que precisa ser real é a máquina que você
+  aponta na mesa.
 - **Não mostre terminal**, a menos que a fala seja sobre o agente. Se a demo
   precisa de terminal, ela não está pronta.
 - **Deixe o vídeo pronto na véspera e teste o arquivo** na máquina que vai

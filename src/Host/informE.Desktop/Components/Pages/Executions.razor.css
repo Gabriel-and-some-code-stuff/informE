@@ -692,3 +692,29 @@
         width: 100%;
     }
 }
+
+/* Agendamento desligado até existir o sweeper que despacha na hora marcada.
+   Ver o comentário no markup e o item 7 de docs/pendencias-front-auditoria.md. */
+
+.schedule-soon {
+    margin-left: 9px;
+    padding: 3px 8px;
+    border: 1px solid #283449;
+    border-radius: 999px;
+    color: #768197;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    vertical-align: middle;
+}
+
+.switch.disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.switch.disabled input {
+    cursor: not-allowed;
+}

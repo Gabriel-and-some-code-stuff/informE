@@ -311,10 +311,14 @@ Está certa e foi seguida em `Devices.razor`:
 - hardware `null` → "Não disponível", com a explicação do porquê
 - `LastSeenAt` `null` → "Nunca"
 
-**O contraexemplo, que precisa de decisão:** `Dashboard.razor` é 100% mock hoje
-— `labs` e `adminAlerts` são listas fixas no `@code`, e o gráfico é gerado por
-`ScaleChartValue`, que escala números inventados. Não injeta `InformEApiClient`.
+**Onde a regra NÃO se aplica:** `Dashboard.razor` é 100% mock — `labs` e
+`adminAlerts` são listas fixas no `@code`, e o gráfico vem de `ScaleChartValue`.
 
-Com `GET /alerts` e `GET /devices` no ar, o Dashboard pode ser real. Enquanto não
-for, ele viola a própria regra deste documento — e é a **primeira tela depois do
-login**.
+Isso foi **decidido como aceitável** para a apresentação: é massa de
+demonstração, não dado inventado se passando por leitura de máquina. A distinção
+importa — a regra acima existe para impedir que a tela **minta sobre uma máquina
+específica** (mostrar "CPU 0%" quando não há leitura), não para proibir tela de
+exemplo.
+
+Com `GET /alerts` e `GET /devices` no ar, ligar o Dashboard é trabalho de tela.
+Está planejado para outubro em `docs/plano-outubro-novembro.md`.
