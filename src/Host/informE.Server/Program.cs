@@ -97,6 +97,7 @@ app.MapUserEndpoints();
 app.MapGroupEndpoints();
 app.MapDeviceEndpoints();
 app.MapExecutionEndpoints();
+app.MapAlertEndpoints();
 app.MapAgentEndpoints();
 
 // Os hubs existiam desde a PR da Infrastructure mas NUNCA foram mapeados —

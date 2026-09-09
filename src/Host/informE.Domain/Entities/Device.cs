@@ -40,6 +40,19 @@ public class Device
     // máquina nunca reportou; a tela mostra "—" nessas linhas.
     public int? UptimeSeconds { get; set; }
 
+    // Percentuais do ÚLTIMO snapshot, para a tela de detalhe do equipamento.
+    //
+    // Antes só o Health derivado era guardado: EvaluateHealth reduzia os três
+    // números a um enum e os percentuais eram descartados. A tela não tinha como
+    // mostrar "CPU 35,9%" porque o dado não existia em lugar nenhum do sistema.
+    //
+    // Isto NÃO é histórico (RF02 continua valendo — histórico é DeviceDailyMetrics):
+    // é o valor corrente, sobrescrito a cada snapshot, igual ao UptimeSeconds.
+    // Null enquanto a máquina nunca reportou; a tela mostra "—".
+    public float? CpuPercent { get; set; }
+    public float? RamPercent { get; set; }
+    public float? DiskPercent { get; set; }
+
     // Máquina do professor vs. do aluno na tela de Grupos. Designado pelo admin
     // depois do enroll, não reportado pelo agente.
     public DeviceRole Role { get; set; } = DeviceRole.Aluno;
@@ -194,7 +207,17 @@ public class Device
     // Métodos de domínio — conexão e saúde
     // uptimeSeconds é opcional porque a conexão do agente (OnConnectedAsync) marca
     // Online antes de existir snapshot; o valor chega na primeira telemetria.
-    public void MarkSeen(DateTimeOffset now, HealthStatus health, int? uptimeSeconds = null)
+    // Os percentuais são opcionais pelo mesmo motivo do uptime: AgentHub chama
+    // MarkSeen(now, device.Health) no OnConnectedAsync, quando ainda não existe
+    // snapshot. Passar os três quando existirem mantém percentual e Health sempre
+    // vindos da MESMA leitura — não dá pra gravar "CPU 12%" com Saúde=Crítico.
+    public void MarkSeen(
+        DateTimeOffset now,
+        HealthStatus health,
+        int? uptimeSeconds = null,
+        float? cpuPercent = null,
+        float? ramPercent = null,
+        float? diskPercent = null)
     {
         LastSeenAt = now;
         Status = EndpointStatus.Online;
@@ -202,6 +225,12 @@ public class Device
 
         if (uptimeSeconds is >= 0)
             UptimeSeconds = uptimeSeconds;
+
+        // Só sobrescreve quando veio leitura nova: preserva o último valor
+        // conhecido no evento de conexão, em vez de zerar a tela.
+        if (cpuPercent is not null) CpuPercent = cpuPercent;
+        if (ramPercent is not null) RamPercent = ramPercent;
+        if (diskPercent is not null) DiskPercent = diskPercent;
     }
 
     // Sem telemetria não há como avaliar saúde nem uptime — a tela mostra "—" em
@@ -211,6 +240,12 @@ public class Device
         Status = EndpointStatus.Offline;
         Health = HealthStatus.Erro;
         UptimeSeconds = null;
+
+        // Mesma razão do uptime: percentual de máquina offline é dado velho
+        // apresentado como atual. A tela mostra "—".
+        CpuPercent = null;
+        RamPercent = null;
+        DiskPercent = null;
     }
 
     // Limiares calibrados pelos dados da tela de Equipamentos: PC-05 com disco

@@ -78,7 +78,34 @@ public record DeviceListItemDto(
     string Health,          // Saúde: Saudavel/Aviso/Critico/Erro
     string Role,            // Aluno/Professor
     int? UptimeSeconds,
-    DateTimeOffset? LastSeenAt);
+    DateTimeOffset? LastSeenAt,
+    // Percentuais do último snapshot. Null em máquina offline ou que nunca
+    // reportou — a tela mostra "—", nunca 0%, que seria uma leitura falsa.
+    float? CpuPercent = null,
+    float? RamPercent = null,
+    float? DiskPercent = null);
+
+// Detalhe do equipamento: a linha da lista + o hardware da tabela info_devices.
+//
+// Todo o bloco de hardware é nullable de propósito. O agente coleta APENAS
+// CPU/RAM/disco/uptime (ver SystemSnapshotCollector) — modelo de processador,
+// GPU, placa-mãe e BIOS não são coletados, decisão registrada em
+// docs/pendencias-front-auditoria.md §1. As máquinas do seed têm esses dados;
+// a máquina real vem null e a tela deve exibir "Não disponível".
+public record DeviceDetailDto(
+    DeviceListItemDto Equipamento,
+    HardwareDto? Hardware);
+
+public record HardwareDto(
+    string? Cpu,
+    string? Gpu,
+    int? RamGb,
+    string? RamType,
+    int? StorageGb,
+    string? StorageType,
+    string? MotherBoard,
+    string? Bios,
+    DateTimeOffset? CollectedAt);
 
 public record DeviceSummaryDto(int Total, int Online, int Offline, int ComProblema);
 
@@ -108,6 +135,11 @@ public record DispatchTaskRequestDto(
 public record DispatchTaskResponseDto(Guid TaskId, string Code, int DispatchedCount);
 
 // Uma linha da tabela de Execuções (grão = log, ou seja, por máquina).
+//
+// `CriadoPor` responde "quem mandou isso?" — item 8 do documento de pendências.
+// MachineTask guarda CreatedByUserId, mas sem propriedade de navegação para
+// User, então o nome é resolvido por lookup no endpoint. Vem null quando o
+// usuário foi removido depois de disparar a execução; a tela mostra "—".
 public record ExecutionListItemDto(
     Guid LogId,
     Guid TaskId,
@@ -117,11 +149,47 @@ public record ExecutionListItemDto(
     string Status,
     DateTimeOffset ExecutedAt,
     int? DurationMs,
-    string? Output);
+    string? Output,
+    string? CriadoPor = null);
 
 // Detalhe de uma execução: o status da TAREFA mais as linhas por máquina. A
 // separação importa — a tarefa só fecha quando nenhum log está mais pendente.
 public record TaskDetailDto(Guid Id, string Code, string Status, IReadOnlyList<ExecutionListItemDto> Maquinas);
+
+// ── Alertas ───────────────────────────────────────────────────────────────────
+
+// Uma linha do painel "Alertas Recentes".
+//
+// `Categoria` e derivada em tempo de leitura por AlertCategoryMap: os 11
+// AlertType tecnicos colapsam nas 6 faixas do grafico do Figma. Nao existe
+// coluna de categoria no banco — e agrupamento de apresentacao.
+//
+// NAO existe campo de severidade no dominio. O documento de pendencias pede
+// "filtrar por categoria e severidade"; categoria existe, severidade nao —
+// ver docs/pendencias-front-auditoria.md item 5.
+public record AlertListItemDto(
+    Guid Id,
+    Guid DeviceId,
+    string DeviceHostname,
+    string? GroupName,
+    string Tipo,          // AlertType tecnico (HighCpu, DiskFull, ...)
+    string Categoria,     // Faixa de apresentacao (Hardware, Armazenamento, ...)
+    string? Mensagem,
+    DateTimeOffset OcorridoEm);
+
+// Uma barra do grafico "Historico de Alertas" (stacked bar por dia).
+// `PorCategoria` traz as 6 faixas sempre presentes, inclusive com zero, para a
+// tela nao precisar completar dia vazio.
+public record AlertHistoryDayDto(
+    DateOnly Dia,
+    int Total,
+    IReadOnlyDictionary<string, int> PorCategoria);
+
+public record AlertsResponseDto(
+    int Total,
+    IReadOnlyDictionary<string, int> PorCategoria,
+    IReadOnlyList<AlertHistoryDayDto> Historico,
+    IReadOnlyList<AlertListItemDto> Recentes);
 
 // ── Agente ────────────────────────────────────────────────────────────────────
 

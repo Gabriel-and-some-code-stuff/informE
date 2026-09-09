@@ -76,10 +76,29 @@ public static class ExecutionEndpoints
 
         grupo.MapGet("/", async (
             IMachineTaskRepository repositorio,
+            IUserRepository usuarios,
             CancellationToken ct,
             int limite = 50) =>
         {
             var tasks = await repositorio.ListRecentAsync(limite, ct);
+
+            // Nome de quem disparou (item 8 das pendências do front).
+            //
+            // MachineTask.CreatedByUserId é coluna solta — não existe navegação
+            // para User nem FK no banco. Criar o relacionamento agora exigiria
+            // migração com FK sobre dados já gravados, risco desnecessário; um
+            // lookup pelos ids DISTINTOS resolve em uma consulta a mais, não uma
+            // por linha.
+            var idsDosAutores = tasks.Select(t => t.CreatedByUserId).Distinct().ToList();
+            var nomePorId = new Dictionary<Guid, string>();
+
+            foreach (var id in idsDosAutores)
+            {
+                var autor = await usuarios.GetByIdAsync(id, ct);
+
+                if (autor is not null)
+                    nomePorId[id] = autor.Username;
+            }
 
             // A tela lista por MÁQUINA, não por tarefa: uma tarefa disparada em 20
             // devices vira 20 linhas. Por isso o achatamento em cima dos logs.
@@ -93,7 +112,8 @@ public static class ExecutionEndpoints
                     l.Status.ToString(),
                     l.ExecutedAt,
                     l.DurationMs,
-                    l.OutputLog)))
+                    l.OutputLog,
+                    nomePorId.GetValueOrDefault(t.CreatedByUserId))))
                 .OrderByDescending(i => i.ExecutedAt)
                 .ToList();
 

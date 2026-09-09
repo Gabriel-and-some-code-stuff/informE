@@ -29,10 +29,10 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v5l-5 10a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3L14 8V3"/><path d="M8 15h8"/></svg>
                     <span>Grupos</span>
                 </button>
-                <button class="nav-link" type="button">
+                <a class="nav-link @(IsActive("/equipamentos") || IsActive("/devices") ? "active" : null)" href="/equipamentos">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
                     <span>Equipamentos</span>
-                </button>
+                </a>
                 <a class="nav-link @(IsActive("/executions") || IsActive("/execucoes") ? "active" : null)" href="/executions">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7V5Z"/></svg>
                     <span>Execuções</span>

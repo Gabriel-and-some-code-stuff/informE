@@ -7,8 +7,14 @@ namespace informE.Infrastructure.Persistence.Repositories;
 
 public class DeviceRepository(AppDbContext db) : IDeviceRepository
 {
+    // Include do Group e do DeviceInfo: a tela de detalhe mostra o nome do
+    // laboratorio e o bloco de hardware. Sem os Includes o endpoint devolvia
+    // GroupName null mesmo com a maquina agrupada.
     public Task<Device?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
-        db.Devices.FirstOrDefaultAsync(d => d.Id == id, ct);
+        db.Devices
+            .Include(d => d.Group)
+            .Include(d => d.DeviceInfo)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
 
     public Task<List<Device>> ListByGroupAsync(Guid groupId, CancellationToken ct = default) =>
         db.Devices.Where(d => d.GroupId == groupId).ToListAsync(ct);
