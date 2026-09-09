@@ -1,0 +1,169 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject informE.Desktop.Services.InformEApiClient Api
+
+<div class="app-shell @(IsViewer ? "viewer-shell" : "admin-shell")">
+    <aside class="sidebar @(menuOpen ? "open" : null)">
+        <div class="sidebar-brand">
+            <button class="brand-mark" type="button" @onclick="ToggleMenu" aria-label="Alternar menu">
+                <img src="images/logo-full.png" alt="informE" />
+            </button>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="Navegação principal">
+            <a class="nav-link @(IsActive("/dashboard") ? "active" : null)" href="@(IsViewer ? "/dashboard/viewer" : "/dashboard/admin")">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <span>Dashboard</span>
+            </a>
+
+            @if (IsViewer)
+            {
+                <button class="nav-link" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                    <span>Máquinas</span>
+                </button>
+            }
+            else
+            {
+                <button class="nav-link" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v5l-5 10a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3L14 8V3"/><path d="M8 15h8"/></svg>
+                    <span>Grupos</span>
+                </button>
+                <a class="nav-link @(IsActive("/equipamentos") || IsActive("/devices") ? "active" : null)" href="/equipamentos">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                    <span>Equipamentos</span>
+                </a>
+                <a class="nav-link @(IsActive("/executions") || IsActive("/execucoes") ? "active" : null)" href="/executions">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7V5Z"/></svg>
+                    <span>Execuções</span>
+                </a>
+                <button class="nav-link" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"/><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z"/><path d="M12 11v10"/></svg>
+                    <span>Inventário</span>
+                </button>
+                <button class="nav-link" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                    <span>Administração de Contas</span>
+                </button>
+            }
+
+            <button class="nav-link" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.36.7.66.95.3.25.68.4 1.07.4H21v4h-.1A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+                <span>Configurações</span>
+            </button>
+        </nav>
+
+        <div class="account-area">
+            <div class="account-menu">
+                <button type="button">Meu Perfil</button>
+                <button class="logout-button" type="button" @onclick="Logout">Sair da Conta</button>
+            </div>
+            <div class="account-card">
+                <span class="avatar">@(IsViewer ? "EU" : "AU")</span>
+                <span class="account-copy">
+                    <strong>@UserName</strong>
+                    <small>@UserEmail</small>
+                </span>
+                <span class="account-chevron">⌃</span>
+            </div>
+        </div>
+    </aside>
+
+    <div class="main-area">
+        <header class="topbar">
+            <button class="mobile-menu" type="button" @onclick="ToggleMenu" aria-label="Abrir menu">☰</button>
+
+            <div class="search-box">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input aria-label="Busca" placeholder="Buscar dispositivos, tickets, usuários..." />
+            </div>
+
+            <div class="topbar-actions">
+                <button class="status-pill sync" type="button" @onclick="Synchronize">
+                    <span class="sync-icon">↻</span>
+                    <span>Sincronizado</span>
+                    <small>@syncText</small>
+                </button>
+                <div class="status-pill online">
+                    <span class="online-dot"></span>
+                    <span>Servidor Online</span>
+                </div>
+                <button class="notification-button" type="button" aria-label="Notificações">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+                    <span></span>
+                </button>
+            </div>
+        </header>
+
+        <main class="app-content">
+            @Body
+        </main>
+    </div>
+
+    @if (menuOpen)
+    {
+        <button class="mobile-overlay" type="button" @onclick="ToggleMenu" aria-label="Fechar menu"></button>
+    }
+</div>
+
+@code {
+    private bool menuOpen;
+    private string syncText = "há 2 min";
+
+    private bool IsViewer => Navigation.Uri.Contains("/viewer", StringComparison.OrdinalIgnoreCase);
+
+    private string UserEmail
+    {
+        get
+        {
+            var email = informE.Desktop.Components.State.AppSession.Email;
+            return string.IsNullOrWhiteSpace(email)
+                ? (IsViewer ? "viewer@informe.local" : "admin@informe.local")
+                : email;
+        }
+    }
+
+    private string UserName
+    {
+        get
+        {
+            var username = informE.Desktop.Components.State.AppSession.Username;
+            return string.IsNullOrWhiteSpace(username)
+                ? (IsViewer ? "End User" : "Admin User")
+                : username;
+        }
+    }
+
+    private bool IsActive(string route)
+    {
+        var relative = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).TrimStart('/');
+        return relative.StartsWith(route, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ToggleMenu()
+    {
+        menuOpen = !menuOpen;
+    }
+
+    private void Synchronize()
+    {
+        syncText = "agora";
+    }
+
+    private async Task Logout()
+    {
+        var loginRoute = IsViewer ? "/login/viewer" : "/login/admin";
+
+        try
+        {
+            await Api.LogoutAsync();
+        }
+        catch
+        {
+            // O logout local continua mesmo se o servidor estiver indisponível.
+        }
+
+        informE.Desktop.Components.State.AppSession.Clear();
+        Navigation.NavigateTo(loginRoute);
+    }
+}

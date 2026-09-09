@@ -164,10 +164,16 @@ public static class SeedData
             // se os limiares mudarem, a massa acompanha sozinha.
             var saude = Device.EvaluateHealth(cpu, ram, disco);
 
+            // Os MESMOS tres numeros que geraram a saude vao para as colunas de
+            // percentual — a tela de detalhe mostra exatamente o que classificou
+            // a maquina, sem chance de divergir.
             devices[i].MarkSeen(
                 agora.AddMinutes(-rng.Next(1, 5)),
                 saude,
-                uptimeSeconds: rng.Next(3, 8) * 86_400 + rng.Next(0, 23) * 3_600);
+                uptimeSeconds: rng.Next(3, 8) * 86_400 + rng.Next(0, 23) * 3_600,
+                cpuPercent: cpu,
+                ramPercent: ram,
+                diskPercent: disco);
         }
     }
 

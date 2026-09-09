@@ -1,0 +1,144 @@
+@page "/login"
+@page "/login/{AccessType}"
+@layout informE.Desktop.Components.Layout.Auth.AuthLayout
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager Navigation
+@inject informE.Desktop.Services.InformEApiClient Api
+
+<PageTitle>Login | informE</PageTitle>
+
+<main class="login-page">
+    <section class="login-card @(IsViewer ? "viewer" : "admin")" aria-labelledby="login-title">
+        <header class="brand-area">
+            <div class="brand-logo-frame">
+                <img class="brand-logo" src="images/logo-full.png" alt="informE" />
+            </div>
+           
+        </header>
+
+        <div class="form-area">
+            <EditForm Model="model" OnValidSubmit="HandleLogin" class="login-form">
+                <DataAnnotationsValidator />
+                <h1 id="login-title" class="sr-only">Entrar no informE</h1>
+
+                <fieldset class="access-fieldset">
+                    <legend>Selecione o tipo de acesso</legend>
+                    <div class="access-options">
+                        <button type="button" class="access-option @(!IsViewer ? "selected" : null)" @onclick="() => SelectAccess(false)">
+                            <strong>Administrador</strong>
+                            <span>Gerenciamento completo</span>
+                        </button>
+                        <button type="button" class="access-option @(IsViewer ? "selected" : null)" @onclick="() => SelectAccess(true)">
+                            <strong>Viewer</strong>
+                            <span>Suporte e diagnóstico</span>
+                        </button>
+                    </div>
+                </fieldset>
+
+                <div class="field">
+                    <label for="email">Email</label>
+                    <InputText id="email" type="email" autocomplete="username" placeholder="seu@email.com" @bind-Value="model.Email" />
+                    <ValidationMessage For="() => model.Email" />
+                </div>
+
+                <div class="field">
+                    <label for="password">Senha</label>
+                    <InputText id="password" type="password" autocomplete="current-password" placeholder="••••••••" @bind-Value="model.Password" />
+                    <ValidationMessage For="() => model.Password" />
+                </div>
+
+                <div class="forgot-row">
+                    <a href="/esqueci-a-senha">Esqueceu a senha?</a>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(loginError))
+                {
+                    <div class="login-error" role="alert">@loginError</div>
+                }
+
+                <button class="submit-button" type="submit" disabled="@isSubmitting">
+                    @(isSubmitting ? "Entrando..." : "Entrar")
+                </button>
+            </EditForm>
+        </div>
+
+        <footer class="card-footer">informE Platform <span>•</span> <strong>Online</strong></footer>
+    </section>
+</main>
+
+@code {
+    [Parameter]
+    public string? AccessType { get; set; }
+
+    private readonly LoginModel model = new();
+    private bool isViewer;
+    private bool isSubmitting;
+    private string? loginError;
+
+    private bool IsViewer => isViewer;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(AccessType))
+            isViewer = AccessType.Equals("viewer", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void SelectAccess(bool viewer)
+    {
+        isViewer = viewer;
+        Navigation.NavigateTo(viewer ? "/login/viewer" : "/login/admin", replace: true);
+    }
+
+    private async Task HandleLogin()
+    {
+        isSubmitting = true;
+        loginError = null;
+
+        try
+        {
+            var email = model.Email.Trim();
+            var result = await Api.LoginAsync(email, model.Password);
+            var accountIsViewer = result.Role.Equals("Viewer", StringComparison.OrdinalIgnoreCase);
+
+            if (accountIsViewer != IsViewer)
+            {
+                loginError = accountIsViewer
+                    ? "Esta conta possui acesso Viewer. Selecione Viewer para entrar."
+                    : "Esta conta possui acesso de Administrador. Selecione Administrador para entrar.";
+                return;
+            }
+
+            informE.Desktop.Components.State.AppSession.Set(
+                email,
+                result.Username,
+                result.Role,
+                result.AccessToken,
+                result.RefreshToken,
+                result.RefreshTokenExpiresAt);
+
+            Navigation.NavigateTo(accountIsViewer ? "/dashboard/viewer" : "/dashboard/admin");
+        }
+        catch (HttpRequestException)
+        {
+            loginError = "Não foi possível conectar ao informE.Server em https://localhost:5021.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            loginError = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        [Required(ErrorMessage = "Informe o email.")]
+        [EmailAddress(ErrorMessage = "Informe um email válido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe a senha.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

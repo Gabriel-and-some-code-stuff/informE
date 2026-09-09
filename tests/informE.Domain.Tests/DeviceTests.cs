@@ -86,4 +86,64 @@ public class DeviceTests
 
     private static Device NovoDevice() =>
         new("PC-01", "192.168.1.10", "AA:BB:CC:DD:EE:FF", "Windows 11", "aluno", "hash-fake", null, null);
+
+    // ── Percentuais correntes ────────────────────────────────────────────────
+    // Antes de existirem estes campos, EvaluateHealth reduzia CPU/RAM/disco a um
+    // enum e os numeros eram descartados — a tela de detalhe nao tinha o dado.
+
+    [Fact]
+    public void MarkSeen_DeveGuardarOsPercentuaisDoSnapshot()
+    {
+        var device = NovoDevice();
+
+        device.MarkSeen(DateTimeOffset.UtcNow, HealthStatus.Critico,
+            uptimeSeconds: 1000, cpuPercent: 35.9f, ramPercent: 90.5f, diskPercent: 89.1f);
+
+        Assert.Equal(35.9f, device.CpuPercent);
+        Assert.Equal(90.5f, device.RamPercent);
+        Assert.Equal(89.1f, device.DiskPercent);
+    }
+
+    [Fact]
+    public void MarkSeen_SemPercentuaisNaoDeveApagarOsAnteriores()
+    {
+        // AgentHub.OnConnectedAsync chama MarkSeen(now, device.Health) sem
+        // telemetria. Se isso zerasse os percentuais, reconectar apagaria a
+        // ultima leitura conhecida da tela.
+        var device = NovoDevice();
+        device.MarkSeen(DateTimeOffset.UtcNow, HealthStatus.Aviso,
+            cpuPercent: 12f, ramPercent: 34f, diskPercent: 56f);
+
+        device.MarkSeen(DateTimeOffset.UtcNow, device.Health);
+
+        Assert.Equal(12f, device.CpuPercent);
+        Assert.Equal(34f, device.RamPercent);
+        Assert.Equal(56f, device.DiskPercent);
+    }
+
+    [Fact]
+    public void MarkOffline_DeveLimparOsPercentuais()
+    {
+        // Percentual de maquina offline e leitura velha apresentada como atual.
+        // A tela mostra "—", nunca o ultimo valor nem 0%.
+        var device = NovoDevice();
+        device.MarkSeen(DateTimeOffset.UtcNow, HealthStatus.Saudavel,
+            cpuPercent: 40f, ramPercent: 50f, diskPercent: 60f);
+
+        device.MarkOffline();
+
+        Assert.Null(device.CpuPercent);
+        Assert.Null(device.RamPercent);
+        Assert.Null(device.DiskPercent);
+    }
+
+    [Fact]
+    public void Percentuais_DevemNascerNulosAntesDoPrimeiroSnapshot()
+    {
+        var device = NovoDevice();
+
+        Assert.Null(device.CpuPercent);
+        Assert.Null(device.RamPercent);
+        Assert.Null(device.DiskPercent);
+    }
 }

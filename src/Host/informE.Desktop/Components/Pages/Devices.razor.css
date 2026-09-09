@@ -1,0 +1,419 @@
+/* Mesma linguagem visual de Executions.razor.css — fundo #080f1d, accent
+   #10c6f4, texto #f2f5fa, secundário #7f899c. Cores repetidas em vez de
+   variáveis CSS porque o isolamento de estilo do Blazor gera um escopo por
+   arquivo e as demais páginas já seguem esse padrão. */
+
+.devices-page {
+    min-height: calc(100vh - 64px);
+    padding: 38px 38px 52px;
+    background: #080f1d;
+    color: #f2f5fa;
+    font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.devices-header {
+    min-height: 98px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.devices-header h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    line-height: 1.1;
+    font-weight: 650;
+    letter-spacing: -.4px;
+}
+
+.devices-header p {
+    margin: 0;
+    color: #7f899c;
+    font-size: 15px;
+}
+
+.refresh-button {
+    height: 44px;
+    padding: 0 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #283449;
+    border-radius: 10px;
+    background: #101b2c;
+    color: #dce2ec;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+}
+
+.refresh-button:hover:not(:disabled) {
+    border-color: #10c6f4;
+    color: #10c6f4;
+}
+
+.refresh-button:disabled {
+    opacity: .55;
+    cursor: default;
+}
+
+/* ── Resumo ─────────────────────────────────────────────────────────────── */
+
+.devices-summary {
+    margin: 8px 0 22px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.summary-card {
+    padding: 20px 22px;
+    border: 1px solid #1d2636;
+    border-radius: 14px;
+    background: #0d1524;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.summary-label {
+    color: #768197;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+}
+
+.summary-value {
+    font-size: 34px;
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: -1px;
+}
+
+.summary-card.online .summary-value { color: #1fd274; }
+.summary-card.offline .summary-value { color: #7f899c; }
+.summary-card.problem .summary-value { color: #ffad00; }
+
+/* ── Filtros ────────────────────────────────────────────────────────────── */
+
+.devices-filters {
+    margin-bottom: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 190px;
+}
+
+.filter-field.grow {
+    flex: 1 1 260px;
+}
+
+.filter-field > span {
+    color: #768197;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.filter-field select,
+.filter-field input {
+    height: 42px;
+    padding: 0 13px;
+    border: 1px solid #283449;
+    border-radius: 10px;
+    background: #101b2c;
+    color: #f2f5fa;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.filter-field select:focus,
+.filter-field input:focus {
+    outline: none;
+    border-color: #10c6f4;
+}
+
+/* ── Tabela ─────────────────────────────────────────────────────────────── */
+
+.devices-panel {
+    border: 1px solid #1d2636;
+    border-radius: 16px;
+    background: #0d1524;
+    overflow: hidden;
+}
+
+.table-scroll {
+    overflow-x: auto;
+    padding: 18px 22px 22px;
+}
+
+.devices-table {
+    width: 100%;
+    min-width: 1080px;
+    border-collapse: collapse;
+}
+
+.devices-table th {
+    height: 52px;
+    padding: 0 15px;
+    border-bottom: 1px solid #283449;
+    color: #768197;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.devices-table td {
+    height: 60px;
+    padding: 0 15px;
+    border-bottom: 1px solid #161f2f;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.devices-table tbody tr {
+    cursor: pointer;
+    transition: background .12s;
+}
+
+.devices-table tbody tr:hover {
+    background: #101b2c;
+}
+
+.devices-table tbody tr.selected {
+    background: #10c6f41a;
+}
+
+.devices-table td strong {
+    display: block;
+    font-weight: 600;
+}
+
+.devices-table td small {
+    color: #768197;
+    font-size: 12px;
+}
+
+.status-wrap,
+.health-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.status-wrap::before,
+.health-wrap::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.status-wrap.online { color: #1fd274; }
+.status-wrap.offline { color: #ff4d58; }
+.status-wrap.unknown { color: #7f899c; }
+
+.health-wrap.saudavel { color: #1fd274; }
+.health-wrap.aviso { color: #ffad00; }
+.health-wrap.critico { color: #ff4d58; }
+.health-wrap.erro { color: #7f899c; }
+
+/* ── Estados ────────────────────────────────────────────────────────────── */
+
+.loading-state,
+.empty-state {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #7e899c;
+    text-align: center;
+}
+
+.empty-state strong {
+    color: #dce2ec;
+    font-size: 15px;
+}
+
+.empty-state span,
+.loading-state p {
+    margin: 0;
+    font-size: 12px;
+}
+
+.loader {
+    width: 26px;
+    height: 26px;
+    border: 2px solid #283449;
+    border-top-color: #10c6f4;
+    border-radius: 50%;
+    animation: devices-spin .8s linear infinite;
+}
+
+@keyframes devices-spin {
+    to { transform: rotate(360deg); }
+}
+
+.page-message {
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid #ff4d5840;
+    border-radius: 12px;
+    background: #ff4d5814;
+}
+
+.page-message > span {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #ff4d58;
+    color: #07131e;
+    font-weight: 700;
+}
+
+.page-message div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.page-message strong { font-size: 14px; }
+.page-message small { color: #ff8f96; font-size: 12px; }
+
+.page-message button {
+    height: 36px;
+    padding: 0 16px;
+    border: 1px solid #ff4d5860;
+    border-radius: 9px;
+    background: transparent;
+    color: #ff8b92;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ── Painel de detalhe ──────────────────────────────────────────────────── */
+
+.detail-backdrop {
+    position: fixed;
+    inset: 0;
+    background: #04080f9c;
+    z-index: 40;
+}
+
+.detail-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(460px, 92vw);
+    z-index: 41;
+    padding: 28px 30px 40px;
+    overflow-y: auto;
+    background: #0d1524;
+    border-left: 1px solid #1d2636;
+    box-shadow: -22px 0 48px #04080f80;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+}
+
+.detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.detail-header h2 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: -.3px;
+}
+
+.detail-header p {
+    margin: 0;
+    color: #768197;
+    font-size: 13px;
+}
+
+.detail-close {
+    width: 34px;
+    height: 34px;
+    flex: none;
+    border: 1px solid #283449;
+    border-radius: 9px;
+    background: transparent;
+    color: #97a2b5;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.detail-close:hover {
+    border-color: #10c6f4;
+    color: #10c6f4;
+}
+
+.detail-block h3 {
+    margin: 0 0 14px;
+    color: #768197;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+}
+
+.detail-grid {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px 18px;
+}
+
+.detail-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-grid dt {
+    color: #768197;
+    font-size: 12px;
+}
+
+.detail-grid dd {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.detail-unavailable {
+    margin: 0;
+    padding: 14px 16px;
+    border: 1px dashed #283449;
+    border-radius: 11px;
+    color: #7f899c;
+    font-size: 13px;
+    line-height: 1.55;
+}
