@@ -9,7 +9,11 @@
 param(
     [string]$Email = 'admin@cps.sp.gov.br',
     [string]$Senha = 'informe123',
-    [string]$ServerUrl = 'https://localhost:5021',
+    # http e nao https: -SkipCertificateCheck so existe no PowerShell 7+, e no
+    # Windows PowerShell 5.1 qualquer chamada https ao certificado de
+    # desenvolvimento falharia na validacao. A porta 5020 evita o problema e e
+    # a mesma que o agente remoto usa.
+    [string]$ServerUrl = 'http://localhost:5020',
     [switch]$Publicar,
     [switch]$Aqui,
     [string]$Hostname
@@ -23,13 +27,13 @@ function Passo($t) { Write-Host "==> $t" -ForegroundColor Cyan }
 # ── 1. Token ──────────────────────────────────────────────────────────────────
 Passo 'Autenticando'
 
-$login = Invoke-RestMethod -Uri "$ServerUrl/auth/login" -Method Post -SkipCertificateCheck `
+$login = Invoke-RestMethod -Uri "$ServerUrl/auth/login" -Method Post `
     -ContentType 'application/json' `
     -Body (@{ email = $Email; password = $Senha } | ConvertTo-Json)
 
 Passo 'Gerando token de registro'
 
-$resposta = Invoke-RestMethod -Uri "$ServerUrl/admin/enrollment-tokens" -Method Post -SkipCertificateCheck `
+$resposta = Invoke-RestMethod -Uri "$ServerUrl/admin/enrollment-tokens" -Method Post `
     -Headers @{ Authorization = "Bearer $($login.accessToken)" }
 
 # O nome do campo variou entre versoes da API; aceita os dois.
@@ -58,7 +62,6 @@ if ($Aqui) {
 
     $env:Agent__EnrollmentToken = $token
     $env:Agent__ServerUrl = $ServerUrl
-    $env:Agent__AceitarCertificadoNaoConfiavel = 'true'
 
     # Hostname e MAC proprios permitem varios agentes na MESMA maquina: sem isso
     # o segundo enroll viola o indice unico de `devices.hostname`. E o arquivo de

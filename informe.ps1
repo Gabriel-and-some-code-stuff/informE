@@ -8,12 +8,12 @@
 #
 # Parametros uteis:
 #   -SoBanco     sobe so o Postgres e sai
-#   -ComApp      abre tambem o aplicativo Desktop no fim
+#   -SemApp      NAO abre o aplicativo (util na maquina que so hospeda o Server)
 #   -Parar       derruba Server, agentes e Postgres
 
 param(
     [switch]$SoBanco,
-    [switch]$ComApp,
+    [switch]$SemApp,
     [switch]$Parar
 )
 
@@ -80,49 +80,101 @@ Ok 'PostgreSQL presente'
 
 # ── 2. Banco ──────────────────────────────────────────────────────────────────
 Passo 'Subindo o Postgres'
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $raiz 'start-local.ps1') | ForEach-Object {
-    if ($_ -match 'no ar|criado|ja existe') { Ok $_.Trim() }
-}
+# Chamado por dot-sourcing, nao por pipe nem por processo filho.
+#
+# Pipe aqui era risco a mais: qualquer executavel nativo que o script filho
+# deixasse com o descritor aberto (o postgres, no caso do pg_ctl) prenderia
+# o ForEach-Object para sempre. Dot-source roda na MESMA sessao, sem pipe e
+# sem o custo de subir outro PowerShell.
+. (Join-Path $raiz 'start-local.ps1')
 
 if ($SoBanco) { exit 0 }
 
 # ── 3. Server ─────────────────────────────────────────────────────────────────
+Passo 'Compilando'
+
+# Build EXPLICITO e visivel, antes de subir.
+#
+# Antes o script chamava `dotnet run` direto. O `run` compila por dentro, sem
+# imprimir nada durante o Start-Process, e o script ficava parado esperando --
+# um boot normal de ~30s parecia travamento. Compilar aqui mostra o progresso e
+# permite subir com --no-build, que corta a verificacao de build do `run`.
+$cronometro = [Diagnostics.Stopwatch]::StartNew()
+
+dotnet build (Join-Path $raiz 'src/Host/informE.Server/informE.Server.csproj') -c Debug --nologo -v q
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error 'A compilacao falhou. Corrija os erros acima e rode de novo.'
+    exit 1
+}
+Ok ("compilado em {0:N0}s" -f $cronometro.Elapsed.TotalSeconds)
+
 Passo 'Subindo o Server (aplica migrations e popula o banco)'
 
 Get-Process informE.Server -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 $logServer = Join-Path $env:TEMP 'informe-server.log'
 
-# WorkingDirectory na raiz: `dotnet run` usa o launchSettings do projeto, que e
-# quem define as portas (0.0.0.0:5021 https + 0.0.0.0:5020 http) e o ambiente
+# WorkingDirectory na raiz e --no-build: o launchSettings do projeto e quem
+# define as portas (0.0.0.0:5021 https + 0.0.0.0:5020 http) e o ambiente
 # Development -- sem Development o seed NAO roda e o banco fica vazio.
 Start-Process -FilePath 'dotnet' `
-    -ArgumentList 'run','--project','src/Host/informE.Server' `
+    -ArgumentList 'run','--no-build','--project','src/Host/informE.Server' `
     -WorkingDirectory $raiz `
     -RedirectStandardOutput $logServer `
     -RedirectStandardError (Join-Path $env:TEMP 'informe-server.err.log') `
     -WindowStyle Hidden | Out-Null
 
+$cronometro.Restart()
 $tentativas = 0
+
 do {
-    Start-Sleep -Seconds 3
+    Start-Sleep -Milliseconds 700
     $tentativas++
 
+    # Checagem TCP crua na porta 5020, nao Invoke-WebRequest.
+    #
+    # DOIS BUGS ja aconteceram aqui:
+    #
+    # 1. Invoke-WebRequest ... -SkipCertificateCheck -- esse parametro SO EXISTE
+    #    no PowerShell 7+. No Windows PowerShell 5.1 ele nao existe, a chamada
+    #    lancava excecao em TODA tentativa, e o script estourava o tempo
+    #    reclamando que o Server nao subiu -- com o Server no ar. Falso negativo.
+    #
+    # 2. Trocado por Invoke-WebRequest http://... , continuou falhando DENTRO do
+    #    script apesar de funcionar no terminal: no 5.1 o cmdlet passa por
+    #    configuracao de proxy do sistema e pelo motor do Internet Explorer, que
+    #    se comportam de um jeito no console interativo e de outro sob
+    #    ExecutionPolicy Bypass num processo filho.
+    #
+    # TcpClient nao tem nada disso. Se a porta aceita conexao, o Kestrel esta
+    # ouvindo -- que e exatamente a pergunta.
+    $noAr = $false
     try {
-        # -SkipCertificateCheck: o certificado de dev vale para "localhost"; esta
-        # chamada e so um teste de vida do processo.
-        $r = Invoke-WebRequest -Uri 'https://localhost:5021/' -SkipCertificateCheck -TimeoutSec 4 -ErrorAction Stop
-        $noAr = $r.StatusCode -eq 200
+        $sonda = New-Object System.Net.Sockets.TcpClient
+        $conexao = $sonda.BeginConnect('127.0.0.1', 5020, $null, $null)
+
+        if ($conexao.AsyncWaitHandle.WaitOne(1500, $false) -and $sonda.Connected) {
+            $sonda.EndConnect($conexao)
+            $noAr = $true
+        }
     }
     catch { $noAr = $false }
+    finally { if ($sonda) { $sonda.Close() } }
 
-    if ($tentativas -gt 40) {
-        Write-Error "Server nao subiu em 2 minutos. Veja $logServer"
+    # Um ponto a cada ~2s: o usuario ve que algo esta acontecendo. Silencio e o
+    # que fazia a espera parecer travamento.
+    if (-not $noAr -and $tentativas % 3 -eq 0) { Write-Host '.' -NoNewline -ForegroundColor DarkGray }
+
+    if ($tentativas -gt 130) {
+        Write-Host ''
+        Write-Error "Server nao respondeu em 90s. Veja $logServer"
         exit 1
     }
 } until ($noAr)
 
-Ok 'Server no ar'
+if ($tentativas -ge 3) { Write-Host '' }
+Ok ("Server no ar em {0:N0}s" -f $cronometro.Elapsed.TotalSeconds)
 
 # ── 4. Endereco para as outras maquinas ───────────────────────────────────────
 $ip = (Get-NetIPAddress -AddressFamily IPv4 |
@@ -153,7 +205,7 @@ if ($ip) {
     Write-Host ''
 }
 
-if ($ComApp) {
+if (-not $SemApp) {
     Passo 'Abrindo o aplicativo'
     Start-Process -FilePath 'dotnet' `
         -ArgumentList 'run','--project','src/Host/informE.Desktop/informE.Desktop.csproj','-f','net10.0-windows10.0.19041.0' `
@@ -161,5 +213,5 @@ if ($ComApp) {
     Ok 'Aplicativo abrindo (leva alguns segundos na primeira vez)'
 }
 
-Write-Host "  Parar tudo:  .\informe.ps1 -Parar" -ForegroundColor DarkGray
+Write-Host "  Parar tudo:  .\informe.ps1 -Parar    (sem abrir o app: -SemApp)" -ForegroundColor DarkGray
 Write-Host ''

@@ -72,9 +72,34 @@ else {
 }
 
 # ── 2. Servidor ───────────────────────────────────────────────────────────────
-& pg_isready -h localhost -p $porta 2>&1 | Out-Null
+# Duas armadilhas do Windows PowerShell 5.1 moram nesta secao.
+#
+# (a) `& pg_ctl start | Out-Null` PENDURA O SCRIPT PARA SEMPRE. O pipe so fecha
+#     quando o processo filho termina, e o pg_ctl deixa o postgres rodando com
+#     o descritor aberto -- ninguem fecha, o Out-Null nunca retorna. Por isso a
+#     saida do pg_ctl vai para ARQUIVO, nunca para um pipe.
+#
+# (b) Redirecionar o stderr de um executavel NATIVO (`2>&1`) embrulha cada linha
+#     num ErrorRecord (NativeCommandError). Com $ErrorActionPreference = 'Stop'
+#     no topo, isso mata o script exatamente no caso para o qual ele existe --
+#     o banco ainda fora do ar, que e quando o pg_isready escreve em stderr.
+#     A checagem certa e o codigo de saida, com a preferencia relaxada em volta.
 
-if ($LASTEXITCODE -eq 0) {
+function Test-PostgresNoAr {
+    param([int]$Porta)
+
+    $anterior = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & pg_isready -h localhost -p $Porta *> $null
+        return $LASTEXITCODE -eq 0
+    }
+    finally {
+        $ErrorActionPreference = $anterior
+    }
+}
+
+if (Test-PostgresNoAr -Porta $porta) {
     Write-Host "Postgres ja estava no ar na porta $porta." -ForegroundColor DarkGray
 }
 else {
@@ -82,31 +107,73 @@ else {
 
     # listen_addresses=localhost: este cluster e de desenvolvimento e nao deve
     # aceitar conexao de fora da maquina.
-    & pg_ctl -D $data -l (Join-Path $data 'server.log') -o "-p $porta -c listen_addresses=localhost" start | Out-Null
+    $logPg = Join-Path $data 'server.log'
+
+    # Start-Process, e NAO `& pg_ctl ... > arquivo` nem `| Out-Null`.
+    #
+    # O pg_ctl deixa o postgres rodando como filho, herdando os descritores de
+    # saida. Tanto o pipe quanto o redirecionamento para arquivo fazem o
+    # PowerShell esperar que TODOS os escritores fechem -- e o postgres nunca
+    # fecha, porque a intencao e justamente que ele continue no ar. O script
+    # ficava pendurado para sempre em "Iniciando Postgres...".
+    #
+    # Start-Process -Wait espera o pg_ctl (que retorna rapido), sem se amarrar
+    # aos descritores do neto. O -l do proprio pg_ctl ja manda o log do servidor
+    # para arquivo, que e o que interessa depois.
+    # ArgumentList como STRING UNICA, com as aspas internas escapadas.
+    #
+    # Com -ArgumentList em ARRAY, o Start-Process reconstroi a linha de comando e
+    # o valor do -o ("-p 5432 -c listen_addresses=localhost") era quebrado em
+    # argumentos soltos: o pg_ctl recebia "5432" na posicao do modo de operacao e
+    # respondia `modo de operacao "5432" e desconhecido`.
+    $argumentos = '-D "{0}" -l "{1}" -o "-p {2} -c listen_addresses=localhost" start' -f $data, $logPg, $porta
+
+    # Dispara e NAO espera pelo processo. So o pg_isready diz a verdade.
+    #
+    # Esta e a TERCEIRA forma do mesmo problema. Todas penduram o script:
+    #   `& pg_ctl start | Out-Null`      -> o pipe espera todo escritor fechar
+    #   `& pg_ctl start > arquivo 2>&1`  -> o redirecionamento, idem
+    #   `Start-Process -NoNewWindow -Wait` -> espera os handles de console que o
+    #                                         postgres herda do pg_ctl
+    #
+    # A raiz e sempre a mesma: o pg_ctl termina, mas deixa o postgres vivo
+    # segurando os descritores -- e a intencao e exatamente que ele continue no
+    # ar. Qualquer espera atrelada a esses descritores nunca retorna.
+    #
+    # WindowStyle Hidden sem -Wait desatrela tudo; o laco de pg_isready abaixo e
+    # quem confirma que subiu.
+    Start-Process -FilePath (Join-Path $pgBin 'pg_ctl.exe') `
+        -ArgumentList $argumentos `
+        -WindowStyle Hidden
 
     $tentativas = 0
-    do {
-        Start-Sleep -Seconds 2
-        & pg_isready -h localhost -p $porta 2>&1 | Out-Null
-        $noAr = $LASTEXITCODE -eq 0
+    while (-not (Test-PostgresNoAr -Porta $porta)) {
+        Start-Sleep -Seconds 1
         $tentativas++
 
-        if ($tentativas -gt 20) {
-            Write-Error "Postgres nao subiu em 40s. Veja $data\server.log"
+        if ($tentativas -gt 30) {
+            Write-Error "Postgres nao subiu em 30s. Veja $logPg"
             exit 1
         }
-    } until ($noAr)
+    }
 }
 
 # ── 3. Banco ──────────────────────────────────────────────────────────────────
-$existe = & psql -h localhost -p $porta -U $usuario -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$banco'"
+$anterior = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+try {
+    $existe = & psql -h localhost -p $porta -U $usuario -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$banco'" 2>$null
 
-if ($existe -eq '1') {
-    Write-Host "Banco '$banco' ja existe." -ForegroundColor DarkGray
+    if ("$existe".Trim() -eq '1') {
+        Write-Host "Banco '$banco' ja existe." -ForegroundColor DarkGray
+    }
+    else {
+        & createdb -h localhost -p $porta -U $usuario $banco 2>$null
+        Write-Host "Banco '$banco' criado." -ForegroundColor Green
+    }
 }
-else {
-    & createdb -h localhost -p $porta -U $usuario $banco
-    Write-Host "Banco '$banco' criado." -ForegroundColor Green
+finally {
+    $ErrorActionPreference = $anterior
 }
 
 Write-Host ""
