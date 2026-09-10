@@ -20,4 +20,11 @@ public class GroupRepository(AppDbContext db) : IGroupRepository
 
     public async Task AddAsync(Group group, CancellationToken ct = default) =>
         await db.Groups.AddAsync(group, ct);
+
+    public Task<List<Group>> ListByOwnerAsync(Guid ownerId, CancellationToken ct = default) =>
+        db.Groups
+            .Include(g => g.Devices)
+            .Where(g => g.OwnerId == ownerId)
+            .OrderBy(g => g.Name)
+            .ToListAsync(ct);
 }

@@ -1,6 +1,9 @@
 @page "/dashboard"
 @page "/dashboard/{AccessType}"
 @layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
 
 <PageTitle>Dashboard | informE</PageTitle>
 
@@ -74,7 +77,7 @@
                     <span class="metric-trend positive">↗ +0</span>
                 }
             </div>
-            <strong>@(IsViewer ? 21 : AdminTotalMachines)</strong>
+            <strong>@(IsViewer ? viewerTotal : AdminTotalMachines)</strong>
             <span>Total de Máquinas</span>
         </article>
 
@@ -86,7 +89,7 @@
                     <span class="metric-trend positive">↗ +3</span>
                 }
             </div>
-            <strong class="green-text">@(IsViewer ? 19 : AdminOnlineMachines)</strong>
+            <strong class="green-text">@(IsViewer ? viewerOnline : AdminOnlineMachines)</strong>
             <span>@(IsViewer ? "Online" : "Máquinas Online")</span>
         </article>
 
@@ -98,7 +101,7 @@
                     <span class="metric-trend negative">↘ -2</span>
                 }
             </div>
-            <strong class="gray-text">@(IsViewer ? 2 : AdminOfflineMachines)</strong>
+            <strong class="gray-text">@(IsViewer ? viewerOffline : AdminOfflineMachines)</strong>
             <span>@(IsViewer ? "Offline" : "Máquinas Offline")</span>
         </article>
 
@@ -110,7 +113,7 @@
                     <span class="metric-trend negative">↘ -3</span>
                 }
             </div>
-            <strong class="warning-text">@(IsViewer ? 1 : AdminActiveAlerts)</strong>
+            <strong class="warning-text">@(IsViewer ? viewerAlertas : AdminActiveAlerts)</strong>
             <span>Alertas Ativos</span>
         </article>
     </section>
@@ -122,7 +125,7 @@
                 <div class="history-heading">
                     <div>
                         <h2>Incidentes de Alerta</h2>
-                        <p>26 alertas no período · Clique nas barras para detalhar</p>
+                        <p>@viewerAlertas alertas no período · Clique nas barras para detalhar</p>
                     </div>
                     <div class="period-toggle" aria-label="Período do gráfico">
                         <button type="button" class="@(period == 7 ? "active" : null)" @onclick="() => SetPeriod(7)">7 dias</button>
@@ -299,6 +302,79 @@
 
     private bool IsViewer => AccessType?.Equals("viewer", StringComparison.OrdinalIgnoreCase) == true;
 
+    // ── Estado real do Viewer ────────────────────────────────────────────────
+    // O Dashboard do Admin segue com massa de demonstracao (decisao registrada
+    // em docs/pendencias-front-auditoria.md). O do Viewer e real, porque o
+    // escopo dele -- um laboratorio -- e o que o fluxo precisa provar.
+    private int viewerTotal;
+    private int viewerOnline;
+    private int viewerOffline;
+    private int viewerAlertas;
+    private string? viewerLab;
+    private List<AlertDay> viewerHistorico = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!IsViewer)
+            return;
+
+        try
+        {
+            // 1. Qual e o meu laboratorio.
+            //
+            // /groups ja vem ESCOPADO pelo servidor: um Viewer recebe apenas os
+            // grupos de que e dono (Group.OwnerId). A tela nao filtra nada --
+            // se filtrasse, bastaria burlar o filtro para ver o parque todo.
+            var meus = await Api.GetGroupsAsync();
+            var lab = meus.FirstOrDefault();
+
+            if (lab is null)
+            {
+                // Viewer sem laboratorio atribuido: estado honesto, nao zero
+                // disfarcado de "tudo bem".
+                viewerLab = null;
+                return;
+            }
+
+            viewerLab = lab.Name;
+
+            // 2. Maquinas do laboratorio. O resumo vem calculado do servidor.
+            var equipamentos = await Api.GetDevicesFiltradosAsync(lab.Id);
+            viewerTotal = equipamentos.Resumo.Total;
+            viewerOnline = equipamentos.Resumo.Online;
+            viewerOffline = equipamentos.Resumo.Offline;
+
+            // 3. Alertas do laboratorio, na janela que a tela esta mostrando.
+            var alertas = await Api.GetAlertsAsync(period, lab.Id);
+            viewerAlertas = alertas.Total;
+            viewerHistorico = ConverterHistorico(alertas);
+        }
+        catch (informE.Desktop.Services.InformEApiException ex) when (ex.StatusCode == 401)
+        {
+            Navigation.NavigateTo("/login", replace: true);
+        }
+        catch (Exception)
+        {
+            // Dashboard com dado velho e melhor que dashboard que nao abre: os
+            // valores ficam em zero e o grafico cai na massa de reserva.
+        }
+    }
+
+    // As 6 faixas do /alerts na ordem que o record AlertDay espera. A ordem
+    // importa e nao e alfabetica -- e a ordem das cores do grafico.
+    private static List<AlertDay> ConverterHistorico(AlertsResponseDto alertas) =>
+        [.. alertas.Historico.Select(d => new AlertDay(
+            d.Dia.ToString("ddd", new System.Globalization.CultureInfo("pt-BR")),
+            Faixa(d, "Hardware"),
+            Faixa(d, "Armazenamento"),
+            Faixa(d, "Rede"),
+            Faixa(d, "Offline"),
+            Faixa(d, "Agente"),
+            Faixa(d, "Windows")))];
+
+    private static int Faixa(AlertHistoryDayDto dia, string nome) =>
+        dia.PorCategoria.TryGetValue(nome, out var quantidade) ? quantidade : 0;
+
     private readonly List<LabOption> labs =
     [
         new("Laboratório 1", "Lab 1", true, 21, 20, 2),
@@ -331,7 +407,13 @@
         AdminGroupCount == 0 ? 0 : (int)Math.Round((period == 7 ? 48 : 96) * AdminFilterRatio);
 
     private List<AlertDay> AdminChart => FilterAdminChart(period == 7 ? AdminSevenDays : AdminFifteenDays);
-    private List<AlertDay> ViewerChart => period == 7 ? ViewerSevenDays : ViewerFifteenDays;
+    // Historico real quando o servidor respondeu; a massa fixa e so reserva
+    // para o caso de a chamada falhar -- assim a tela nunca fica vazia numa
+    // demonstracao, mas tambem nao inventa dado quando existe o verdadeiro.
+    private List<AlertDay> ViewerChart =>
+        viewerHistorico.Count > 0
+            ? viewerHistorico
+            : (period == 7 ? ViewerSevenDays : ViewerFifteenDays);
 
     private string LabFilterLabel
     {

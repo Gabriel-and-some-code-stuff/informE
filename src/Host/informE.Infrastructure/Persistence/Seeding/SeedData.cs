@@ -52,7 +52,7 @@ public static class SeedData
         var usuarios = MontarUsuarios(senhaHash);
         var ownerId = ownerIdExistente ?? usuarios[0].Id;
 
-        var grupos = MontarGrupos(ownerId);
+        var grupos = MontarGrupos(ownerId, usuarios);
         var devices = MontarDevices(grupos, agentKeyHash, rng, agora);
         var alertas = MontarAlertas(devices, rng, agora);
         var (tarefas, logs) = MontarTarefas(devices, ownerId, agora);
@@ -117,12 +117,32 @@ public static class SeedData
         return user;
     }
 
-    private static List<Group> MontarGrupos(Guid ownerId) =>
-        [.. NomesDeGrupo.Select(nome =>
-            new Group(nome, $"Laboratório {nome} — Etec Albert Einstein", ownerId)
+    // A POSSE do laboratorio e o que da escopo ao Viewer.
+    //
+    // Antes os 5 grupos eram todos do admin, e o fluxo do Viewer nao tinha como
+    // ser demonstrado: ele logava e o /groups dele vinha VAZIO, porque o escopo
+    // e por Group.OwnerId (ver docs/politica-login-sessao.md §1 -- escopo real
+    // por N-N e Fase 2; um Viewer com UM laboratorio cabe no modelo de hoje).
+    //
+    // Cada Viewer ativo recebe um laboratorio, em ordem; os que sobram ficam com
+    // o admin. Com 3 Viewers ativos e 5 grupos: Lab 1, 2 e 3 tem professor
+    // responsavel, Lab 4 e 5 ficam so com a administracao.
+    private static List<Group> MontarGrupos(Guid ownerId, List<User> usuarios)
+    {
+        var professores = usuarios
+            .Where(u => u.Role == UserRole.Viewer && u.IsActive)
+            .Select(u => u.Id)
+            .ToList();
+
+        return [.. NomesDeGrupo.Select((nome, indice) =>
+            new Group(
+                nome,
+                $"Laboratório {nome} — Etec Albert Einstein",
+                indice < professores.Count ? professores[indice] : ownerId)
             {
                 Id = Guid.NewGuid()
             })];
+    }
 
     private static List<Device> MontarDevices(List<Group> grupos, string agentKeyHash, Random rng, DateTimeOffset agora)
     {
