@@ -61,6 +61,56 @@ public sealed class InformEApiClient(HttpClient http)
             ?? new AlertsResponseDto(0, new Dictionary<string, int>(), [], []);
     }
 
+    // ── Administracao de Contas ──────────────────────────────────────────────
+    // Filtros vao para o servidor, mesmo desenho de /devices.
+
+    public async Task<IReadOnlyList<UserListItemDto>> GetUsersAsync(
+        string? papel = null,
+        bool? ativo = null,
+        string? busca = null,
+        CancellationToken ct = default)
+    {
+        var query = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(papel)) query.Add($"papel={Uri.EscapeDataString(papel)}");
+        if (ativo is not null) query.Add($"ativo={ativo.Value.ToString().ToLowerInvariant()}");
+        if (!string.IsNullOrWhiteSpace(busca)) query.Add($"busca={Uri.EscapeDataString(busca)}");
+
+        var route = query.Count == 0 ? "users" : $"users?{string.Join('&', query)}";
+
+        return await GetAsync<List<UserListItemDto>>(route, ct) ?? [];
+    }
+
+    public async Task<Guid> CreateUserAsync(CreateUserRequestDto request, CancellationToken ct = default)
+    {
+        using var response = await SendAuthorizedAsync(
+            HttpMethod.Post, "users", () => JsonContent.Create(request), ct);
+
+        var criado = await ReadAsync<CreateUserResponseDto>(response, ct);
+        return criado.UserId;
+    }
+
+    public async Task UpdateUserAsync(Guid id, UpdateUserRequestDto request, CancellationToken ct = default)
+    {
+        using var response = await SendAuthorizedAsync(
+            HttpMethod.Patch, $"users/{id}", () => JsonContent.Create(request), ct);
+        await EnsureSuccessAsync(response, ct);
+    }
+
+    public async Task ChangeUserRoleAsync(Guid id, string papel, CancellationToken ct = default)
+    {
+        using var response = await SendAuthorizedAsync(
+            HttpMethod.Patch, $"users/{id}/role", () => JsonContent.Create(new ChangeRoleRequestDto(papel)), ct);
+        await EnsureSuccessAsync(response, ct);
+    }
+
+    public async Task SetUserActiveAsync(Guid id, bool ativo, CancellationToken ct = default)
+    {
+        using var response = await SendAuthorizedAsync(
+            HttpMethod.Patch, $"users/{id}/active", () => JsonContent.Create(new SetActiveRequestDto(ativo)), ct);
+        await EnsureSuccessAsync(response, ct);
+    }
+
     public async Task<IReadOnlyList<GroupListItemDto>> GetGroupsAsync(CancellationToken ct = default) =>
         await GetAsync<List<GroupListItemDto>>("groups", ct) ?? [];
 

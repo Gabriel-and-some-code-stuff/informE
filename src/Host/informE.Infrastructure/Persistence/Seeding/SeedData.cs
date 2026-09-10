@@ -103,6 +103,7 @@ public static class SeedData
         Usuario("romeu", "romeu@cps.sp.gov.br", senhaHash, UserRole.Viewer),
         Usuario("celina", "celina@cps.sp.gov.br", senhaHash, UserRole.Viewer),
         Usuario("gislene", "gislene@cps.sp.gov.br", senhaHash, UserRole.Viewer),
+        Usuario("alexandre", "alexandre@cps.sp.gov.br", senhaHash, UserRole.Viewer),
         Inativo(Usuario("luci", "luci@cps.sp.gov.br", senhaHash, UserRole.Viewer)),
     ];
 
@@ -117,6 +118,55 @@ public static class SeedData
         return user;
     }
 
+    // Uma maquina de DEMONSTRACAO. Serve tanto para semear quanto para renovar.
+    //
+    // POR QUE ISTO EXISTE SEPARADO: o seed grava `last_seen_at` como "agora" e
+    // roda UMA vez. O DeviceOfflineSweeper marca offline quem nao fala ha 90
+    // min. Resultado: 90 minutos depois de criar o banco, as 105 maquinas de
+    // demonstracao viravam offline PARA SEMPRE, e qualquer demonstracao feita no
+    // dia seguinte mostrava o parque inteiro morto. Foi exatamente o que
+    // aconteceu numa apresentacao.
+    //
+    // Agora o mesmo calculo alimenta o boot (ver
+    // DatabaseBootstrapper.RenovarParqueDeDemonstracaoAsync), e o parque volta a
+    // ficar vivo sozinho.
+    //
+    // Deterministico pelo indice, nao aleatorio: a mesma maquina fica offline em
+    // toda renovacao, entao a tela nao "pisca" maquina entrando e saindo.
+    public static void AplicarEstado(Device device, int indice, DateTimeOffset agora)
+    {
+        // 1 em cada 15 fica offline -> 7 das 105, que e a proporcao que o parque
+        // sempre teve.
+        if (indice % 15 == 14)
+        {
+            device.MarkOffline();
+            device.LastSeenAt = agora.AddHours(-2 - (indice % 6));
+            return;
+        }
+
+        // Percentuais derivados do indice: variados o suficiente para a tela
+        // mostrar as tres faixas de saude, e estaveis entre renovacoes.
+        var cpu = 5 + (indice * 7) % 90;
+        var ram = 20 + (indice * 13) % 75;
+        var disco = 25 + (indice * 11) % 70;
+
+        device.MarkSeen(
+            agora.AddMinutes(-(indice % 5) - 1),
+            Device.EvaluateHealth(cpu, ram, disco),
+            uptimeSeconds: (3 + indice % 6) * 86_400 + (indice % 23) * 3_600,
+            cpuPercent: cpu,
+            ramPercent: ram,
+            diskPercent: disco);
+    }
+
+    // Identifica maquina de demonstracao pelo nome que o proprio seed gera:
+    // PC-101..PC-520 e PROF-LAB1..PROF-LAB5. Maquina real tem nome real, entao
+    // a renovacao nunca mexe no `last_seen_at` de quem tem agente de verdade --
+    // se mexesse, uma maquina desligada apareceria eternamente online.
+    public static bool EhDeDemonstracao(string hostname) =>
+        hostname.StartsWith("PC-", StringComparison.Ordinal) ||
+        hostname.StartsWith("PROF-LAB", StringComparison.Ordinal);
+
     // A POSSE do laboratorio e o que da escopo ao Viewer.
     //
     // Antes os 5 grupos eram todos do admin, e o fluxo do Viewer nao tinha como
@@ -127,21 +177,38 @@ public static class SeedData
     // Cada Viewer ativo recebe um laboratorio, em ordem; os que sobram ficam com
     // o admin. Com 3 Viewers ativos e 5 grupos: Lab 1, 2 e 3 tem professor
     // responsavel, Lab 4 e 5 ficam so com a administracao.
+    // Quem responde por cada laboratorio. Mapa EXPLICITO por username.
+    //
+    // Antes era por ORDEM: "o primeiro Viewer ativo pega o primeiro grupo". Isso
+    // fazia a posse mudar sozinha ao inserir um usuario no meio da lista --
+    // acrescentar o alexandre teria movido o laboratorio da gislene. Com o mapa,
+    // quem tem qual laboratorio esta escrito, e inserir usuario nao mexe em nada.
+    //
+    // Laboratorio sem responsavel aqui fica com o SuperAdmin.
+    private static readonly Dictionary<string, string> ResponsavelPorGrupo = new()
+    {
+        ["Lab 1"] = "romeu",
+        ["Lab 2"] = "alexandre",
+        ["Lab 3"] = "gislene",
+        ["Lab 4"] = "celina",
+    };
+
     private static List<Group> MontarGrupos(Guid ownerId, List<User> usuarios)
     {
-        var professores = usuarios
-            .Where(u => u.Role == UserRole.Viewer && u.IsActive)
-            .Select(u => u.Id)
-            .ToList();
+        var porUsername = usuarios.ToDictionary(u => u.Username, u => u.Id);
 
-        return [.. NomesDeGrupo.Select((nome, indice) =>
-            new Group(
-                nome,
-                $"Laboratório {nome} — Etec Albert Einstein",
-                indice < professores.Count ? professores[indice] : ownerId)
+        return [.. NomesDeGrupo.Select(nome =>
+        {
+            var dono = ResponsavelPorGrupo.TryGetValue(nome, out var username)
+                       && porUsername.TryGetValue(username, out var id)
+                ? id
+                : ownerId;
+
+            return new Group(nome, $"Laboratório {nome} — Etec Albert Einstein", dono)
             {
                 Id = Guid.NewGuid()
-            })];
+            };
+        })];
     }
 
     private static List<Device> MontarDevices(List<Group> grupos, string agentKeyHash, Random rng, DateTimeOffset agora)
@@ -197,40 +264,12 @@ public static class SeedData
     // Distribui Conexão e Saúde para bater com os big numbers do Dashboard.
     private static void AplicarEstadoAtual(List<Device> devices, Random rng, DateTimeOffset agora)
     {
-        // Os 7 offline saem espalhados (índices determinísticos), não os 7 primeiros —
-        // senão a tela mostra todo o Lab 1 caído, que não é realista.
-        var offline = Enumerable.Range(0, DevicesOffline)
-            .Select(i => i * (devices.Count / DevicesOffline))
-            .ToHashSet();
-
+        // Estado de cada maquina vem de AplicarEstado -- a MESMA regra que o boot
+        // usa para renovar o parque. Antes esta parte sorteava os valores aqui, e
+        // renovar depois exigiria duplicar o sorteio; com a regra num lugar so,
+        // seed e renovacao nunca divergem.
         for (var i = 0; i < devices.Count; i++)
-        {
-            if (offline.Contains(i))
-            {
-                devices[i].MarkOffline();
-                devices[i].LastSeenAt = agora.AddHours(-rng.Next(2, 8));
-                continue;
-            }
-
-            var cpu = rng.Next(5, 95);
-            var ram = rng.Next(20, 95);
-            var disco = rng.Next(25, 95);
-
-            // A saúde sai da MESMA regra de domínio que roda em produção —
-            // se os limiares mudarem, a massa acompanha sozinha.
-            var saude = Device.EvaluateHealth(cpu, ram, disco);
-
-            // Os MESMOS tres numeros que geraram a saude vao para as colunas de
-            // percentual — a tela de detalhe mostra exatamente o que classificou
-            // a maquina, sem chance de divergir.
-            devices[i].MarkSeen(
-                agora.AddMinutes(-rng.Next(1, 5)),
-                saude,
-                uptimeSeconds: rng.Next(3, 8) * 86_400 + rng.Next(0, 23) * 3_600,
-                cpuPercent: cpu,
-                ramPercent: ram,
-                diskPercent: disco);
-        }
+            AplicarEstado(devices[i], i, agora);
     }
 
     private static string Mac(int grupo, int indice) =>

@@ -59,7 +59,18 @@ await using (var scope = app.Services.CreateAsyncScope())
     // Massa de teste SÓ em desenvolvimento. Em produção o banco começa vazio e o
     // primeiro SuperAdmin é criado pelo instalador — nunca com senha conhecida.
     if (app.Environment.IsDevelopment())
+    {
         await bootstrapper.SeedDevelopmentDataAsync();
+
+        // DEPOIS do reset e do seed, nesta ordem.
+        //
+        // O ResetarConexoesAsync acima marca tudo offline -- correto para
+        // maquina real, porque nenhum agente esta conectado a este processo
+        // ainda. Mas as maquinas de demonstracao NAO TEM agente por definicao,
+        // entao elas ficavam offline a partir do primeiro reinicio do Server, e
+        // a tela abria com "Offline: 105". Aconteceu numa apresentacao.
+        await bootstrapper.RenovarParqueDeDemonstracaoAsync();
+    }
 }
 
 app.UseExceptionHandler();

@@ -417,3 +417,60 @@
     font-size: 13px;
     line-height: 1.55;
 }
+
+/* ── Paginação ──────────────────────────────────────────────────────────── */
+
+.filter-field.compact {
+    min-width: 96px;
+}
+
+.pager {
+    padding: 14px 22px 18px;
+    border-top: 1px solid #161f2f;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.pager-info {
+    color: #768197;
+    font-size: 13px;
+}
+
+.pager-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pager-controls button {
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid #283449;
+    border-radius: 6px;
+    background: #101b2c;
+    color: #dce2ec;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.pager-controls button:hover:not(:disabled) {
+    border-color: #10c6f4;
+    color: #10c6f4;
+}
+
+.pager-controls button:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.pager-page {
+    min-width: 58px;
+    text-align: center;
+    color: #97a2b5;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}

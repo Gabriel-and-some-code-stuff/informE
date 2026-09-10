@@ -143,3 +143,23 @@ svg[aria-hidden="true"] {
 .filter-chevron svg { width: 15px; height: 15px; }
 
 .mobile-menu svg { width: 21px; height: 21px; }
+
+/* TAMANHO PADRÃO — a rede de segurança dos ícones.
+   ------------------------------------------------
+   A regra acima define traço e cor, mas não tamanho. SVG inline com viewBox e
+   sem width/height assume o tamanho do CONTAINER: dentro de um botão largo o
+   ícone estourava, e foi assim que o X de fechar do painel de Equipamentos
+   apareceu gigante.
+
+   Com um padrão aqui, esquecer de dimensionar um ícone novo deixa ele um pouco
+   fora de escala, nunca quebrado. As regras específicas continuam vencendo,
+   porque vêm depois e são mais específicas. */
+
+svg[aria-hidden="true"] {
+    width: 18px;
+    height: 18px;
+    flex: none;
+}
+
+/* Ícone dentro de botão redondo de fechar. */
+.detail-close svg { width: 15px; height: 15px; }

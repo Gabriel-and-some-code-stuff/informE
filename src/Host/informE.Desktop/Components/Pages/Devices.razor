@@ -73,6 +73,16 @@
             </select>
         </label>
 
+        <label class="filter-field compact">
+            <span>Linhas</span>
+            <select value="@porPagina" @onchange="OnPorPaginaChanged">
+                @foreach (var opcao in new[] { 5, 10, 15, 20, 30, 50 })
+                {
+                    <option value="@opcao">@opcao</option>
+                }
+            </select>
+        </label>
+
         <label class="filter-field grow">
             <span>Buscar</span>
             <input type="search"
@@ -116,7 +126,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var device in devices)
+                        @foreach (var device in DaPagina)
                         {
                             <tr class="@(selectedDetail?.Equipamento.Id == device.Id ? "selected" : null)"
                                 @onclick="() => OpenDetailAsync(device.Id)">
@@ -146,6 +156,25 @@
                     </tbody>
                 </table>
             </div>
+
+            @if (devices.Count > porPagina)
+            {
+                <footer class="pager">
+                    <span class="pager-info">
+                        @PrimeiroDaPagina–@UltimoDaPagina de @devices.Count
+                    </span>
+
+                    <div class="pager-controls">
+                        <button type="button" @onclick="() => IrPara(pagina - 1)" disabled="@(pagina <= 1)">
+                            Anterior
+                        </button>
+                        <span class="pager-page">@pagina / @TotalDePaginas</span>
+                        <button type="button" @onclick="() => IrPara(pagina + 1)" disabled="@(pagina >= TotalDePaginas)">
+                            Próxima
+                        </button>
+                    </div>
+                </footer>
+            }
         }
     </section>
 </div>
@@ -221,6 +250,28 @@
     private string selectedStatus = string.Empty;
     private string busca = string.Empty;
 
+    // Paginacao no CLIENTE, sobre a lista que o servidor ja filtrou.
+    //
+    // A lista chegava inteira -- 105 linhas de rolagem, sem controle nenhum.
+    // Paginar no servidor exigiria parametros novos no endpoint e paginar
+    // tambem o `resumo`, e os big numbers TEM que continuar refletindo o filtro
+    // inteiro, nao a pagina: "98 online" de 105 nao vira "8 online" porque a
+    // pagina mostra 10. Recortar aqui mantem essa garantia de graca.
+    //
+    // Quando uma listagem passar de ~1000 linhas isto vira paginacao de
+    // servidor. `ponytail:` recorte no cliente enquanto o parque couber na
+    // resposta.
+    private int porPagina = 10;
+    private int pagina = 1;
+
+    private int TotalDePaginas => devices.Count == 0 ? 1 : (int)Math.Ceiling(devices.Count / (double)porPagina);
+
+    private IEnumerable<DeviceListItemDto> DaPagina =>
+        devices.Skip((pagina - 1) * porPagina).Take(porPagina);
+
+    private int PrimeiroDaPagina => devices.Count == 0 ? 0 : ((pagina - 1) * porPagina) + 1;
+    private int UltimoDaPagina => Math.Min(pagina * porPagina, devices.Count);
+
     // A busca dispara a cada tecla. Sem o cancelamento, digitar "PC-10" manda 5
     // requisições e a resposta da 2ª pode chegar depois da 5ª, mostrando o
     // resultado errado na tela. O token cancela a anterior a cada tecla nova.
@@ -265,6 +316,9 @@
         devices.Clear();
         devices.AddRange(resposta.Itens);
         resumo = resposta.Resumo;
+
+        // Filtrar de 105 para 3 itens estando na pagina 4 mostraria tela vazia.
+        pagina = 1;
     }
 
     private async Task AplicarFiltrosAsync()
@@ -302,6 +356,19 @@
         selectedStatus = args.Value?.ToString() ?? string.Empty;
         return AplicarFiltrosAsync();
     }
+
+    private void OnPorPaginaChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var valor))
+            porPagina = valor;
+
+        // Volta para a primeira pagina: com 105 itens em paginas de 30 existe
+        // pagina 4, e trocar para 50 por pagina deixaria a pagina 4 vazia.
+        pagina = 1;
+    }
+
+    private void IrPara(int destino) =>
+        pagina = Math.Clamp(destino, 1, TotalDePaginas);
 
     private Task OnBuscaInput(ChangeEventArgs args)
     {

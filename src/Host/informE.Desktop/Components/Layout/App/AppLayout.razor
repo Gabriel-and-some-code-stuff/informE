@@ -41,10 +41,10 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"/><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z"/><path d="M12 11v10"/></svg>
                     <span>Inventário</span>
                 </button>
-                <button class="nav-link" type="button">
+                <a class="nav-link @(IsActive("/contas") || IsActive("/administracao-de-contas") ? "active" : null)" href="/contas">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
                     <span>Administração de Contas</span>
-                </button>
+                </a>
             }
 
             <button class="nav-link" type="button">

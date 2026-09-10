@@ -1,0 +1,9 @@
+
+.campo-dica {
+    color: #768197;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+/* Vira aviso quando o que está digitado já é inválido — antes de enviar. */
+.campo-dica.erro { color: #ff8f96; }

@@ -73,6 +73,57 @@ public class DatabaseBootstrapper(
     // sempre, e o log dizia apenas "Banco já tem dados — seed ignorado". Como o
     // parque é justamente o que se precisa para testar execução remota, o
     // sintoma era um banco que parecia semeado e não era.
+    // Renova o parque de DEMONSTRACAO a cada boot.
+    //
+    // O BUG QUE ISTO CONSERTA: o seed grava `last_seen_at` como "agora" e roda
+    // uma vez so. O DeviceOfflineSweeper marca offline quem nao fala ha 90 min.
+    // Resultado: 90 minutos depois de criar o banco, as 105 maquinas de
+    // demonstracao viravam offline PARA SEMPRE.
+    //
+    // Aconteceu numa apresentacao: o banco tinha sido criado no dia anterior, e
+    // a tela abriu com "Offline: 105". Pior tipo de defeito -- nao quebra nada,
+    // so faz o produto parecer morto.
+    //
+    // So mexe em maquina de demonstracao (SeedData.EhDeDemonstracao, pelo nome
+    // que o proprio seed gera). Maquina com agente de verdade nao e tocada: se
+    // fosse, uma maquina desligada apareceria eternamente online, que e mentira
+    // pior que parque morto.
+    public async Task<int> RenovarParqueDeDemonstracaoAsync(CancellationToken ct = default)
+    {
+        var demo = await db.Devices
+            .Where(d => d.Hostname.StartsWith("PC-") || d.Hostname.StartsWith("PROF-LAB"))
+            .OrderBy(d => d.Hostname)
+            .ToListAsync(ct);
+
+        if (demo.Count == 0)
+            return 0;
+
+        var agora = DateTimeOffset.UtcNow;
+
+        // SEM guarda de "o dado ainda esta fresco".
+        //
+        // Tentei essa guarda e ela nao serve: o ResetarConexoesAsync, que roda
+        // logo antes, marca tudo offline SEM mexer no last_seen_at. O dado fica
+        // parecendo fresco e a renovacao seria ignorada -- deixando o parque
+        // morto exatamente no caso mais comum, que e reiniciar o Server.
+        //
+        // Renovar sempre custa um UPDATE de 105 linhas por boot. E de graca, e o
+        // parque de demonstracao deve estar vivo sempre que o app esta no ar.
+
+        for (var i = 0; i < demo.Count; i++)
+            SeedData.AplicarEstado(demo[i], i, agora);
+
+        await db.SaveChangesAsync(ct);
+
+        var online = demo.Count(d => d.Status == EndpointStatus.Online);
+
+        logger.LogInformation(
+            "Parque de demonstração renovado: {Online} online, {Offline} offline de {Total}.",
+            online, demo.Count - online, demo.Count);
+
+        return demo.Count;
+    }
+
     public async Task<bool> SeedDevelopmentDataAsync(CancellationToken ct = default)
     {
         var usuariosExistentes = await db.Users

@@ -47,7 +47,7 @@ public class User
         Username = username;
 
         ValidateEmail(email);
-        Email = email;
+        Email = Normalizar(email);
 
         ValidateRole(role);
         Role = role;
@@ -80,6 +80,23 @@ public class User
     // é da Application, não daqui: a lista de domínios permitidos vem de
     // configuração e varia por instalação, e o Domain não lê configuração.
     // Ver DominioDeEmailPolicy e AuthOptions.
+    // E-mail e guardado em minusculas e sem espaco nas pontas.
+    //
+    // O BUG QUE ISTO CONSERTA: a busca por e-mail era `u.Email == email`, exata
+    // e sensivel a caixa. Entao "admin@cps.sp.gov.br" logava e
+    // "Admin@cps.sp.gov.br" devolvia 401 -- a MESMA conta. Como teclado de
+    // celular e campo de WebView capitalizam a primeira letra sozinhos, o login
+    // funcionava ou nao dependendo de como a pessoa digitou. Chegou a ser
+    // relatado como "login hiper inconsistente", e era exatamente isso.
+    //
+    // A parte de dominio de um e-mail e insensivel a caixa por norma (RFC 5321),
+    // e ninguem espera que Admin@ seja outra conta que admin@. Normalizar na
+    // ESCRITA (aqui) e na LEITURA (UserRepository) fecha os dois lados: sem o
+    // lado da escrita, o indice unico de `users.email` aceitaria admin@ e Admin@
+    // como contas distintas.
+    private static string Normalizar(string email) =>
+        email.Trim().ToLowerInvariant();
+
     private static void ValidateEmail(string email)
     {
         if (!EmailRegex.IsMatch(email))
@@ -96,7 +113,7 @@ public class User
     public void UpdateEmail(string email)
     {
         ValidateEmail(email);
-        Email = email;
+        Email = Normalizar(email);
     }
 
     // Só troca o flag. A revogação das sessões ativas NÃO acontece aqui de
