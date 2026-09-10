@@ -2,53 +2,111 @@ name: AI PR Review
 
 # GitHub Models — custo $0, usa o GITHUB_TOKEN que já existe em todo workflow.
 # Docs: https://docs.github.com/en/github-models
+#
+# ⚠️ CUIDADO COM INDENTAÇÃO NESTE ARQUIVO.
+#
+# A versão anterior falhava em 0s em TODA execução, sem log e sem job nenhum —
+# o GitHub nem chegava a compilar o workflow. A causa: o corpo do comentário era
+# escrito com linhas na COLUNA 0 dentro de um bloco `run: |`, e uma dessas
+# linhas era `---`. Na coluna 0, `---` é o SEPARADOR DE DOCUMENTO do YAML, então
+# o arquivo inteiro deixava de ser válido.
+#
+# Nada em `run:` pode começar na coluna 0. O corpo agora é montado com
+# `printf` e enviado por `--body-file`, que não depende de texto multilinha
+# dentro do YAML.
 
 on:
   pull_request:
     types: [opened, synchronize]
+
+# Uma revisão por PR: um push novo cancela a revisão da versão anterior, que já
+# não interessa a ninguém.
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   review:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Get diff (.cs/.razor/.csproj, máx 8 KB)
+      - name: Montar o diff (.cs/.razor/.csproj, máx 8 KB)
         id: diff
+        env:
+          BASE: ${{ github.base_ref }}
         run: |
-          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD \
-            -- '*.cs' '*.csproj' '*.razor' | head -c 8000)
-          {
-            echo 'diff<<EOF'
-            echo "$DIFF"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+          git diff "origin/$BASE...HEAD" -- '*.cs' '*.csproj' '*.razor' \
+            | head -c 8000 > diff.txt
 
-      - name: GitHub Models review
+          # PR só de documentação ou de script não tem o que revisar aqui.
+          if [ ! -s diff.txt ]; then
+            echo "vazio=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "vazio=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Revisar com GitHub Models
+        if: steps.diff.outputs.vazio == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DIFF: ${{ steps.diff.outputs.diff }}
           PR_NUM: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          BODY=$(curl -sf https://models.inference.ai.azure.com/chat/completions \
+          INSTRUCOES=$(cat <<'FIM'
+          Você é revisor de código C#/.NET 10. Revise o diff abaixo de um projeto RMM (Arquitetura Onion).
+
+          Regras do projeto:
+          - Domain NUNCA referencia Infrastructure ou Application
+          - Senhas: só Argon2id via IPasswordHasher
+          - IDs: sempre Guid, nunca int auto-increment
+          - Datas: sempre UTC (DateTimeOffset) — o Npgsql RECUSA offset != 0
+          - JWT: só via IJwtTokenService
+          - Telemetria ao vivo NÃO é persistida (flui só pelo hub)
+          - Escopo de dados é decidido no servidor, nunca por filtro que a tela manda
+
+          Aponte no máximo 5 problemas reais (bugs, violações de Onion, falhas de
+          segurança). Ignore estilo. Se estiver ok, diga. Seja direto e em português.
+
+          Diff:
+          FIM
+          )
+
+          PROMPT=$(printf '%s\n%s' "$INSTRUCOES" "$(cat diff.txt)")
+
+          # -s sem -f: com -f o curl fica MUDO em erro HTTP, e o passo seguia
+          # publicando um comentário vazio como se a revisão tivesse rodado.
+          # Sem -f, o corpo do erro chega e dá para decidir.
+          RESPOSTA=$(curl -s https://models.inference.ai.azure.com/chat/completions \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "$(jq -n --arg diff "$DIFF" '{
-              model: "gpt-4o-mini",
-              max_tokens: 1024,
-              messages: [{
-                role: "user",
-                content: ("Você é revisor de código C#/.NET 10. Revise o diff abaixo de um projeto RMM (Arquitetura Onion).\n\nRegras do projeto:\n- Domain NUNCA referencia Infrastructure ou Application\n- Senhas: só Argon2id via IPasswordHasher\n- IDs: sempre Guid, nunca int auto-increment\n- Datas: sempre UTC (DateTimeOffset)\n- JWT: só via IJwtTokenService\n- Telemetria ao vivo NÃO é persistida (flui só pelo hub)\n\nAponte no máximo 5 problemas reais (bugs, violações de Onion, falhas de segurança). Ignore style. Se estiver ok, diga. Seja direto e em português.\n\nDiff:\n" + $diff)
-              }]
-            }')" | jq -r '.choices[0].message.content')
+            -d "$(jq -n --arg p "$PROMPT" '{
+                  model: "gpt-4o-mini",
+                  max_tokens: 1024,
+                  messages: [{ role: "user", content: $p }]
+                }')")
 
-          gh pr comment "$PR_NUM" --body "## Revisão automática (GitHub Models)
+          BODY=$(printf '%s' "$RESPOSTA" | jq -r '.choices[0].message.content // empty')
 
-$BODY
+          if [ -z "$BODY" ]; then
+            echo "A API não devolveu conteúdo. Resposta crua:"
+            printf '%s\n' "$RESPOSTA" | head -c 2000
+            echo ""
+            echo "Revisão automática indisponível — seguindo sem comentar."
+            exit 0
+          fi
 
----
-*\`${{ github.sha }}\` · [run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+          {
+            printf '## Revisão automática (GitHub Models)\n\n'
+            printf '%s\n\n' "$BODY"
+            printf -- '---\n'
+            printf '`%s` · [run](%s)\n' "$SHA" "$RUN_URL"
+          } > comentario.md
+
+          gh pr comment "$PR_NUM" --body-file comentario.md
