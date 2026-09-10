@@ -91,6 +91,34 @@ Passo 'Subindo o Postgres'
 if ($SoBanco) { exit 0 }
 
 # ── 3. Server ─────────────────────────────────────────────────────────────────
+# Derruba o que esta rodando ANTES de compilar.
+#
+# BUG CORRIGIDO: o Stop-Process vinha DEPOIS do build. Na segunda execucao o
+# `dotnet build` tentava sobrescrever as DLLs que o informE.Server da execucao
+# ANTERIOR ainda tinha abertas, o MSBuild tentava 10 vezes e desistia com
+# MSB3027/MSB3021 -- dezenas de linhas de erro para dizer "o programa ja esta
+# aberto". O app Desktop entra na conta porque tambem carrega informE.Contracts.
+Passo 'Encerrando o que ja estava rodando'
+
+$rodando = @(Get-Process informE.Server, informE.Desktop, informE.Agent.Worker -ErrorAction SilentlyContinue)
+
+if ($rodando.Count -gt 0) {
+    $rodando | Stop-Process -Force -ErrorAction SilentlyContinue
+
+    # Encerrar nao e instantaneo: o Windows leva um instante para liberar os
+    # descritores, e compilar antes disso cai no mesmo erro.
+    $espera = 0
+    while ((Get-Process informE.Server, informE.Desktop, informE.Agent.Worker -ErrorAction SilentlyContinue) -and $espera -lt 20) {
+        Start-Sleep -Milliseconds 300
+        $espera++
+    }
+
+    Ok ("$($rodando.Count) processo(s) encerrado(s)")
+}
+else {
+    Ok 'nada rodando'
+}
+
 Passo 'Compilando'
 
 # Build EXPLICITO e visivel, antes de subir.
@@ -104,14 +132,22 @@ $cronometro = [Diagnostics.Stopwatch]::StartNew()
 dotnet build (Join-Path $raiz 'src/Host/informE.Server/informE.Server.csproj') -c Debug --nologo -v q
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error 'A compilacao falhou. Corrija os erros acima e rode de novo.'
+    Write-Error @"
+A compilacao falhou.
+
+Se o erro acima fala em MSB3027/MSB3021 e "o arquivo esta bloqueado por
+informE.Server" ou "informE.Desktop", significa que uma copia do programa
+ficou aberta. Rode:
+
+  .\informe.ps1 -Parar
+
+e tente de novo.
+"@
     exit 1
 }
 Ok ("compilado em {0:N0}s" -f $cronometro.Elapsed.TotalSeconds)
 
 Passo 'Subindo o Server (aplica migrations e popula o banco)'
-
-Get-Process informE.Server -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 $logServer = Join-Path $env:TEMP 'informe-server.log'
 
@@ -166,9 +202,14 @@ do {
     # que fazia a espera parecer travamento.
     if (-not $noAr -and $tentativas % 3 -eq 0) { Write-Host '.' -NoNewline -ForegroundColor DarkGray }
 
-    if ($tentativas -gt 130) {
+    # 300 tentativas ~ 3,5 min. Parece muito, mas na PRIMEIRA subida de uma
+    # maquina o EF aplica 8 migrations e semeia 105 maquinas: medi 57s aqui, e
+    # uma maquina de laboratorio (disco lento, antivirus varrendo) leva mais.
+    # Desistir cedo e pior que esperar: quem esta demonstrando reroda achando
+    # que quebrou, e a segunda tentativa concorre com a primeira.
+    if ($tentativas -gt 300) {
         Write-Host ''
-        Write-Error "Server nao respondeu em 90s. Veja $logServer"
+        Write-Error "Server nao respondeu em 3,5 min. Veja $logServer"
         exit 1
     }
 } until ($noAr)
