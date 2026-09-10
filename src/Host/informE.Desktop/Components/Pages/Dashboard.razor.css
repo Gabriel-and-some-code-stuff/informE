@@ -67,7 +67,7 @@
     min-width: 235px;
     height: 42px;
     border: 1px solid #344156;
-    border-radius: 14px;
+    border-radius: 8px;
     background: #0e1625;
     color: #e3e8f1;
     display: flex;
@@ -102,7 +102,7 @@
     z-index: 15;
     padding: 10px;
     border: 1px solid #354258;
-    border-radius: 12px;
+    border-radius: 8px;
     background: #151e2e;
     box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
 }
@@ -146,7 +146,7 @@
     min-height: 218px;
     padding: 24px;
     border: 1px solid var(--border);
-    border-radius: 19px;
+    border-radius: 10px;
     background: var(--panel);
     display: flex;
     flex-direction: column;
@@ -165,8 +165,18 @@
     border-radius: 50%;
     display: grid;
     place-items: center;
-    font-size: 24px;
-    font-weight: 300;
+}
+
+/* Traco fino e uniforme nos cinco cartoes. Antes eram glifos de texto, entao o
+   "peso" do icone dependia da fonte e variava de simbolo para simbolo. */
+.metric-icon svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .metric-icon.cyan { background: rgba(16, 198, 244, .13); color: #10c6f4; }
@@ -219,7 +229,7 @@
 
 .panel {
     border: 1px solid var(--border);
-    border-radius: 20px;
+    border-radius: 10px;
     background: var(--panel);
     overflow: hidden;
 }
@@ -264,7 +274,7 @@
     place-items: center;
     padding: 18px;
     border: 1px dashed #354154;
-    border-radius: 14px;
+    border-radius: 8px;
     color: #7f899b;
     font-size: 12px;
     text-align: center;
@@ -275,7 +285,7 @@
     min-height: 62px;
     padding: 12px 14px;
     border: 1px solid #334056;
-    border-radius: 14px;
+    border-radius: 8px;
     background: #1c2536;
 }
 
@@ -315,7 +325,7 @@
     z-index: 8;
     padding: 9px 11px;
     border: 1px solid #40506a;
-    border-radius: 9px;
+    border-radius: 6px;
     background: #111a2a;
     color: #cdd5e2;
     font-size: 11px;
@@ -509,7 +519,7 @@
     gap: 5px;
     padding: 12px 14px;
     border: 1px solid #334056;
-    border-radius: 14px;
+    border-radius: 8px;
     background: #1c2536;
 }
 
@@ -534,7 +544,7 @@
 .alert-badge {
     padding: 3px 8px;
     border: 1px solid;
-    border-radius: 10px;
+    border-radius: 6px;
     font-size: 9px;
 }
 
@@ -567,7 +577,7 @@
     margin-bottom: 9px;
     padding: 0 14px;
     border: 1px solid #354156;
-    border-radius: 10px;
+    border-radius: 6px;
     background: transparent;
     color: #e5e9f0;
     font-size: 12px;
@@ -587,7 +597,7 @@
     margin-top: 42px;
     padding: 16px;
     border: 1px solid rgba(133, 59, 243, .35);
-    border-radius: 14px;
+    border-radius: 8px;
     background: rgba(133, 59, 243, .12);
 }
 
@@ -616,7 +626,7 @@
     position: relative;
     padding: 24px;
     border: 1px solid #34445e;
-    border-radius: 17px;
+    border-radius: 10px;
     background: #111a2a;
     box-shadow: 0 24px 70px rgba(0, 0, 0, .52);
 }
@@ -655,7 +665,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 0 13px;
-    border-radius: 11px;
+    border-radius: 6px;
     background: #1c2536;
 }
 
@@ -675,7 +685,7 @@
 .detail-row strong {
     padding: 3px 8px;
     border: 1px solid currentColor;
-    border-radius: 10px;
+    border-radius: 6px;
     background: transparent;
     font-size: 10px;
     font-weight: 500;

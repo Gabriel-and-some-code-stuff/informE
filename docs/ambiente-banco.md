@@ -18,7 +18,7 @@ dotnet run --project src/Host/informE.Server
 Só isso. Não precisa rodar `dotnet ef database update`, não precisa de script de
 seed, não precisa nem ter a ferramenta `dotnet-ef` instalada.
 
-**Login de desenvolvimento:** `admin@etec.sp.gov.br` / `informe123`
+**Login de desenvolvimento:** `admin@cps.sp.gov.br` / `informe123`
 
 ---
 
@@ -266,7 +266,8 @@ crash. Os sintomas:
   unix://.../dockerInference: The file cannot be accessed by the system`
 
 Renomear o diretório dos sockets resolve **às vezes** — em 09/09 o erro
-simplesmente pulou de `Local\Dockerun\dockerInference` para
+simplesmente pulou de `Local\Docker
+un\dockerInference` para
 `Local\docker-secrets-engine\engine.sock`. São vários sockets, e consertar um
 revela o próximo.
 
@@ -335,3 +336,27 @@ $env:Agent__EnrollmentToken = '<token de POST /admin/enrollment-tokens>'
 $env:Agent__ServerUrl = 'https://localhost:5021'
 dotnet run --project src/Agent/informE.Agent.Worker
 ```
+
+### As duas portas do Server
+
+`launchSettings.json` liga o Kestrel em **`0.0.0.0`**, não em `localhost`: agente
+rodando em outra máquina precisa alcançar o Host, e com `localhost` a VM leva
+`connection refused` sem nenhuma pista do motivo.
+
+São duas portas de propósito:
+
+| Porta | Uso |
+|---|---|
+| **5021 https** | o app Desktop, que roda na mesma máquina e confia no certificado de desenvolvimento |
+| **5020 http** | os agentes remotos |
+
+O certificado de desenvolvimento vale para `localhost`. Uma VM batendo em
+`https://192.168.x.x:5021` falha na validação do nome. HTTP na rede local evita
+o problema inteiro, sem a gambiarra de desligar validação de certificado.
+
+> ⚠️ **Não coloque comentários em `launchSettings.json`.** O `dotnet run` usa
+> parser JSON estrito e **recusa o arquivo inteiro** com
+> `'/' is an invalid start of a property name`. O perfil não é aplicado em
+> silêncio: o servidor cai para `http://localhost:5000` e ambiente `Production`
+> — onde o seed não roda e o banco fica vazio. O erro só aparece no stderr, que
+> normalmente ninguém está lendo.

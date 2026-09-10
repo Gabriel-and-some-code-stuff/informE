@@ -27,10 +27,10 @@ public class ValidacaoQueLancaTests
     [Fact]
     public void UpdateEmail_ComEmailInvalido_DeveLancarEManterOAnterior()
     {
-        var user = new User("professor", "prof@etec.sp.gov.br", "hash", UserRole.Viewer);
+        var user = new User("professor", "prof@cps.sp.gov.br", "hash", UserRole.Viewer);
 
         Assert.Throws<ArgumentException>(() => user.UpdateEmail("invalido"));
-        Assert.Equal("prof@etec.sp.gov.br", user.Email);
+        Assert.Equal("prof@cps.sp.gov.br", user.Email);
     }
 
     [Theory]

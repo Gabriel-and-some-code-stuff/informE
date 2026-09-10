@@ -37,7 +37,7 @@ public class RefreshTokenUseCaseTests
         };
 
     private static User UsuarioAtivo() =>
-        new("admin", "admin@etec.sp.gov.br", "hash", UserRole.Admin) { Id = Guid.NewGuid() };
+        new("admin", "admin@cps.sp.gov.br", "hash", UserRole.Admin) { Id = Guid.NewGuid() };
 
     private void ArranjarSessao(Session sessao, User user)
     {

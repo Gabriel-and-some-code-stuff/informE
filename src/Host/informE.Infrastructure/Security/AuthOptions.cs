@@ -12,7 +12,7 @@ public class AuthOptions
     // O DoD pede cps.sp.gov.br; etec entra junto porque é o domínio da massa de
     // desenvolvimento (SeedData) e do enroll-agent.ps1. Em produção,
     // appsettings.Production.json restringe a lista a cps.sp.gov.br.
-    public static readonly string[] PadraoInstitucional = ["cps.sp.gov.br", "etec.sp.gov.br"];
+    public static readonly string[] PadraoInstitucional = ["cps.sp.gov.br", "cps.sp.gov.br"];
 
     // ⚠️ Inicializa VAZIO de propósito. O binder de configuração do .NET
     // ACRESCENTA a arrays que já vêm preenchidos pelo inicializador em vez de

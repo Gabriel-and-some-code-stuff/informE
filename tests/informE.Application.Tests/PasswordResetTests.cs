@@ -37,7 +37,7 @@ public class PasswordResetTests
     private RequestPasswordResetUseCase Pedir() => new(_users, _tokens, _hasher, _email, _uow);
     private ResetPasswordUseCase Redefinir() => new(_users, _tokens, _hasher, _uow);
 
-    private static User Usuario() => new("prof", "prof@etec.sp.gov.br", "hash-antigo", UserRole.Viewer)
+    private static User Usuario() => new("prof", "prof@cps.sp.gov.br", "hash-antigo", UserRole.Viewer)
     {
         Id = Guid.NewGuid()
     };
@@ -49,7 +49,7 @@ public class PasswordResetTests
     {
         _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((User?)null);
 
-        await Pedir().ExecuteAsync("naoexiste@etec.sp.gov.br", UrlBase);
+        await Pedir().ExecuteAsync("naoexiste@cps.sp.gov.br", UrlBase);
 
         // Sem exceção e sem e-mail: de fora, indistinguível do caso de sucesso.
         await _email.DidNotReceive().SendAsync(

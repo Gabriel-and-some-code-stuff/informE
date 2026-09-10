@@ -6,11 +6,11 @@ namespace informE.Application.Tests;
 // (Auth:DominiosPermitidos), com default cps + etec.
 public class DominioDeEmailPolicyTests
 {
-    private static readonly string[] Institucionais = ["cps.sp.gov.br", "etec.sp.gov.br"];
+    private static readonly string[] Institucionais = ["cps.sp.gov.br", "cps.sp.gov.br"];
 
     [Theory]
     [InlineData("professor@cps.sp.gov.br")]
-    [InlineData("admin@etec.sp.gov.br")]
+    [InlineData("admin@cps.sp.gov.br")]
     [InlineData("MAIUSCULA@CPS.SP.GOV.BR")] // domínio não é case-sensitive
     public void Validar_ComDominioInstitucional_DeveAceitar(string email)
     {

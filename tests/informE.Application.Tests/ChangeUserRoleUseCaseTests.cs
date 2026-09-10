@@ -23,7 +23,7 @@ public class ChangeUserRoleUseCaseTests
 
     private User Alvo(UserRole papel = UserRole.Admin)
     {
-        var user = new User("tecnico", "tecnico@etec.sp.gov.br", "hash", papel) { Id = Guid.NewGuid() };
+        var user = new User("tecnico", "tecnico@cps.sp.gov.br", "hash", papel) { Id = Guid.NewGuid() };
         _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
         return user;
     }

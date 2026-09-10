@@ -114,8 +114,8 @@ Coisas que um clique na hora errada expõe:
 - **Merge da Bruna com a master: limpo**, zero conflito
 - **Compila:** Server e Desktop, em Debug
 - **164 testes verdes** (78 Domain + 86 Application)
-- **Credenciais do seed:** `admin@etec.sp.gov.br` / `informe123` (SuperAdmin) ·
-  `jessica@etec.sp.gov.br` / `informe123` (Admin)
+- **Credenciais do seed:** `admin@cps.sp.gov.br` / `informe123` (SuperAdmin) ·
+  `jessica@cps.sp.gov.br` / `informe123` (Admin)
 
 ## ❗ Não verificado — e você precisa saber disso
 
@@ -136,7 +136,7 @@ Estes dois itens são o primeiro trabalho depois de resolver o Docker.
 
 Grave nesta ordem. Tudo fora disso é enfeite:
 
-1. **Logar** como `admin@etec.sp.gov.br`
+1. **Logar** como `admin@cps.sp.gov.br`
 2. **Ver o parque** — 105 máquinas do seed **+ 1 real**, com CPU/RAM/disco
    de verdade na máquina real
 3. **Abrir o detalhe** da máquina real — percentuais e "Não disponível" no

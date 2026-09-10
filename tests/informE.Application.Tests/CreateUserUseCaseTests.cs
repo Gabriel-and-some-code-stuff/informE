@@ -28,7 +28,7 @@ public class CreateUserUseCaseTests
     private CreateUserUseCase CriarUseCase() => new(_users, _hasher, new DominioDeEmailPolicy([]), _uow);
 
     private static CreateUserRequest Request(UserRole papel) =>
-        new("prof", "prof@etec.sp.gov.br", "senha", papel);
+        new("prof", "prof@cps.sp.gov.br", "senha", papel);
 
     // SuperAdmin cria Admin e Viewer. Admin cria SOMENTE Viewer.
     [Theory]
@@ -61,7 +61,7 @@ public class CreateUserUseCaseTests
     public async Task Email_duplicado_deve_lancar()
     {
         _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new User("outro", "prof@etec.sp.gov.br", "hash", UserRole.Viewer));
+            .Returns(new User("outro", "prof@cps.sp.gov.br", "hash", UserRole.Viewer));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => CriarUseCase().ExecuteAsync(Request(UserRole.Viewer), UserRole.Admin));

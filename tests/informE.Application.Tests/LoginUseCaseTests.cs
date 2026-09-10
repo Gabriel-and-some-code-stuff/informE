@@ -30,10 +30,10 @@ public class LoginUseCaseTests
     private LoginUseCase CriarUseCase() => new(_users, _hasher, _jwt, _audit, _uow);
 
     private static LoginRequest Request() =>
-        new("admin@etec.sp.gov.br", "senha", "192.168.0.10", "Chrome — Windows 11");
+        new("admin@cps.sp.gov.br", "senha", "192.168.0.10", "Chrome — Windows 11");
 
     private static User Usuario(UserRole role = UserRole.Admin) =>
-        new("admin", "admin@etec.sp.gov.br", "hash-no-banco", role);
+        new("admin", "admin@cps.sp.gov.br", "hash-no-banco", role);
 
     [Fact]
     public async Task Email_inexistente_deve_lancar_credencial_invalida()

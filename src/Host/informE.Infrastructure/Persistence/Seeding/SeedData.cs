@@ -98,12 +98,12 @@ public static class SeedData
 
     private static List<User> MontarUsuarios(string senhaHash) =>
     [
-        Usuario("admin", "admin@etec.sp.gov.br", senhaHash, UserRole.SuperAdmin),
-        Usuario("jessica", "jessica@etec.sp.gov.br", senhaHash, UserRole.Admin),
-        Usuario("romeu", "romeu@etec.sp.gov.br", senhaHash, UserRole.Viewer),
-        Usuario("celina", "celina@etec.sp.gov.br", senhaHash, UserRole.Viewer),
-        Usuario("gislene", "gislene@etec.sp.gov.br", senhaHash, UserRole.Viewer),
-        Inativo(Usuario("luci", "luci@etec.sp.gov.br", senhaHash, UserRole.Viewer)),
+        Usuario("admin", "admin@cps.sp.gov.br", senhaHash, UserRole.SuperAdmin),
+        Usuario("jessica", "jessica@cps.sp.gov.br", senhaHash, UserRole.Admin),
+        Usuario("romeu", "romeu@cps.sp.gov.br", senhaHash, UserRole.Viewer),
+        Usuario("celina", "celina@cps.sp.gov.br", senhaHash, UserRole.Viewer),
+        Usuario("gislene", "gislene@cps.sp.gov.br", senhaHash, UserRole.Viewer),
+        Inativo(Usuario("luci", "luci@cps.sp.gov.br", senhaHash, UserRole.Viewer)),
     ];
 
     private static User Usuario(string nome, string email, string hash, UserRole papel) =>

@@ -66,4 +66,4 @@ Write-Host ""
 Write-Host "Proximo passo — o Server migra e popula o banco sozinho:" -ForegroundColor Cyan
 Write-Host "  dotnet run --project src/Host/informE.Server" -ForegroundColor White
 Write-Host ""
-Write-Host "Login de desenvolvimento: admin@etec.sp.gov.br / informe123" -ForegroundColor DarkGray
+Write-Host "Login de desenvolvimento: admin@cps.sp.gov.br / informe123" -ForegroundColor DarkGray

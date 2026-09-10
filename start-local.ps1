@@ -115,5 +115,5 @@ Write-Host ""
 Write-Host "Proximo passo — o Server migra e popula sozinho:" -ForegroundColor Cyan
 Write-Host "  dotnet run --project src/Host/informE.Server" -ForegroundColor White
 Write-Host ""
-Write-Host "Login: admin@etec.sp.gov.br / informe123" -ForegroundColor DarkGray
+Write-Host "Login: admin@cps.sp.gov.br / informe123" -ForegroundColor DarkGray
 Write-Host "Parar o banco:  pg_ctl -D `"$data`" stop" -ForegroundColor DarkGray

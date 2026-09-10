@@ -77,7 +77,7 @@ em máquinas distintas pelo informE.
 
 | # | Decisão |
 |---|---|
-| 1 | Domínio de e-mail = **lista configurável**, default `["cps.sp.gov.br","etec.sp.gov.br"]`. Seed e scripts continuam funcionando; produção restringe a `cps`. |
+| 1 | Domínio de e-mail = **lista configurável**, default `["cps.sp.gov.br","cps.sp.gov.br"]`. Seed e scripts continuam funcionando; produção restringe a `cps`. |
 | 2 | Banco volta ao **volume nomeado** `informe_pgdata`; `database/` sai do git. Portabilidade vem de migrate+seed, que já são automáticos. |
 | 3 | Porta única de dev = **`https://localhost:5021`**, hubs em `wss://`. 5000 e 7257 saem de circulação. |
 | 4 | Final boss validado com **N agentes locais + 1 máquina real** na LAN. |
@@ -255,7 +255,7 @@ Novo `AuthOptions` em `Infrastructure/Security/` (ao lado de `JwtOptions`):
 public class AuthOptions
 {
     public const string SectionName = "Auth";
-    public string[] DominiosPermitidos { get; set; } = ["cps.sp.gov.br", "etec.sp.gov.br"];
+    public string[] DominiosPermitidos { get; set; } = ["cps.sp.gov.br", "cps.sp.gov.br"];
 }
 ```
 
@@ -554,7 +554,7 @@ Log deve mostrar 7 migrations aplicadas + "Seed concluído: 6 usuários, 5 grupo
 
 **3. Scalar** — abrir `https://localhost:5021/scalar/v1`:
 - Todas as tags aparecem na ordem definida.
-- `POST /auth/login` com `admin@etec.sp.gov.br` / `informe123` → 200.
+- `POST /auth/login` com `admin@cps.sp.gov.br` / `informe123` → 200.
 - Authorize com o `accessToken` → cadeado fecha nas rotas protegidas.
 - Cada endpoint mostra schema de resposta **e** os `ProblemDetails` de erro.
 

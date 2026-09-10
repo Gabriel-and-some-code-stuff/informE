@@ -484,3 +484,6 @@ $RECYCLE.BIN/
 # Data dir do Postgres de desenvolvimento (bind-mount antigo do docker-compose).
 # Hoje o banco usa volume nomeado; esta pasta so sobrevive em quem ja a tinha.
 /database/
+
+# Executavel publicado do agente — 74 MB, gerado por novo-agente.ps1 -Publicar
+dist/

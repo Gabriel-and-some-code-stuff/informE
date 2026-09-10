@@ -30,7 +30,7 @@ Um teste unitario verifica **um unico comportamento** de uma unica classe, sem b
 public void UpdateUsername_ComNomeValido_AtualizaOUsername()
 {
     // Arrange — prepara o estado inicial
-    var user = new User("gabriel", "gabriel@etec.sp.gov.br", "hash", UserRole.Admin);
+    var user = new User("gabriel", "gabriel@cps.sp.gov.br", "hash", UserRole.Admin);
 
     // Act — executa o comportamento sendo testado
     user.UpdateUsername("gabrielv2");

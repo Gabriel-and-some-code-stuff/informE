@@ -99,3 +99,47 @@ h1:focus {
         padding-left: env(safe-area-inset-left);
     }
 }
+
+/* ============================================================
+   Ícones — regra única para todo o app
+   ============================================================
+   Antes, vários "ícones" eram caracteres Unicode (⌬ ▣ × △ ☰ ↻ ⟳ ✕ ＋).
+   Como glifo de texto, cada um herdava peso e tamanho óptico da fonte:
+   ficavam com espessuras diferentes lado a lado, e o mesmo símbolo (▣)
+   chegou a significar duas coisas distintas em cartões vizinhos.
+
+   Agora são SVG de traço, todos com viewBox 24 e a mesma espessura.
+   `fill:none` + `stroke:currentColor` fazem o ícone herdar a cor do
+   contexto, então as variações de cor continuam vindo do CSS de cada tela. */
+
+svg[aria-hidden="true"] {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Ícone dentro de botão: acompanha o texto sem empurrar a altura da linha. */
+.btn-icon,
+.ok-icon,
+.sync-icon,
+.account-chevron,
+.filter-chevron,
+.pulse-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon svg,
+.sync-icon svg,
+.pulse-icon svg { width: 17px; height: 17px; }
+
+.ok-icon svg { width: 21px; height: 21px; }
+
+/* Chevrons são indicadores, não ações: menores e mais discretos. */
+.account-chevron svg,
+.filter-chevron svg { width: 15px; height: 15px; }
+
+.mobile-menu svg { width: 21px; height: 21px; }

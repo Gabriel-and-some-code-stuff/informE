@@ -19,7 +19,7 @@ Tudo exige `Authorization: Bearer <access_token>`, exceto `/auth/login`,
 ```bash
 curl -X POST https://localhost:5021/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@etec.sp.gov.br","password":"informe123"}'
+  -d '{"email":"admin@cps.sp.gov.br","password":"informe123"}'
 ```
 
 Devolve `accessToken` (15 min), `refreshToken` (7 dias), `userId`, `username` e
@@ -91,7 +91,7 @@ O grão é **por máquina**, não por tarefa: uma ação disparada em 20 devices
 ```json
 {
   "username": "professor01",
-  "email": "professor01@etec.sp.gov.br",
+  "email": "professor01@cps.sp.gov.br",
   "password": "senha-forte",
   "role": "Viewer"
 }
@@ -195,7 +195,7 @@ A lista antiga tinha `5000`/`5001` (de um perfil de launch que não existe mais)
 # 1. login
 TOKEN=$(curl -s -X POST https://localhost:5021/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@etec.sp.gov.br","password":"informe123"}' \
+  -d '{"email":"admin@cps.sp.gov.br","password":"informe123"}' \
   | python -c "import sys,json;print(json.load(sys.stdin)['accessToken'])")
 
 # 2. máquinas

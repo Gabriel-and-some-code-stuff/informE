@@ -66,8 +66,18 @@ app.UseExceptionHandler();
 
 // HTTPS é o que faz os hubs negociarem wss:// em vez de ws://. Sem isso o
 // tráfego do agente (que carrega a agentKey na query string do handshake) sai
-// em texto claro na rede da escola.
-app.UseHttpsRedirection();
+// em texto claro na rede da escola. Em PRODUÇÃO isso é obrigatório.
+//
+// Em Development, NÃO: o certificado de desenvolvimento é emitido para
+// "localhost", então um agente em outra máquina (ou numa VM) que bata em
+// http://192.168.x.x:5020 recebia 307 para https://localhost:5021 — endereço
+// que, visto de lá, aponta para a PRÓPRIA VM. O agente ficava tentando
+// conectar em si mesmo, e o erro não dizia nada disso.
+//
+// A porta 5020 (http) existe justamente para o agente remoto em laboratório;
+// redirecionar tornava-a inútil. Ver docs/ambiente-banco.md.
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 
 if (app.Environment.IsDevelopment())
 {
