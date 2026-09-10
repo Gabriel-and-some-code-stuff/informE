@@ -85,21 +85,29 @@ else {
 #     o banco ainda fora do ar, que e quando o pg_isready escreve em stderr.
 #     A checagem certa e o codigo de saida, com a preferencia relaxada em volta.
 
-function Test-PostgresNoAr {
+# Devolve o CODIGO do pg_isready, nao um booleano -- os codigos dizem coisas
+# diferentes e o script precisa dessa diferenca:
+#
+#   0 = aceitando conexao          -> pronto
+#   1 = REJEITANDO conexao         -> o servidor ESTA no ar, ainda iniciando
+#                                     (recuperacao, fsync do diretorio)
+#   2 = sem resposta               -> nao ha nada escutando
+#   3 = chamada invalida
+function Get-EstadoPostgres {
     param([int]$Porta)
 
     $anterior = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
         & pg_isready -h localhost -p $Porta *> $null
-        return $LASTEXITCODE -eq 0
+        return $LASTEXITCODE
     }
     finally {
         $ErrorActionPreference = $anterior
     }
 }
 
-if (Test-PostgresNoAr -Porta $porta) {
+if ((Get-EstadoPostgres -Porta $porta) -eq 0) {
     Write-Host "Postgres ja estava no ar na porta $porta." -ForegroundColor DarkGray
 }
 else {
@@ -146,16 +154,54 @@ else {
         -ArgumentList $argumentos `
         -WindowStyle Hidden
 
-    $tentativas = 0
-    while (-not (Test-PostgresNoAr -Porta $porta)) {
-        Start-Sleep -Seconds 1
-        $tentativas++
+    # NAO existe cronometro para banco que esta subindo.
+    #
+    # A versao anterior desistia em 30s e reclamava de um banco que estava
+    # LITERALMENTE iniciando. Quando o Postgres nao foi desligado direito na vez
+    # anterior, ele recupera e sincroniza o diretorio antes de aceitar conexao --
+    # medido nesta maquina:
+    #
+    #   LOG: syncing data directory (fsync), elapsed time: 36.76 s
+    #   LOG: database system was not properly shut down; automatic recovery in progress
+    #   LOG: database system is ready to accept connections
+    #
+    # Aumentar o numero so empurra o problema: em disco lento ou base maior,
+    # qualquer limite fixo derruba de novo. O certo e olhar o ESTADO:
+    #
+    #   codigo 1 -> o servidor esta ai, trabalhando. Esperar, sem limite.
+    #   codigo 2 -> nao ha nada escutando. AI sim vale desistir.
+    $semNinguem = 0
 
-        if ($tentativas -gt 30) {
-            Write-Error "Postgres nao subiu em 30s. Veja $logPg"
-            exit 1
+    while ($true) {
+        $estado = Get-EstadoPostgres -Porta $porta
+
+        if ($estado -eq 0) { break }
+
+        if ($estado -eq 1) {
+            # Esta subindo. Reseta a contagem de "ninguem ai": o servidor existe.
+            if ($semNinguem -eq 0) {
+                Write-Host "  o banco esta iniciando (recuperando dados)" -ForegroundColor DarkGray
+            }
+            $semNinguem = 0
         }
+        else {
+            # Sem resposta. So aqui um limite faz sentido: se o pg_ctl nem
+            # conseguiu subir o processo, esperar para sempre nao ajuda ninguem.
+            $semNinguem++
+
+            if ($semNinguem -gt 60) {
+                Write-Host ''
+                Write-Error "Postgres nao respondeu em 60s e nao ha processo escutando na porta $porta. Veja $logPg"
+                exit 1
+            }
+        }
+
+        Write-Host '.' -NoNewline -ForegroundColor DarkGray
+        Start-Sleep -Seconds 1
     }
+
+    Write-Host ''
+
 }
 
 # ── 3. Banco ──────────────────────────────────────────────────────────────────

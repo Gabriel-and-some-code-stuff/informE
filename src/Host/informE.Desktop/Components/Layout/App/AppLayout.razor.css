@@ -6,8 +6,13 @@
     --border: #263247;
     --text: #f3f6fb;
     --muted: #8e98ac;
-    min-height: 100vh;
+    /* height, nao min-height.
+       Com min-height o shell podia crescer alem da tela e a ROLAGEM ia parar no
+       documento -- a barra lateral rolava junto com a tabela, e sobrava area
+       vazia no fim. Com altura fixa, quem rola e a area de conteudo (abaixo). */
+    height: 100vh;
     display: flex;
+    overflow: hidden;
     background: var(--page-bg);
     color: var(--text);
     font-family: Inter, "Segoe UI", sans-serif;
@@ -347,6 +352,11 @@ button.status-pill {
 .app-content {
     flex: 1;
     min-width: 0;
+
+    /* A rolagem acontece AQUI. A barra lateral e o cabecalho ficam parados,
+       como em qualquer painel. */
+    height: 100vh;
+    overflow-y: auto;
 }
 
 .mobile-overlay {

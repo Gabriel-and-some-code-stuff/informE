@@ -1,3 +1,41 @@
+﻿/* ============================================================
+   RESET — precisa vir antes de tudo
+   ============================================================
+   O Bootstrap fazia este trabalho e foi removido (ele definia
+   `.modal { display: none }`, que deixava o dialogo da tela de Contas
+   invisivel). Tirar a folha levou o RESET junto, e voltou a margem padrao do
+   navegador: espaco branco em volta de toda a interface e barra de rolagem
+   vertical numa tela que cabe inteira.
+
+   O que segue e o minimo que o app depende: margem zero, box-sizing herdado e
+   altura cheia para os layouts que usam 100vh. */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    /* Mesmo fundo das paginas: sem isto, qualquer folga mostra branco. */
+    background: #080f1d;
+    color: #f2f5fa;
+    overflow: hidden;
+}
+
+/* O host do Blazor ocupa a altura toda. Sem isto, uma pagina com
+   `min-height: 100vh` dentro de um host sem altura estoura o corpo. */
+#app {
+    height: 100%;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
