@@ -129,16 +129,19 @@
     gap: 8px;
 }
 
+/* Sem borda e sem circulo: o icone e um SVG de traco, igual ao resto do app.
+   O circulo de 2px em volta de um glifo de 10px era o que fazia cada status
+   parecer de um tamanho diferente. */
 .status-icon {
-    width: 18px;
-    height: 18px;
-    border: 2px solid currentColor;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+
+.status-icon svg {
+    width: 17px;
+    height: 17px;
 }
 
 .status-pill-execution {

@@ -9,11 +9,13 @@
 # Parametros uteis:
 #   -SoBanco     sobe so o Postgres e sai
 #   -SemApp      NAO abre o aplicativo (util na maquina que so hospeda o Server)
+#   -SemAgente   NAO registra esta maquina como monitorada
 #   -Parar       derruba Server, agentes e Postgres
 
 param(
     [switch]$SoBanco,
     [switch]$SemApp,
+    [switch]$SemAgente,
     [switch]$Parar
 )
 
@@ -217,6 +219,73 @@ do {
 if ($tentativas -ge 3) { Write-Host '' }
 Ok ("Server no ar em {0:N0}s" -f $cronometro.Elapsed.TotalSeconds)
 
+# ── 4. Esta maquina, monitorada ───────────────────────────────────────────────
+# Registra e roda um agente AQUI, na maquina que esta subindo o informE.
+#
+# POR QUE ISSO E PADRAO: sem agente, a tela mostra apenas as 105 maquinas de
+# demonstracao -- e disparar comando nelas nao produz saida nenhuma, porque nao
+# existe agente do outro lado. Com esta maquina na lista, "Informacoes do
+# Sistema" devolve o nome, o sistema e o espaco em disco REAIS, que e a
+# diferenca entre demonstrar o produto e mostrar uma tela.
+#
+# Use -SemAgente na maquina que so hospeda o Server.
+if (-not $SemAgente) {
+    Passo 'Registrando esta maquina como monitorada'
+
+    $identidade = Join-Path $env:LOCALAPPDATA 'informE\informe-agent.identity'
+
+    try {
+        if (Test-Path $identidade) {
+            # Identidade em disco: o agente reaproveita e nao precisa de token.
+            Ok 'identidade ja existe — reaproveitando'
+            $token = $null
+        }
+        else {
+            # Token de registro pela propria API, com o login de desenvolvimento.
+            $login = Invoke-RestMethod -Uri 'http://localhost:5020/auth/login' -Method Post `
+                -ContentType 'application/json' `
+                -Body '{"email":"admin@cps.sp.gov.br","password":"informe123"}'
+
+            $resposta = Invoke-RestMethod -Uri 'http://localhost:5020/admin/enrollment-tokens' -Method Post `
+                -Headers @{ Authorization = "Bearer $($login.accessToken)" }
+
+            $token = if ($resposta.token) { $resposta.token } else { $resposta.enrollmentToken }
+        }
+
+        Get-Process informE.Agent.Worker -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+
+        # http e nao https: o certificado de desenvolvimento vale para
+        # "localhost" e o agente aqui usa a mesma porta que um agente remoto
+        # usaria -- assim o caminho testado e o caminho de producao.
+        $env:Agent__ServerUrl = 'http://localhost:5020'
+        if ($token) { $env:Agent__EnrollmentToken = $token }
+
+        # SnapshotIntervalMinutes=5 em vez dos 30 padrao: numa demonstracao,
+        # esperar meia hora pelo proximo numero nao serve.
+        $env:Agent__SnapshotIntervalMinutes = '5'
+
+        $logAgente = Join-Path $env:TEMP 'informe-agente.log'
+
+        Start-Process -FilePath 'dotnet' `
+            -ArgumentList 'run','--project','src/Agent/informE.Agent.Worker' `
+            -WorkingDirectory $raiz `
+            -RedirectStandardOutput $logAgente `
+            -RedirectStandardError (Join-Path $env:TEMP 'informe-agente.err.log') `
+            -WindowStyle Hidden | Out-Null
+
+        Ok "agente subindo — log em $logAgente"
+        Ok "$env:COMPUTERNAME vai aparecer em Equipamentos em alguns segundos"
+    }
+    catch {
+        # Falhar aqui NAO derruba o informE: o painel funciona sem agente, so
+        # nao tem maquina real. Melhor avisar e seguir do que abortar tudo.
+        Aviso "Nao foi possivel registrar esta maquina: $($_.Exception.Message)"
+        Aviso 'O painel funciona; para registrar depois, rode .
+ovo-agente.ps1'
+    }
+}
+
 # ── 4. Endereco para as outras maquinas ───────────────────────────────────────
 $ip = (Get-NetIPAddress -AddressFamily IPv4 |
        Where-Object { $_.InterfaceAlias -notlike '*Loopback*' -and $_.IPAddress -notlike '169.*' } |
@@ -254,5 +323,5 @@ if (-not $SemApp) {
     Ok 'Aplicativo abrindo (leva alguns segundos na primeira vez)'
 }
 
-Write-Host "  Parar tudo:  .\informe.ps1 -Parar    (sem abrir o app: -SemApp)" -ForegroundColor DarkGray
+Write-Host "  Parar tudo:  .\informe.ps1 -Parar    (sem app: -SemApp | sem agente: -SemAgente)" -ForegroundColor DarkGray
 Write-Host ''

@@ -1,3 +1,356 @@
+/* Mesma linguagem visual de Devices/Executions: fundo #080f1d, accent #10c6f4,
+   escala de raio 6 (controles) / 8 (cartões) / 10 (painéis grandes). */
+
+.accounts-page {
+    min-height: calc(100vh - 64px);
+    padding: 38px 38px 52px;
+    background: #080f1d;
+    color: #f2f5fa;
+    font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.accounts-header {
+    min-height: 98px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.accounts-header h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    line-height: 1.1;
+    font-weight: 650;
+    letter-spacing: -.4px;
+}
+
+.accounts-header p {
+    margin: 0;
+    color: #7f899c;
+    font-size: 15px;
+}
+
+.new-account-button {
+    height: 44px;
+    padding: 0 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    border: none;
+    border-radius: 6px;
+    background: #10c6f4;
+    color: #07131e;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.new-account-button:hover { background: #3ad2f8; }
+
+/* ── Filtros ────────────────────────────────────────────────────────────── */
+
+.accounts-filters {
+    margin: 8px 0 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 180px;
+}
+
+.filter-field.grow { flex: 1 1 240px; }
+
+.filter-field > span {
+    color: #768197;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.filter-field select,
+.filter-field input {
+    height: 42px;
+    padding: 0 13px;
+    border: 1px solid #283449;
+    border-radius: 6px;
+    background: #101b2c;
+    color: #f2f5fa;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.filter-field select:focus,
+.filter-field input:focus {
+    outline: none;
+    border-color: #10c6f4;
+}
+
+/* ── Tabela ─────────────────────────────────────────────────────────────── */
+
+.accounts-panel {
+    border: 1px solid #1d2636;
+    border-radius: 8px;
+    background: #0d1524;
+    overflow: hidden;
+}
+
+.table-scroll {
+    overflow-x: auto;
+    padding: 18px 22px 22px;
+}
+
+.accounts-table {
+    width: 100%;
+    min-width: 940px;
+    border-collapse: collapse;
+}
+
+.accounts-table th {
+    height: 52px;
+    padding: 0 15px;
+    border-bottom: 1px solid #283449;
+    color: #768197;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.accounts-table td {
+    height: 60px;
+    padding: 0 15px;
+    border-bottom: 1px solid #161f2f;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* Conta desativada fica visivelmente apagada — a diferença não pode depender
+   só de ler a coluna Situação. */
+.accounts-table tr.inativa td { opacity: .5; }
+
+.codigo {
+    color: #768197;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.papel-wrap,
+.situacao-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.papel-wrap::before,
+.situacao-wrap::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.papel-wrap.superadmin { color: #853bf3; }
+.papel-wrap.admin { color: #10c6f4; }
+.papel-wrap.viewer { color: #97a2b5; }
+
+.situacao-wrap.ativa { color: #1fd274; }
+.situacao-wrap.desativada { color: #ff4d58; }
+
+.acoes-col { text-align: right; }
+
+.acoes {
+    display: inline-flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.acao {
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid #283449;
+    border-radius: 6px;
+    background: transparent;
+    color: #dce2ec;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.acao:hover:not(:disabled) { border-color: #10c6f4; color: #10c6f4; }
+.acao.perigo:hover:not(:disabled) { border-color: #ff4d58; color: #ff4d58; }
+.acao:disabled { opacity: .45; cursor: default; }
+
+/* ── Estados ────────────────────────────────────────────────────────────── */
+
+.loading-state,
+.empty-state {
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #7e899c;
+    text-align: center;
+}
+
+.empty-state strong { color: #dce2ec; font-size: 15px; }
+.empty-state span,
+.loading-state p { margin: 0; font-size: 12px; }
+
+.loader {
+    width: 26px;
+    height: 26px;
+    border: 2px solid #283449;
+    border-top-color: #10c6f4;
+    border-radius: 50%;
+    animation: accounts-spin .8s linear infinite;
+}
+
+@keyframes accounts-spin { to { transform: rotate(360deg); } }
+
+.page-message {
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-radius: 8px;
+}
+
+.page-message.error { border: 1px solid #ff4d5840; background: #ff4d5814; }
+.page-message.ok { border: 1px solid #1fd27440; background: #1fd27414; }
+
+.page-message > span {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: #07131e;
+    font-weight: 700;
+}
+
+.page-message.error > span { background: #ff4d58; }
+.page-message.ok > span { background: #1fd274; }
+
+.page-message div { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.page-message strong { font-size: 14px; }
+.page-message small { color: #ff8f96; font-size: 12px; }
+
+.page-message button {
+    height: 36px;
+    padding: 0 16px;
+    border: 1px solid #ff4d5860;
+    border-radius: 6px;
+    background: transparent;
+    color: #ff8b92;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ── Modal ──────────────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: #04080f9c;
+    z-index: 40;
+}
+
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(460px, 92vw);
+    max-height: 88vh;
+    overflow-y: auto;
+    z-index: 41;
+    border: 1px solid #1d2636;
+    border-radius: 10px;
+    background: #0d1524;
+    box-shadow: 0 24px 60px #04080fb0;
+}
+
+.modal-header {
+    padding: 22px 24px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 650;
+    letter-spacing: -.3px;
+}
+
+.modal-close {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border: 1px solid #283449;
+    border-radius: 6px;
+    background: transparent;
+    color: #97a2b5;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+}
+
+.modal-close:hover { border-color: #10c6f4; color: #10c6f4; }
+
+.modal-body {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.campo { display: flex; flex-direction: column; gap: 7px; }
+
+.campo > span {
+    color: #768197;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.campo input,
+.campo select {
+    height: 42px;
+    padding: 0 13px;
+    border: 1px solid #283449;
+    border-radius: 6px;
+    background: #101b2c;
+    color: #f2f5fa;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.campo input:focus,
+.campo select:focus { outline: none; border-color: #10c6f4; }
+
+.campo-ajuda {
+    margin: 0;
+    color: #768197;
+    font-size: 12px;
+    line-height: 1.5;
+}
 
 .campo-dica {
     color: #768197;
@@ -7,3 +360,48 @@
 
 /* Vira aviso quando o que está digitado já é inválido — antes de enviar. */
 .campo-dica.erro { color: #ff8f96; }
+
+.modal-error {
+    padding: 12px 14px;
+    border: 1px solid #ff4d5840;
+    border-radius: 6px;
+    background: #ff4d5814;
+    color: #ff8f96;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    padding: 0 24px 22px;
+    display: flex;
+    gap: 10px;
+}
+
+.primary-button {
+    height: 42px;
+    padding: 0 22px;
+    border: none;
+    border-radius: 6px;
+    background: #10c6f4;
+    color: #07131e;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.primary-button:hover:not(:disabled) { background: #3ad2f8; }
+.primary-button:disabled { opacity: .45; cursor: default; }
+
+.secondary-button {
+    height: 42px;
+    padding: 0 20px;
+    border: 1px solid #283449;
+    border-radius: 6px;
+    background: transparent;
+    color: #dce2ec;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.secondary-button:hover:not(:disabled) { border-color: #10c6f4; color: #10c6f4; }

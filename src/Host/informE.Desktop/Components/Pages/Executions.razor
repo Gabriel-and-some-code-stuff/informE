@@ -78,14 +78,21 @@
                                 </td>
                                 <td>
                                     <span class="status-wrap @StatusClass(item.Status)">
-                                        <span class="status-icon">@StatusIcon(item.Status)</span>
+                                        <span class="status-icon">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                @((MarkupString)StatusIconPath(item.Status))
+                                            </svg>
+                                        </span>
                                         <span class="status-pill-execution">@StatusLabel(item.Status)</span>
                                     </span>
                                 </td>
                                 <td>@FormatTime(item.ExecutedAt)</td>
                                 <td>@FormatDuration(item.DurationMs)</td>
                                 <td>
-                                    <span class="responsible">—</span>
+                                    @* Estava fixo em "—", ignorando o criadoPor que a API
+                                       passou a devolver. A coluna existia sem nunca mostrar
+                                       nada. *@
+                                    <span class="responsible">@(item.CriadoPor ?? "—")</span>
                                 </td>
                                 <td class="row-actions">
                                     @if (!string.IsNullOrWhiteSpace(item.Output))
@@ -550,15 +557,33 @@
 
     private static string StatusClass(string status) => status.ToLowerInvariant();
 
-    private static string StatusIcon(string status) => status switch
+    // Desenho do icone de cada status.
+    //
+    // Antes eram GLIFOS Unicode (✓ × ◔ ◷ •) apertados dentro de um circulo de
+    // 18px com borda de 2px. Como texto, cada um tinha tamanho optico e linha
+    // de base propios: o ✓ ficava alto, o × pequeno, e o ◔ era um circulo
+    // DENTRO de outro circulo. Lado a lado na tabela, nada alinhava.
+    //
+    // Agora sao SVG de traco no mesmo viewBox 24 e mesma espessura do resto do
+    // app, e o circulo com borda saiu -- o desenho ja carrega o significado.
+    //
+    // MarkupString e seguro aqui: o conteudo e uma constante deste arquivo,
+    // nunca dado de usuario.
+    private static string StatusIconPath(string status) => status switch
     {
-        "Succeeded" => "✓",
-        "Failed" => "×",
-        "Canceled" => "×",
-        "Running" => "◔",
-        "Queued" => "◷",
-        "Pending" => "◷",
-        _ => "•"
+        // Confirmado
+        "Succeeded" => """<path d="m4 12.5 5 5L20 6.5"/>""",
+
+        // Falhou / cancelado -- o X e o mesmo, a COR e o que distingue (ver CSS)
+        "Failed" or "Canceled" => """<path d="M6 6l12 12M18 6 6 18"/>""",
+
+        // Em andamento: arco aberto, sugere movimento
+        "Running" => """<path d="M12 3a9 9 0 1 0 9 9"/>""",
+
+        // Aguardando: relogio
+        "Queued" or "Pending" => """<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5l3.5 2"/>""",
+
+        _ => """<circle cx="12" cy="12" r="4"/>"""
     };
 
     private static string FormatTime(DateTimeOffset value) => value.ToLocalTime().ToString("HH:mm:ss");
