@@ -29,11 +29,19 @@ era do endpoint.
 2. **O agente nunca coletou hardware.** `SystemSnapshotCollector` devolve
    `SystemSnapshot(CpuPercent, RamPercent, DiskPercent, UptimeSeconds)` — e nada
    mais. Não existe caminho que preencha `info_devices` para uma máquina real.
-   As linhas dessa tabela existem **apenas no seed**.
+   Pior: **o seed também não criava** — `info_devices` estava com **zero
+   linhas**, então o bloco de hardware vinha nulo em *todas* as 105 máquinas e
+   a tela parecia quebrada em vez de honesta. Corrigido: o seed agora gera
+   inventário para as máquinas de demonstração (3 perfis, com BIOS nulo em ~1
+   de cada 5, que é o que acontece no mundo real).
 
 **O que foi feito:** `GET /devices/{id}` agora devolve `DeviceDetailDto` com o
 bloco `hardware`, vindo de `info_devices` quando existir. Máquina do seed traz
 tudo; máquina real traz `null`.
+
+**Verificado em execução (09/09):** `GET /devices/{id}` de uma máquina do seed
+devolve `Intel Core i3-7100 | 8GB DDR3 | 500GB HD | placa Dell OptiPlex 3050 |
+BIOS 3.1.7`; a máquina real (`NOTEBOOKSECO`) devolve `hardware: null`.
 
 **Por que a coleta não entra:** capturar BIOS e placa-mãe exige WMI por campo,
 com resultado que varia por fabricante e frequentemente vem vazio ou como

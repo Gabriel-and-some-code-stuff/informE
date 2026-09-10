@@ -40,7 +40,7 @@
     align-items: center;
     gap: 10px;
     border: 1px solid #283449;
-    border-radius: 10px;
+    border-radius: 6px;
     background: #101b2c;
     color: #dce2ec;
     font-size: 14px;
@@ -71,7 +71,7 @@
 .summary-card {
     padding: 20px 22px;
     border: 1px solid #1d2636;
-    border-radius: 14px;
+    border-radius: 8px;
     background: #0d1524;
     display: flex;
     flex-direction: column;
@@ -128,7 +128,7 @@
     height: 42px;
     padding: 0 13px;
     border: 1px solid #283449;
-    border-radius: 10px;
+    border-radius: 6px;
     background: #101b2c;
     color: #f2f5fa;
     font-size: 14px;
@@ -145,7 +145,7 @@
 
 .devices-panel {
     border: 1px solid #1d2636;
-    border-radius: 16px;
+    border-radius: 8px;
     background: #0d1524;
     overflow: hidden;
 }
@@ -274,7 +274,7 @@
     align-items: center;
     gap: 14px;
     border: 1px solid #ff4d5840;
-    border-radius: 12px;
+    border-radius: 8px;
     background: #ff4d5814;
 }
 
@@ -304,7 +304,7 @@
     height: 36px;
     padding: 0 16px;
     border: 1px solid #ff4d5860;
-    border-radius: 9px;
+    border-radius: 6px;
     background: transparent;
     color: #ff8b92;
     font-size: 13px;
@@ -363,7 +363,7 @@
     height: 34px;
     flex: none;
     border: 1px solid #283449;
-    border-radius: 9px;
+    border-radius: 6px;
     background: transparent;
     color: #97a2b5;
     font-size: 14px;
@@ -412,7 +412,7 @@
     margin: 0;
     padding: 14px 16px;
     border: 1px dashed #283449;
-    border-radius: 11px;
+    border-radius: 6px;
     color: #7f899c;
     font-size: 13px;
     line-height: 1.55;

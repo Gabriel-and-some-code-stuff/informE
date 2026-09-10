@@ -260,7 +260,7 @@ Tudo que ela precisa já existe na API:
 
 - [ ] `POST /auth/login` → guarda tokens, redireciona
 - [ ] Erro 401 com a mesma mensagem de sempre (anti-enumeração já está no servidor)
-- [ ] `admin@etec.sp.gov.br` / `informe123` funciona no seed
+- [ ] `admin@cps.sp.gov.br` / `informe123` funciona no seed
 
 ### Dashboard — ~4 h (mock, por decisão do time)
 

@@ -39,7 +39,7 @@ Com o Server no ar, da raiz do repo:
 powershell -ExecutionPolicy Bypass -File enroll-agent.ps1 -ServerUrl https://localhost:5021 -Run
 ```
 
-Faz login como Admin/SuperAdmin (`admin@etec.sp.gov.br` / `informe123` por
+Faz login como Admin/SuperAdmin (`admin@cps.sp.gov.br` / `informe123` por
 padrão — dá pra sobrescrever com `-Email`/`-Password`), gera o token de
 registro, grava em `src/Agent/informE.Agent.Worker/appsettings.json` e, com
 `-Run`, já sobe o agente. Sem `-Run`, só grava o token e imprime o `dotnet run`

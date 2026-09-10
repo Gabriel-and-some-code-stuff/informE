@@ -26,7 +26,7 @@
 param(
     [int]$Count = 3,
     [string]$ServerUrl = "https://localhost:5021",
-    [string]$Email = "admin@etec.sp.gov.br",
+    [string]$Email = "admin@cps.sp.gov.br",
     [string]$Password = "informe123"
 )
 

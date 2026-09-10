@@ -11,7 +11,7 @@ public sealed class InformEApiClient(HttpClient http)
     public async Task<LoginResponseDto> LoginAsync(string email, string password, CancellationToken ct = default)
     {
         using var response = await http.PostAsJsonAsync("auth/login", new LoginRequestDto(email, password), ct);
-        return await ReadAsync<LoginResponseDto>(response, ct);
+        return await ReadAsync<LoginResponseDto>(response, ct, ContextoDaChamada.Login);
     }
 
     public async Task<IReadOnlyList<MachineActionDto>> GetActionsAsync(CancellationToken ct = default) =>
@@ -112,7 +112,15 @@ public sealed class InformEApiClient(HttpClient http)
         response.Dispose();
 
         if (!await TentarRenovarAsync(ct))
-            throw new InformEApiException("Sua sessao expirou. Entre novamente.", 401);
+        {
+            // Limpa o estado ANTES de avisar: sem isto o AppSession continuaria
+            // com um token morto, o IsAuthenticated seguiria true, e a proxima
+            // tela tentaria carregar dado com credencial que nao vale mais --
+            // gerando um segundo erro em vez de mandar a pessoa para o login.
+            AppSession.Clear();
+
+            throw new InformEApiException("Sua sessão expirou. Entre novamente.", 401);
+        }
 
         return await EnviarUmaVezAsync(method, route, content, ct);
     }
@@ -189,14 +197,30 @@ public sealed class InformEApiClient(HttpClient http)
         return message;
     }
 
-    private static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken ct)
+    private static async Task<T> ReadAsync<T>(
+        HttpResponseMessage response,
+        CancellationToken ct,
+        ContextoDaChamada contexto = ContextoDaChamada.Autenticada)
     {
-        await EnsureSuccessAsync(response, ct);
+        await EnsureSuccessAsync(response, ct, contexto);
         var value = await response.Content.ReadFromJsonAsync<T>(cancellationToken: ct);
         return value ?? throw new InformEApiException("O servidor respondeu sem os dados esperados.");
     }
 
-    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
+    // O MESMO status HTTP quer dizer coisas diferentes dependendo de onde
+    // aconteceu, e a mensagem tem que dizer o que a pessoa pode fazer.
+    //
+    // 401 na tela de login  = credencial errada -> tentar de novo
+    // 401 em qualquer outra = sessao caiu       -> entrar de novo
+    //
+    // Antes as duas caiam num texto so ("E-mail ou senha inválidos, ou a sessão
+    // expirou"), que nao ajuda em nenhum dos dois casos: quem errou a senha fica
+    // em duvida se o problema e a sessao, e quem foi deslogado fica conferindo a
+    // senha. O contexto vem de QUEM chama, nao de adivinhacao pelo status.
+    private static async Task EnsureSuccessAsync(
+        HttpResponseMessage response,
+        CancellationToken ct,
+        ContextoDaChamada contexto = ContextoDaChamada.Autenticada)
     {
         if (response.IsSuccessStatusCode)
             return;
@@ -204,11 +228,41 @@ public sealed class InformEApiClient(HttpClient http)
         var body = await response.Content.ReadAsStringAsync(ct);
         var detail = TryReadProblemDetail(body);
 
-        var message = response.StatusCode switch
+        var message = (contexto, response.StatusCode) switch
         {
-            System.Net.HttpStatusCode.Unauthorized => "E-mail ou senha inválidos, ou a sessão expirou.",
-            System.Net.HttpStatusCode.Forbidden => "Sua conta não tem permissão para realizar esta ação.",
-            System.Net.HttpStatusCode.Conflict => detail ?? "A operação não pode ser concluída no estado atual.",
+            // ── Tela de login ────────────────────────────────────────────────
+            (ContextoDaChamada.Login, System.Net.HttpStatusCode.Unauthorized) =>
+                "E-mail ou senha incorretos.",
+
+            // O servidor devolve 403 no login quando a conta foi desativada. O
+            // detail explica; a mensagem de reserva diz o que fazer.
+            (ContextoDaChamada.Login, System.Net.HttpStatusCode.Forbidden) =>
+                detail ?? "Esta conta está desativada. Procure o administrador.",
+
+            // 409 no login = limite de 3 dispositivos atingido. O detail traz o
+            // numero e a orientacao, entao ele vale mais que qualquer texto fixo.
+            (ContextoDaChamada.Login, System.Net.HttpStatusCode.Conflict) =>
+                detail ?? "Você já tem 3 dispositivos conectados. Encerre a sessão em um deles para entrar aqui.",
+
+            // ── Chamadas autenticadas ────────────────────────────────────────
+            // So chega aqui depois de a renovacao automatica ter falhado (ver
+            // SendAuthorizedAsync), entao a sessao morreu de verdade.
+            (_, System.Net.HttpStatusCode.Unauthorized) =>
+                "Sua sessão expirou. Entre novamente.",
+
+            (_, System.Net.HttpStatusCode.Forbidden) =>
+                detail ?? "Sua conta não tem permissão para realizar esta ação.",
+
+            (_, System.Net.HttpStatusCode.Conflict) =>
+                detail ?? "A operação não pode ser concluída no estado atual.",
+
+            (_, System.Net.HttpStatusCode.NotFound) =>
+                detail ?? "O item não foi encontrado. Ele pode ter sido removido.",
+
+            // 5xx nao e problema de quem esta usando: nao mande conferir dado.
+            _ when (int)response.StatusCode >= 500 =>
+                "O servidor encontrou um erro. Tente novamente em instantes.",
+
             _ => detail ?? $"O servidor retornou o erro {(int)response.StatusCode}."
         };
 
@@ -240,6 +294,16 @@ public sealed class InformEApiClient(HttpClient http)
 
         return null;
     }
+}
+
+// De onde a chamada partiu. Muda a mensagem, nao o comportamento.
+public enum ContextoDaChamada
+{
+    /// <summary>Tela de login: 401 e credencial errada.</summary>
+    Login,
+
+    /// <summary>Qualquer chamada com token: 401 e sessao expirada.</summary>
+    Autenticada
 }
 
 public sealed class InformEApiException(string message, int? statusCode = null, Exception? innerException = null)

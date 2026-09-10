@@ -50,7 +50,7 @@ catálogo de endpoints nem CSRF de teste pra fora.
    ambiente local, `5000`/`5001` se você fixou via `launchSettings.json`)
 
 3. Faça login pela própria UI: abra `POST /auth/login`, preencha
-   `email`/`password` (`admin@etec.sp.gov.br` / `informe123` em dev) e clique
+   `email`/`password` (`admin@cps.sp.gov.br` / `informe123` em dev) e clique
    **Send**. Copie o `accessToken` da resposta.
 
 4. Clique em **Authorize** (canto superior) e cole o token — a partir daí toda

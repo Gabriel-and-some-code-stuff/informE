@@ -1,5 +1,5 @@
 ﻿# enroll-agent.ps1 — automatiza o registro do agente.
-# Uso: powershell -ExecutionPolicy Bypass -File enroll-agent.ps1 [-Run] [-ServerUrl https://localhost:5021] [-Email admin@etec.sp.gov.br] [-Password informe123]
+# Uso: powershell -ExecutionPolicy Bypass -File enroll-agent.ps1 [-Run] [-ServerUrl https://localhost:5021] [-Email admin@cps.sp.gov.br] [-Password informe123]
 #
 # Antes disto, o fluxo era manual (ver docs/agente.md):
 #   1. login via curl pra pegar o access token
@@ -11,7 +11,7 @@
 
 param(
     [string]$ServerUrl = "https://localhost:5021",
-    [string]$Email = "admin@etec.sp.gov.br",
+    [string]$Email = "admin@cps.sp.gov.br",
     [string]$Password = "informe123",
     [switch]$Run
 )

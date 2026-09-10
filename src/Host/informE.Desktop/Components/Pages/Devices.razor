@@ -3,6 +3,7 @@
 @layout informE.Desktop.Components.Layout.App.AppLayout
 @using informE.Contracts.Dtos.Api
 @inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
 
 <PageTitle>Equipamentos | informE</PageTitle>
 
@@ -14,7 +15,7 @@
         </div>
 
         <button class="refresh-button" type="button" @onclick="LoadAsync" disabled="@loading">
-            <span>⟳</span>
+            <span class="btn-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-13.7-5.7L4 7.5"/><path d="M4 4v3.5H7.5"/><path d="M4 13a8 8 0 0 0 13.7 5.7L20 16.5"/><path d="M20 20v-3.5h-3.5"/></svg></span>
             Atualizar
         </button>
     </header>
@@ -158,7 +159,7 @@
                 <h2>@selectedDetail.Equipamento.Hostname</h2>
                 <p>@(selectedDetail.Equipamento.GroupName ?? "Sem laboratório") · @selectedDetail.Equipamento.Os</p>
             </div>
-            <button type="button" class="detail-close" @onclick="CloseDetail" aria-label="Fechar">✕</button>
+            <button type="button" class="detail-close" @onclick="CloseDetail" aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
         </header>
 
         <section class="detail-block">
@@ -247,7 +248,7 @@
         }
         catch (Exception ex)
         {
-            pageError = Mensagem(ex);
+            pageError = TrataOuMensagem(ex);
         }
         finally
         {
@@ -286,7 +287,7 @@
         }
         catch (Exception ex)
         {
-            pageError = Mensagem(ex);
+            pageError = TrataOuMensagem(ex);
         }
     }
 
@@ -321,7 +322,7 @@
         }
         catch (Exception ex)
         {
-            detailError = Mensagem(ex);
+            detailError = TrataOuMensagem(ex);
         }
     }
 
@@ -381,6 +382,19 @@
             { TotalHours: < 24 } => $"há {(int)decorrido.TotalHours} h",
             _ => local.ToString("dd/MM HH:mm")
         };
+    }
+
+    // Intercepta 401 antes de virar texto na tela: sessao expirada volta para
+    // o login em vez de deixar a tela vazia com um aviso sem saida.
+    private string TrataOuMensagem(Exception ex)
+    {
+        if (ex is informE.Desktop.Services.InformEApiException api && api.StatusCode == 401)
+        {
+            Navigation.NavigateTo("/login", replace: true);
+            return string.Empty;
+        }
+
+        return Mensagem(ex);
     }
 
     private static string Mensagem(Exception ex) => ex switch

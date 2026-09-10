@@ -22,7 +22,7 @@ public class DatasEmUtcTests
     [Fact]
     public void User_CreatedAt_deve_ser_UTC()
     {
-        var user = new User("gabriel", "g@etec.sp.gov.br", "hash", UserRole.Admin);
+        var user = new User("gabriel", "g@cps.sp.gov.br", "hash", UserRole.Admin);
 
         Assert.Equal(TimeSpan.Zero, user.CreatedAt.Offset);
     }

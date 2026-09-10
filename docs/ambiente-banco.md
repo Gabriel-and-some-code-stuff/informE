@@ -18,7 +18,7 @@ dotnet run --project src/Host/informE.Server
 Só isso. Não precisa rodar `dotnet ef database update`, não precisa de script de
 seed, não precisa nem ter a ferramenta `dotnet-ef` instalada.
 
-**Login de desenvolvimento:** `admin@etec.sp.gov.br` / `informe123`
+**Login de desenvolvimento:** `admin@cps.sp.gov.br` / `informe123`
 
 ---
 
@@ -241,3 +241,122 @@ Se persistir depois disso, **reiniciar o Windows** limpa o estado dos sockets
 
 As pastas `*-quebrado-*` podem ser apagadas depois de um reboot, quando o Windows
 já tiver soltado os sockets.
+
+---
+
+## Caminho sem Docker — o que funcionou em 09/09/2026
+
+> **Se o Docker estiver travado, não lute com ele. Use este caminho.**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File start-local.ps1
+dotnet run --project src/Host/informE.Server
+```
+
+Pronto. O Server migra e semeia sozinho, e a connection string **não muda** —
+mesmo host, porta, usuário, senha e banco que o `docker-compose` usava.
+
+### Por que existe
+
+O Docker Desktop desta máquina trava com sockets AF_UNIX órfãos depois de um
+crash. Os sintomas:
+
+- `docker ps` fica **pendurado para sempre** (exit 124, não retorna erro)
+- a janela mostra `initializing Inference manager: listening on
+  unix://.../dockerInference: The file cannot be accessed by the system`
+
+Renomear o diretório dos sockets resolve **às vezes** — em 09/09 o erro
+simplesmente pulou de `Local\Docker
+un\dockerInference` para
+`Local\docker-secrets-engine\engine.sock`. São vários sockets, e consertar um
+revela o próximo.
+
+**Postgres não precisa de container.** O `start-local.ps1` cria um cluster
+próprio num diretório do usuário e o inicia com `pg_ctl`.
+
+### Três detalhes que importam
+
+**Não precisa de admin.** O serviço `postgresql-x64-18` instalado nesta máquina
+está com StartType **Disabled**, e ligá-lo pede elevação (`Não é possível abrir
+o serviço`). Um cluster próprio em `%USERPROFILE%\informe-pgdata` não precisa
+de nada disso.
+
+**O cluster sobrevive a reinício da máquina, mas não sobe sozinho** — não é
+serviço. Depois de reiniciar o Windows, rode o `start-local.ps1` de novo (ele é
+idempotente: detecta que o cluster já existe e só sobe o servidor).
+
+**Parar o banco:**
+
+```powershell
+pg_ctl -D "$env:USERPROFILE\informe-pgdata" stop
+```
+
+### Rodar o Server na porta certa
+
+O `dotnet run` sem argumento usa o `launchSettings.json` e sobe em
+`https://localhost:5021` com ambiente `Development` — que é o que o app MAUI
+espera e o que **faz o seed rodar**.
+
+⚠️ **`--no-launch-profile` quebra as duas coisas:** o servidor cai para
+`http://localhost:5000` e para ambiente `Production`, onde
+`SeedDevelopmentDataAsync` não executa. O banco fica migrado e **vazio**. Se
+precisar dessa flag, passe as duas variáveis à mão:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT='Development'
+$env:ASPNETCORE_URLS='https://localhost:5021'
+```
+
+### Resemear do zero
+
+O seed é idempotente e não roda se já houver dados. Para recomeçar:
+
+```powershell
+$env:PGPASSWORD='informe_dev'
+psql -h localhost -U informe -d informe -c "TRUNCATE devices, users, groups, alerts, tasks, task_execution_logs, device_daily_metrics, info_devices, sessions, devices_tasks, devices_softwares RESTART IDENTITY CASCADE;"
+```
+
+Depois reinicie o Server.
+
+> ⚠️ Truncar `devices` invalida a identidade que o agente guardou em disco: ele
+> reconecta e o hub **fecha a conexão**, porque o `DeviceId` não existe mais.
+> Arquive a identidade para forçar novo registro:
+>
+> ```powershell
+> Get-ChildItem "$env:LOCALAPPDATA\informE\*.identity" | Rename-Item -NewName { $_.Name + '.velha' }
+> ```
+
+### Registrar o agente sem commitar credencial
+
+Passe o token por variável de ambiente em vez de escrever no `appsettings.json`
+— assim não há como commitar a credencial por acidente:
+
+```powershell
+$env:Agent__EnrollmentToken = '<token de POST /admin/enrollment-tokens>'
+$env:Agent__ServerUrl = 'https://localhost:5021'
+dotnet run --project src/Agent/informE.Agent.Worker
+```
+
+### As duas portas do Server
+
+`launchSettings.json` liga o Kestrel em **`0.0.0.0`**, não em `localhost`: agente
+rodando em outra máquina precisa alcançar o Host, e com `localhost` a VM leva
+`connection refused` sem nenhuma pista do motivo.
+
+São duas portas de propósito:
+
+| Porta | Uso |
+|---|---|
+| **5021 https** | o app Desktop, que roda na mesma máquina e confia no certificado de desenvolvimento |
+| **5020 http** | os agentes remotos |
+
+O certificado de desenvolvimento vale para `localhost`. Uma VM batendo em
+`https://192.168.x.x:5021` falha na validação do nome. HTTP na rede local evita
+o problema inteiro, sem a gambiarra de desligar validação de certificado.
+
+> ⚠️ **Não coloque comentários em `launchSettings.json`.** O `dotnet run` usa
+> parser JSON estrito e **recusa o arquivo inteiro** com
+> `'/' is an invalid start of a property name`. O perfil não é aplicado em
+> silêncio: o servidor cai para `http://localhost:5000` e ambiente `Production`
+> — onde o seed não roda e o banco fica vazio. O erro só aparece no stderr, que
+> normalmente ninguém está lendo.

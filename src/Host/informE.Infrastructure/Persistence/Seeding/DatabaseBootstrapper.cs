@@ -120,6 +120,7 @@ public class DatabaseBootstrapper(
             await db.TaskExecutionLogs.AddRangeAsync(massa.Logs, ct);
             await db.Alerts.AddRangeAsync(massa.Alertas, ct);
             await db.DeviceDailyMetrics.AddRangeAsync(massa.Metricas, ct);
+            await db.DeviceInfos.AddRangeAsync(massa.Hardware, ct);
         }
 
         await db.SaveChangesAsync(ct);

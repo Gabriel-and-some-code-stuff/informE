@@ -102,7 +102,7 @@ public static class MachineActionCatalog
             Write-Output "=== Gateway ==="
             Test-NetConnection -ComputerName (Get-NetRoute -DestinationPrefix '0.0.0.0/0').NextHop -InformationLevel Quiet
             Write-Output "=== DNS ==="
-            Resolve-DnsName -Name etec.sp.gov.br -ErrorAction SilentlyContinue | Select-Object -First 1 | Out-String
+            Resolve-DnsName -Name cps.sp.gov.br -ErrorAction SilentlyContinue | Select-Object -First 1 | Out-String
             """)
     };
 
