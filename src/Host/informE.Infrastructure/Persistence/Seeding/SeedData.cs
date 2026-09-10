@@ -34,7 +34,8 @@ public static class SeedData
         List<Alert> Alertas,
         List<MachineTask> Tarefas,
         List<TaskExecutionLog> Logs,
-        List<DeviceDailyMetrics> Metricas);
+        List<DeviceDailyMetrics> Metricas,
+        List<DeviceInfo> Hardware);
 
     // senhaHash e agentKeyHash entram prontos: hashear 105 vezes com Argon2
     // (64 MB por chamada) travaria o boot. Um hash só, reaproveitado — é dev.
@@ -56,8 +57,43 @@ public static class SeedData
         var alertas = MontarAlertas(devices, rng, agora);
         var (tarefas, logs) = MontarTarefas(devices, ownerId, agora);
         var metricas = MontarMetricas(devices, rng, agora);
+        var hardware = MontarHardware(devices, rng);
 
-        return new Semeadura(usuarios, grupos, devices, alertas, tarefas, logs, metricas);
+        return new Semeadura(usuarios, grupos, devices, alertas, tarefas, logs, metricas, hardware);
+    }
+
+    // Inventario de hardware das maquinas de demonstracao.
+    //
+    // O AGENTE NAO COLETA hardware (SystemSnapshotCollector devolve so
+    // CPU/RAM/disco/uptime), entao maquina real continua vindo com o bloco
+    // `hardware` nulo e a tela mostra "Nao disponivel" -- que e o comportamento
+    // correto e honesto.
+    //
+    // Sem estas linhas, PORÉM, a tabela info_devices ficava VAZIA e o bloco era
+    // nulo em TODAS as 105 maquinas: a tela parecia quebrada em vez de honesta.
+    // Massa de demonstracao resolve isso sem mentir sobre nenhuma maquina real.
+    private static List<DeviceInfo> MontarHardware(List<Device> devices, Random rng)
+    {
+        // Tres perfis de maquina, como um parque de laboratorio de verdade:
+        // as antigas com DDR3 e HD, as novas com DDR5 e SSD.
+        (string Cpu, string Gpu, int RamGb, RamType Ram, int StorageGb, StorageType Disco, string Placa)[] perfis =
+        [
+            ("Intel Core i3-7100", "Intel HD Graphics 630", 8, RamType.DDR3, 500, StorageType.HD, "Dell OptiPlex 3050"),
+            ("Intel Core i5-10400", "Intel UHD Graphics 630", 16, RamType.DDR4, 256, StorageType.SSD, "Dell OptiPlex 5080"),
+            ("AMD Ryzen 5 5600G", "AMD Radeon Graphics", 16, RamType.DDR5, 512, StorageType.SSD, "ASUS PRIME B550M"),
+        ];
+
+        return devices.Select(device =>
+        {
+            var p = perfis[rng.Next(perfis.Length)];
+
+            // BIOS nulo em ~1 a cada 5: e exatamente o que acontece no mundo real
+            // (fabricante que nao publica, ou "To be filled by O.E.M."), e mantem
+            // a tela exercitando o caminho de "Nao disponivel".
+            var bios = rng.Next(5) == 0 ? null : $"{1 + rng.Next(3)}.{rng.Next(10)}.{rng.Next(10)}";
+
+            return new DeviceInfo(device.Id, p.Cpu, p.Gpu, p.RamGb, p.Ram, p.StorageGb, p.Disco, p.Placa, bios);
+        }).ToList();
     }
 
     private static List<User> MontarUsuarios(string senhaHash) =>
