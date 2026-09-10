@@ -28,6 +28,18 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
+
+    # Revisao automatica e CORTESIA, nao porteiro.
+    #
+    # Este workflow nunca funcionou: falhava em 0s por YAML invalido e, depois
+    # disso corrigido, o curl saiu com codigo 6 -- nao resolveu
+    # models.inference.ai.azure.com, endpoint que o GitHub Models desativou.
+    #
+    # O efeito pratico de um check permanentemente vermelho e pior que a falta
+    # dele: as pessoas aprendem a ignorar o vermelho, e um dia ignoram o que
+    # importa. Com continue-on-error a revisao e um bonus quando funciona e
+    # silencio quando nao -- quem barra merge e o job CI.
+    continue-on-error: true
     permissions:
       pull-requests: write
       contents: read
@@ -83,14 +95,18 @@ jobs:
           # -s sem -f: com -f o curl fica MUDO em erro HTTP, e o passo seguia
           # publicando um comentário vazio como se a revisão tivesse rodado.
           # Sem -f, o corpo do erro chega e dá para decidir.
-          RESPOSTA=$(curl -s https://models.inference.ai.azure.com/chat/completions \
+          # `|| true`: o shell do Actions e `bash -e`, e um curl com falha DENTRO
+          # de uma atribuicao aborta o passo antes de chegar na checagem de
+          # conteudo logo abaixo -- foi assim que o exit 6 (host nao resolvido)
+          # virou passo vermelho em vez de mensagem explicativa.
+          RESPOSTA=$(curl -s --max-time 60 https://models.github.ai/inference/chat/completions \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Content-Type: application/json" \
             -d "$(jq -n --arg p "$PROMPT" '{
                   model: "gpt-4o-mini",
                   max_tokens: 1024,
                   messages: [{ role: "user", content: $p }]
-                }')")
+                }')" || true)
 
           BODY=$(printf '%s' "$RESPOSTA" | jq -r '.choices[0].message.content // empty')
 
@@ -99,6 +115,7 @@ jobs:
             printf '%s\n' "$RESPOSTA" | head -c 2000
             echo ""
             echo "Revisão automática indisponível — seguindo sem comentar."
+            echo "Isto NÃO reprova o PR: quem barra merge é o job CI."
             exit 0
           fi
 
