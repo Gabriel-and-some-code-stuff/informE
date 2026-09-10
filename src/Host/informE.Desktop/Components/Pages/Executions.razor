@@ -132,6 +132,11 @@
                     <label for="execution-group">Laboratório</label>
                     <select id="execution-group" value="@selectedGroupId" @onchange="OnGroupChangedAsync" disabled="@modalDataLoading">
                         <option value="">Selecione o laboratório</option>
+                        @* Maquina recem-registrada nasce SEM laboratorio (o agente
+                           nao sabe a qual lab pertence). Sem esta opcao ela era
+                           invisivel aqui: o select de dispositivo so abria depois de
+                           escolher um lab, e ela nao estava em nenhum. *@
+                        <option value="todos">Todas as máquinas (inclusive sem laboratório)</option>
                         @foreach (var group in groups)
                         {
                             <option value="@group.Id">@group.Name (@group.TotalDeDispositivos máquinas)</option>
@@ -141,11 +146,16 @@
 
                 <div class="form-field">
                     <label for="execution-device">Dispositivo</label>
-                    <select id="execution-device" @bind="selectedDeviceId" disabled="@(modalDataLoading || devicesLoading || string.IsNullOrWhiteSpace(selectedGroupId))">
+                    <select id="execution-device" @bind="selectedDeviceId" disabled="@(modalDataLoading || devicesLoading || !AlvoEscolhido)">
                         <option value="">@(devicesLoading ? "Carregando máquinas..." : "Selecione o dispositivo")</option>
-                        @if (!string.IsNullOrWhiteSpace(selectedGroupId) && !devicesLoading)
+                        @if (AlvoEscolhido && !devicesLoading)
                         {
-                            <option value="all">Todas as máquinas do laboratório</option>
+                            @* "all" despacha para o GRUPO inteiro, o que so faz
+                               sentido quando um laboratorio de verdade foi escolhido. *@
+                            @if (!TodasAsMaquinas)
+                            {
+                                <option value="all">Todas as máquinas do laboratório</option>
+                            }
                             @foreach (var device in devices.OrderBy(x => x.Hostname))
                             {
                                 <option value="@device.Id">@device.Hostname</option>
@@ -280,6 +290,15 @@
     private bool loading = true;
     private bool modalDataLoading;
     private bool devicesLoading;
+
+    // "todos" = o parque inteiro que o papel permite ver, incluindo maquina sem
+    // laboratorio. Guid.TryParse nao serve para reconhecer essa opcao, por isso
+    // as duas propriedades.
+    private const string TodosOsLabs = "todos";
+
+    private bool TodasAsMaquinas => selectedGroupId == TodosOsLabs;
+
+    private bool AlvoEscolhido => TodasAsMaquinas || Guid.TryParse(selectedGroupId, out _);
     private bool newExecutionOpen;
     private bool scheduleEnabled;
     private bool submitting;
@@ -383,9 +402,19 @@
     {
         modalError = null;
 
-        if (!Guid.TryParse(selectedGroupId, out var groupId))
+        if (!AlvoEscolhido)
         {
-            modalError = "Selecione um laboratório.";
+            modalError = "Selecione o laboratório ou \"Todas as máquinas\".";
+            return;
+        }
+
+        // Com "Todas as máquinas" nao existe grupo para despachar em bloco: e
+        // obrigatorio escolher a maquina.
+        var groupId = TodasAsMaquinas ? Guid.Empty : Guid.Parse(selectedGroupId);
+
+        if (TodasAsMaquinas && selectedDeviceId == "all")
+        {
+            modalError = "Escolha uma máquina específica ou selecione um laboratório.";
             return;
         }
 
@@ -517,13 +546,19 @@
         devices.Clear();
         modalError = null;
 
-        if (!Guid.TryParse(selectedGroupId, out var groupId))
+        if (!AlvoEscolhido)
             return;
 
         devicesLoading = true;
         try
         {
-            var result = await Api.GetDevicesAsync(groupId);
+            // Sem grupoId a API devolve o parque que o papel permite ver --
+            // inclusive maquina sem laboratorio, que e o caso da maquina
+            // recem-registrada.
+            var result = TodasAsMaquinas
+                ? await Api.GetDevicesFiltradosAsync()
+                : await Api.GetDevicesFiltradosAsync(Guid.Parse(selectedGroupId));
+
             devices.AddRange(result.Itens);
         }
         catch (HttpRequestException)

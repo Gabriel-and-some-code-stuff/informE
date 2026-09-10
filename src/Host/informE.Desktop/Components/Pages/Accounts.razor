@@ -7,6 +7,17 @@
 
 <PageTitle>Administração de Contas | informE</PageTitle>
 
+@if (!EhAdministrador)
+{
+    <div class="accounts-page">
+        <div class="empty-state">
+            <strong>Esta área é da administração</strong>
+            <span>Sua conta não tem permissão para gerenciar usuários.</span>
+        </div>
+    </div>
+}
+else
+{
 <div class="accounts-page">
     <header class="accounts-header">
         <div>
@@ -144,8 +155,9 @@
         }
     </section>
 </div>
+}
 
-@if (modal is not ModalAberto.Nenhum)
+@if (EhAdministrador && modal is not ModalAberto.Nenhum)
 {
     <div class="modal-backdrop" @onclick="FecharModal"></div>
     <div class="modal" role="dialog" aria-modal="true">
@@ -294,8 +306,11 @@
     private static string[] PapeisQuePodeCriar =>
         EhSuperAdmin ? ["Viewer", "Admin", "SuperAdmin"] : ["Viewer"];
 
-    private static bool PodeMudarPapel(UserListItemDto u) =>
-        EhSuperAdmin || u.Role.Equals("Viewer", StringComparison.OrdinalIgnoreCase);
+    // Trocar papel e SO do SuperAdmin -- e o que PATCH /users/{id}/role exige
+    // (RequireRole("SuperAdmin")). Antes a tela oferecia o botao para Admin
+    // tambem, e o clique voltava 403: botao que sempre falha e pior que botao
+    // ausente.
+    private static bool PodeMudarPapel(UserListItemDto u) => EhSuperAdmin;
 
     // Ninguém desativa a própria conta: quem fizer isso perde o acesso no
     // próximo request e não tem como reverter sozinho.
@@ -333,7 +348,8 @@
 
     // ── Carga ─────────────────────────────────────────────────────────────────
 
-    protected override Task OnInitializedAsync() => CarregarAsync();
+    protected override Task OnInitializedAsync() =>
+        EhAdministrador ? CarregarAsync() : Task.CompletedTask;
 
     private async Task CarregarAsync()
     {
@@ -540,4 +556,11 @@
             _ => "Ocorreu um erro inesperado ao falar com o servidor."
         };
     }
+
+    // Defesa em profundidade: o menu nao oferece esta tela a Usuario Comum, mas
+    // o endereco e digitavel. O servidor tambem recusa (RequireRole), entao isto
+    // nao e a unica barreira -- e a que evita a tela quebrada, cheia de erro,
+    // que seria pior que uma mensagem clara.
+    private static bool EhAdministrador =>
+        informE.Desktop.Components.State.AppSession.Role is "Admin" or "SuperAdmin";
 }

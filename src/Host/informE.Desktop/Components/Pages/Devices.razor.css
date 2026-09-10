@@ -326,7 +326,9 @@
     top: 0;
     right: 0;
     bottom: 0;
-    width: min(460px, 92vw);
+    /* Painel lateral mais largo: o bloco de hardware tem 7 campos e ficava
+       com duas colunas apertadas. */
+    width: min(560px, 94vw);
     z-index: 41;
     padding: 28px 30px 40px;
     overflow-y: auto;

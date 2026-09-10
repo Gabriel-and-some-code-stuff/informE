@@ -270,13 +270,19 @@
     z-index: 40;
 }
 
+/* `display: flex` EXPLICITO: nao depender do padrao do navegador para uma
+   propriedade que outra folha de estilo pode ter definido. Foi assim que o
+   `.modal { display: none }` do Bootstrap deixava este dialogo invisivel. */
 .modal {
+    display: flex;
+    flex-direction: column;
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: min(460px, 92vw);
-    max-height: 88vh;
+    /* Cresce com a tela, mesma razao dos modais de Execucoes. */
+    width: min(620px, 94vw);
+    max-height: calc(100vh - 44px);
     overflow-y: auto;
     z-index: 41;
     border: 1px solid #1d2636;

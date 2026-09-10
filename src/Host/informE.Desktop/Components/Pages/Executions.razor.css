@@ -314,14 +314,41 @@
     backdrop-filter: blur(2px);
 }
 
-.execution-modal,
-.log-modal {
-    width: min(100%, 520px);
+/* Cresce com a tela em vez de ficar preso em 520px.
+   Num monitor grande, um cartao de 520px no meio de uma pagina escura parecia
+   um dialogo perdido; agora ocupa espaco de verdade e o log fica legivel sem
+   rolagem horizontal. O `min` com 100% mantem o comportamento em tela pequena. */
+.execution-modal {
+    width: min(100%, 720px);
+    max-height: calc(100vh - 44px);
+    display: flex;
+    flex-direction: column;
     border: 1px solid #344057;
     border-radius: 10px;
     background: #111a2a;
     box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
     overflow: hidden;
+}
+
+/* O log e o que mais precisa de area: saida de PowerShell tem linha longa. */
+.log-modal {
+    width: min(100%, 1100px);
+    max-height: calc(100vh - 44px);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #344057;
+    border-radius: 10px;
+    background: #111a2a;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
+    overflow: hidden;
+}
+
+/* O corpo rola; cabecalho e rodape ficam fixos. Sem isto, modal alto empurrava
+   o botao Executar para fora da tela. */
+.execution-modal .modal-body,
+.log-modal .modal-body {
+    flex: 1;
+    overflow-y: auto;
 }
 
 .modal-header {
