@@ -1,3 +1,5 @@
+using informE.Server.Auth;
+using System.Security.Claims;
 using informE.Application.Interfaces.Repositories;
 using informE.Contracts.Dtos.Api;
 using informE.Domain.Enums;
@@ -12,11 +14,42 @@ public static class DeviceEndpoints
 
         grupo.MapGet("/", async (
             IDeviceRepository repositorio,
+            IGroupRepository grupos,
+            ClaimsPrincipal usuario,
             CancellationToken ct,
             Guid? grupoId = null,
             string? status = null,
             string? busca = null) =>
         {
+            // ESCOPO DO VIEWER -- decidido no servidor.
+            //
+            // Antes, /devices devolvia as 105 maquinas para qualquer papel: um
+            // Viewer via o parque inteiro. A politica
+            // (docs/politica-login-sessao.md §1) diz "acesso apenas aos proprios
+            // dados/maquinas".
+            //
+            // Se o Viewer pedir um grupoId que nao e dele, o pedido nao vira
+            // erro: vira lista vazia. Recusar com 403 confirmaria que o grupo
+            // existe, e isso permite descobrir o parque por tentativa.
+            if (usuario.Papel() == UserRole.Viewer)
+            {
+                var meus = await grupos.ListByOwnerAsync(usuario.Id(), ct);
+                var idsPermitidos = meus.Select(g => g.Id).ToHashSet();
+
+                if (grupoId is not null && !idsPermitidos.Contains(grupoId.Value))
+                    return Results.Ok(new DeviceListResponseDto(new DeviceSummaryDto(0, 0, 0, 0), []));
+
+                // Sem grupoId, o Viewer recebe o(s) laboratorio(s) dele. Sem
+                // nenhum laboratorio atribuido, recebe vazio -- nunca o parque.
+                if (grupoId is null)
+                {
+                    if (idsPermitidos.Count == 0)
+                        return Results.Ok(new DeviceListResponseDto(new DeviceSummaryDto(0, 0, 0, 0), []));
+
+                    grupoId = idsPermitidos.First();
+                }
+            }
+
             // Status inválido na query vira "sem filtro" em vez de 500. É filtro de
             // tela: o usuário digitou errado, não é falha do servidor.
             EndpointStatus? filtroStatus = Enum.TryParse<EndpointStatus>(status, ignoreCase: true, out var s)
@@ -63,12 +96,24 @@ public static class DeviceEndpoints
         grupo.MapGet("/{id:guid}", async (
             Guid id,
             IDeviceRepository repositorio,
+            IGroupRepository grupos,
+            ClaimsPrincipal usuario,
             CancellationToken ct) =>
         {
             var d = await repositorio.GetByIdAsync(id, ct);
 
             if (d is null)
                 return Results.NotFound();
+
+            // Maquina de outro laboratorio responde 404, nao 403: 403 confirmaria
+            // que o id existe, e com isso da para mapear o parque por tentativa.
+            if (usuario.Papel() == UserRole.Viewer)
+            {
+                var meus = await grupos.ListByOwnerAsync(usuario.Id(), ct);
+
+                if (d.GroupId is null || !meus.Any(g => g.Id == d.GroupId.Value))
+                    return Results.NotFound();
+            }
 
             var linha = new DeviceListItemDto(
                 d.Id, d.Hostname, d.Group?.Name, d.LastIp, d.Os,

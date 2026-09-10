@@ -1,3 +1,4 @@
+using informE.Domain.Enums;
 using System.Security.Claims;
 using informE.Application.Interfaces;
 using informE.Application.Interfaces.Repositories;
@@ -18,9 +19,19 @@ public static class GroupEndpoints
 
         grupo.MapGet("/", async (
             IGroupRepository repositorio,
+            ClaimsPrincipal usuario,
             CancellationToken ct) =>
         {
-            var grupos = await repositorio.ListAsync(ct);
+            // Viewer ve APENAS os laboratorios que sao dele.
+            //
+            // O escopo e decidido AQUI, no servidor, e nao por um filtro que a
+            // tela manda. Se o recorte dependesse de parametro, bastaria omiti-lo
+            // para um Viewer enxergar o parque inteiro -- a politica
+            // (docs/politica-login-sessao.md §1) diz "acesso apenas aos proprios
+            // dados/maquinas", e isso e uma regra de autorizacao, nao de tela.
+            var grupos = usuario.Papel() == UserRole.Viewer
+                ? await repositorio.ListByOwnerAsync(usuario.Id(), ct)
+                : await repositorio.ListAsync(ct);
 
             var itens = grupos
                 .Select(g => new GroupListItemDto(g.Id, g.Name, g.Description, g.Devices.Count))
@@ -29,10 +40,12 @@ public static class GroupEndpoints
             return Results.Ok(itens);
         })
         .WithName("ListarGrupos")
-        .WithSummary("Laboratórios cadastrados e quantas máquinas cada um tem.")
+        .WithSummary("Laboratórios visíveis para quem chamou, e quantas máquinas cada um tem.")
         .WithDescription(
             "Alimenta a tela de Grupos e o seletor \"dispositivos ou grupo de destino\" da tela de " +
-            "Nova Execução. Para o detalhe de um grupo, use GET /devices?grupoId=.")
+            "Nova Execução. Para o detalhe de um grupo, use GET /devices?grupoId=. " +
+            "ESCOPO: Admin e SuperAdmin veem todos os laboratórios; Viewer vê apenas os " +
+            "que são dele (Group.OwnerId). O recorte é do servidor, não da tela.")
         .Produces<List<GroupListItemDto>>();
 
         // ponytail: sem use case. Criar grupo nao tem regra de negocio nenhuma

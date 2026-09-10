@@ -48,6 +48,19 @@ public sealed class InformEApiClient(HttpClient http)
     public async Task<DeviceDetailDto?> GetDeviceAsync(Guid id, CancellationToken ct = default) =>
         await GetAsync<DeviceDetailDto>($"devices/{id}", ct);
 
+    // Uma chamada serve o Dashboard inteiro: total, contagem por categoria,
+    // historico diario (grafico de barras) e os alertas recentes.
+    public async Task<AlertsResponseDto> GetAlertsAsync(
+        int dias = 7,
+        Guid? grupoId = null,
+        CancellationToken ct = default)
+    {
+        var route = grupoId is null ? $"alerts?dias={dias}" : $"alerts?dias={dias}&grupoId={grupoId}";
+
+        return await GetAsync<AlertsResponseDto>(route, ct)
+            ?? new AlertsResponseDto(0, new Dictionary<string, int>(), [], []);
+    }
+
     public async Task<IReadOnlyList<GroupListItemDto>> GetGroupsAsync(CancellationToken ct = default) =>
         await GetAsync<List<GroupListItemDto>>("groups", ct) ?? [];
 

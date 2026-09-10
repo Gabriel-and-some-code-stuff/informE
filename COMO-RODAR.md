@@ -1,194 +1,285 @@
 # Como rodar o informE
 
-Testado em máquina Windows 11 limpa. Do zero ao sistema no ar: **~5 minutos**,
-sendo quase todo esse tempo instalação do PostgreSQL.
+Guia para **qualquer pessoa**, mesmo sem experiência com programação.
+Você vai digitar dois comandos. Nada mais.
+
+**Precisa de:** um computador com Windows 10 ou 11.
 
 ---
 
-## Máquina principal (a que roda o servidor)
+# Parte 1 — Preparar (só na primeira vez, ~5 min)
 
-### O que precisa ter antes
+## 1.1 Baixar o informE
 
-**Só o .NET 10.** Se não tiver:
+Se você recebeu uma **pasta** com o projeto, pule para o passo 1.2.
 
-```powershell
+Se não, [baixe o ZIP aqui](https://github.com/Gabriel-and-some-code-stuff/informE/archive/refs/heads/master.zip),
+clique com o botão direito no arquivo baixado → **Extrair tudo** → escolha a
+Área de Trabalho.
+
+Você vai ficar com uma pasta chamada `informE`.
+
+## 1.2 Instalar o .NET
+
+O informE foi feito com uma ferramenta da Microsoft chamada .NET. Para instalar:
+
+1. Aperte a tecla **Windows**, digite `powershell` e aperte **Enter**
+2. Cole o comando abaixo (Ctrl+V) e aperte **Enter**:
+
+```
 winget install Microsoft.DotNet.SDK.10
 ```
 
-Feche e reabra o terminal depois de instalar.
+3. Espere terminar (alguns minutos)
+4. **Feche essa janela** — importante, senão o próximo passo não funciona
 
-> O PostgreSQL o script instala sozinho se faltar. **Docker não é usado.**
+> **Não sabe se já tem?** Não faz mal instalar de novo: ele avisa que já existe
+> e não faz nada.
 
-### Rodar
+---
 
-```powershell
-git clone https://github.com/Gabriel-and-some-code-stuff/informE.git
-cd informE
+# Parte 2 — Ligar o informE
+
+## 2.1 Abrir o terminal na pasta do informE
+
+1. Abra a pasta `informE` no Explorador de Arquivos
+2. Clique na **barra de endereço** (onde aparece o caminho da pasta)
+3. Apague o que está escrito, digite `powershell` e aperte **Enter**
+
+Vai abrir uma janela preta ou azul, já apontando para a pasta certa.
+
+## 2.2 Ligar
+
+Cole este comando e aperte **Enter**:
+
+```
 powershell -ExecutionPolicy Bypass -File informe.ps1
 ```
 
-É isso. O script:
+Na primeira vez leva de **3 a 5 minutos** — ele instala o banco de dados,
+prepara tudo e abre o programa. Nas vezes seguintes, menos de um minuto.
 
-1. confere .NET e PostgreSQL (instala o Postgres se faltar)
-2. cria e sobe um banco em `%USERPROFILE%\informe-pgdata`
-3. compila (~6s)
-4. sobe o servidor, que **aplica as migrations e popula o banco sozinho**
-5. abre o aplicativo
-6. imprime o endereço que as outras máquinas devem usar
+**Vai aparecendo o que ele está fazendo.** Pontinhos na tela significam
+"estou trabalhando, espere". É normal.
 
-**Login:** `admin@cps.sp.gov.br` · senha `informe123`
+## 2.3 Duas perguntas que o Windows pode fazer
 
-### Na primeira vez
+**"Deseja permitir que este aplicativo faça alterações?"**
+→ Clique em **Sim**.
 
-O Windows vai perguntar se libera o `dotnet` no firewall. **Aceite, para rede
-privada** — sem isso as outras máquinas não alcançam o servidor.
+**"Deseja permitir comunicação nas redes?"**
+→ Marque **Redes privadas** e clique em **Permitir acesso**.
 
-### Variações
+> Essa segunda é importante: sem ela, os outros computadores não conseguem
+> conversar com o informE.
 
-```powershell
-.\informe.ps1 -SemApp     # só servidor, não abre o aplicativo
-.\informe.ps1 -SoBanco    # só o banco
-.\informe.ps1 -Parar      # derruba tudo
-```
+## 2.4 Entrar
 
----
+O programa abre sozinho. Na tela de login:
 
-## Outras máquinas (as monitoradas)
-
-**Essas não precisam de .NET, nem de banco, nem de nada.** Só o executável.
-
-### Na máquina principal
-
-```powershell
-.\novo-agente.ps1 -Publicar
-```
-
-Isso gera duas coisas:
-
-- a pasta **`dist\agente`** com o executável (74 MB, tudo dentro)
-- um **token de registro**, e o comando pronto para colar
-
-O `-Publicar` só é necessário na primeira vez. Depois, `.\novo-agente.ps1`
-sozinho já gera um token novo.
-
-> **Um token por máquina.** Vale 2 horas e é de uso único — rode o
-> `novo-agente.ps1` uma vez para cada computador.
-
-### Na máquina monitorada
-
-Copie a pasta `dist\agente` (pen drive, rede, o que for) e rode lá:
-
-```powershell
-$env:Agent__ServerUrl='http://192.168.15.9:5020'
-$env:Agent__EnrollmentToken='<o token que o script imprimiu>'
-.\informE.Agent.Worker.exe
-```
-
-Troque o IP pelo que o `informe.ps1` imprimiu na máquina principal.
-
-Em poucos segundos a máquina aparece na tela de **Equipamentos**, com CPU, RAM,
-disco e tempo ligado reais.
-
-> **Porta 5020 (http), não 5021 (https).** O certificado de desenvolvimento vale
-> só para `localhost`; uma máquina remota batendo em `https://<ip>` falha na
-> validação do nome.
-
-### Várias máquinas de teste no mesmo computador
-
-Útil para ensaiar sem VM. Cada agente precisa de nome, MAC e arquivo de
-identidade próprios — senão o segundo tenta reusar o registro do primeiro:
-
-```powershell
-$env:Agent__HostnameOverride='PC-LAB-01'
-$env:Agent__IdentityFileName='pc-lab-01.identity'
-$env:Agent__MacAddressOverride='AA:BB:CC:E1:00:01'
-.\informE.Agent.Worker.exe
-```
-
----
-
-## Usando
-
-1. **Login** — `admin@cps.sp.gov.br` / `informe123`
-2. **Equipamentos** — as máquinas reais aparecem junto com 105 de exemplo.
-   Filtre por laboratório, conexão ou nome; clique numa linha para ver detalhe
-   e hardware
-3. **Execuções → Nova Execução** — escolha a ação, escolha as máquinas,
-   Executar. O resultado volta em segundos, com a saída real
-4. Ações disponíveis: Informações do Sistema, Limpeza de Disco, Atualização
-   WinGet, Atualização do Windows, Reinicialização, Desligamento, Diagnóstico
-   de Rede
-
-**Para demonstrar, comece por "Informações do Sistema"** — é leitura pura, não
-muda nada na máquina.
-
----
-
-## Quando algo não funciona
-
-### A máquina remota não aparece
-
-Nesta ordem:
-
-1. **Firewall.** Na máquina principal, teste do outro computador:
-   `curl http://<ip-do-servidor>:5020/` — deve responder
-   `informE.Server online`. Se não responder, o firewall está barrando.
-2. **Endereço errado.** Confirme que o `Agent__ServerUrl` usa a porta **5020**
-   e **http**, não 5021/https.
-3. **Token gasto.** É de uso único e vale 2 horas. Gere outro.
-4. **Identidade antiga.** Se a máquina já foi registrada antes e o banco foi
-   recriado, o agente tenta reusar o registro velho e o servidor recusa:
-
-   ```powershell
-   Get-ChildItem "$env:LOCALAPPDATA\informE\*.identity" | Rename-Item -NewName { $_.Name + '.velha' }
-   ```
-
-### O banco não sobe
-
-```powershell
-Get-Content "$env:USERPROFILE\informe-pgdata\server.log" -Tail 30
-```
-
-Se a porta 5432 estiver ocupada por outro PostgreSQL, pare o serviço dele ou
-mude a porta no topo do `start-local.ps1` (e na connection string do
-`appsettings.json`).
-
-### Recomeçar do zero
-
-```powershell
-.\informe.ps1 -Parar
-Remove-Item "$env:USERPROFILE\informe-pgdata" -Recurse -Force
-Get-ChildItem "$env:LOCALAPPDATA\informE\*.identity" | Remove-Item
-.\informe.ps1
-```
-
----
-
-## O que fica de pé depois de fechar o terminal
-
-| Componente | Sobrevive? |
+| Campo | O que digitar |
 |---|---|
-| Banco | sim, até reiniciar o Windows — não é serviço |
-| Servidor | não, morre com o terminal |
-| Agente | não, ainda é aplicação de console |
+| E-mail | `admin@cps.sp.gov.br` |
+| Senha | `informe123` |
 
-Depois de reiniciar a máquina, rode o `informe.ps1` de novo. Ele é idempotente:
-detecta o que já existe e só sobe o que falta.
-
-Virar serviço do Windows é uma linha (`AddWindowsService()`) e está planejado —
-ver `docs/plano-outubro-novembro.md`.
+Pronto. Você está dentro.
 
 ---
 
-## Detalhes que valem saber
+# Parte 3 — Monitorar outros computadores
 
-**Duas portas:** `5021` https para o aplicativo (mesma máquina, confia no
-certificado de desenvolvimento) e `5020` http para os agentes remotos.
+Esta parte é opcional. Faça só se quiser ver **mais de um** computador na tela.
 
-**O servidor migra e semeia no boot.** Não existe passo manual de banco.
+Chamamos de **agente** o programinha que fica no computador monitorado. Ele não
+tem janela, não incomoda ninguém — só informa como a máquina está.
 
-**O seed traz 105 máquinas de exemplo** para as telas não ficarem vazias. As
-máquinas reais aparecem junto, com dados de verdade.
+## 3.1 No computador principal: gerar o convite
 
-**Documentação da API:** `https://localhost:5021/scalar/v1` — dá para testar
-qualquer endpoint pelo navegador.
+Na mesma janela preta, cole:
+
+```
+powershell -ExecutionPolicy Bypass -File novo-agente.ps1 -Publicar
+```
+
+Ele vai mostrar, na tela, três coisas:
+
+1. Uma pasta criada: `dist\agente`
+2. Um **token** — é uma senha de uso único, tipo um convite
+3. Os comandos prontos para copiar
+
+> **Guarde a tela aberta**, você vai copiar dali. Um token serve para **um
+> computador só** e vale **2 horas**. Precisa de outra máquina? Rode o comando
+> de novo (sem o `-Publicar`, que só é necessário na primeira vez).
+
+## 3.2 Levar para o outro computador
+
+Copie a pasta **`dist\agente`** para o outro computador — pen drive, rede,
+como preferir.
+
+> O outro computador **não precisa instalar nada**. Nem .NET, nem banco de
+> dados. Só a pasta.
+
+## 3.3 No outro computador: ligar o agente
+
+1. Abra a pasta `agente` que você copiou
+2. Clique na barra de endereço, digite `powershell`, **Enter**
+3. Cole as **três linhas** que a tela do passo 3.1 mostrou. Elas se parecem
+   com isto (os números serão diferentes no seu caso):
+
+```
+$env:Agent__ServerUrl='http://192.168.15.9:5020'
+```
+```
+$env:Agent__EnrollmentToken='cole-aqui-o-token-que-apareceu'
+```
+```
+.\informE.Agent.Worker.exe
+```
+
+Em alguns segundos esse computador aparece na tela do informE, no menu
+**Equipamentos**.
+
+**Deixe essa janela aberta** enquanto quiser monitorar. Fechar a janela
+desliga o agente.
+
+---
+
+# Parte 4 — Usando
+
+## Ver os computadores
+
+Menu **Equipamentos**. Aparece uma lista com uso de processador, memória,
+disco e há quanto tempo cada máquina está ligada.
+
+Clique numa linha para ver os detalhes daquele computador.
+
+> Você vai ver **105 computadores de exemplo** junto com os reais. Eles existem
+> para as telas não ficarem vazias em demonstrações. Os reais aparecem no meio
+> deles, com dados verdadeiros.
+
+## Mandar um comando
+
+Menu **Execuções** → botão **+ Nova Execução**:
+
+1. Escolha a ação
+2. Escolha o computador
+3. Clique em **Executar**
+
+O resultado aparece na lista em alguns segundos.
+
+**Comece por "Informações do Sistema"** — ela só *lê* dados, não muda nada na
+máquina. É a mais segura para experimentar.
+
+As outras ações:
+
+| Ação | O que faz |
+|---|---|
+| Informações do Sistema | Mostra os dados da máquina. Não altera nada |
+| Limpeza de Disco | Apaga arquivos temporários. **Não** toca em documentos |
+| Atualização WinGet | Atualiza os programas instalados |
+| Atualização do Windows | Procura atualizações do Windows |
+| Diagnóstico de Rede | Testa a conexão |
+| Reinicialização | **Reinicia** o computador |
+| Desligamento | **Desliga** o computador |
+
+> As duas últimas fazem exatamente o que dizem, na hora. Cuidado ao escolher.
+
+---
+
+# Parte 5 — Desligar
+
+Na janela preta do computador principal:
+
+```
+powershell -ExecutionPolicy Bypass -File informe.ps1 -Parar
+```
+
+Nos computadores monitorados, basta fechar a janela do agente.
+
+---
+
+# Quando algo não funciona
+
+## "Não consigo entrar"
+
+O e-mail é `admin@cps.sp.gov.br` — com **cps**, não "etec". A senha é
+`informe123`, tudo junto e minúsculo.
+
+Se aparecer *"Esta conta possui acesso de Administrador"*, você está na tela
+errada: volte e escolha **Administrador** em vez de Viewer.
+
+## Apareceu um monte de erro vermelho falando de "arquivo bloqueado"
+
+O informE já estava aberto. Rode:
+
+```
+powershell -ExecutionPolicy Bypass -File informe.ps1 -Parar
+```
+
+E depois ligue de novo. (As versões novas do script já resolvem isso sozinhas.)
+
+## "O outro computador não aparece"
+
+Confira nesta ordem:
+
+1. **O convite venceu?** O token vale 2 horas e serve para uma máquina só.
+   Gere outro com `novo-agente.ps1`.
+2. **O endereço está certo?** Tem que ser o número que apareceu na tela do
+   computador principal, e a porta é **5020**.
+3. **O firewall?** No computador monitorado, cole isto — deve responder
+   `informE.Server online`:
+
+```
+curl http://192.168.15.9:5020/
+```
+
+   (troque pelo endereço que apareceu na sua tela). Se não responder nada, o
+   firewall do computador principal está bloqueando: ligue o informE lá de novo
+   e clique em **Permitir acesso**.
+
+4. **Esse computador já foi monitorado antes?** Ele guarda o registro antigo e
+   o servidor recusa. Apague o registro colando isto na máquina monitorada:
+
+```
+Remove-Item "$env:LOCALAPPDATA\informE\*.identity"
+```
+
+## "Quero começar tudo de novo, do zero"
+
+Cole as quatro linhas, uma por vez, no computador principal:
+
+```
+powershell -ExecutionPolicy Bypass -File informe.ps1 -Parar
+```
+```
+Remove-Item "$env:USERPROFILE\informe-pgdata" -Recurse -Force
+```
+```
+Remove-Item "$env:LOCALAPPDATA\informE\*.identity" -ErrorAction SilentlyContinue
+```
+```
+powershell -ExecutionPolicy Bypass -File informe.ps1
+```
+
+---
+
+# Duas coisas que é bom saber
+
+**Depois de reiniciar o computador, ligue o informE de novo.** Ele não sobe
+sozinho junto com o Windows — rode o comando da Parte 2.2. Ele percebe o que já
+existe e só liga o que falta, então é rápido.
+
+**O agente também não volta sozinho** depois de reiniciar a máquina monitorada.
+Abra a pasta e rode de novo.
+
+> Fazer os dois subirem junto com o Windows está planejado, mas ainda não está
+> pronto — veja `docs/plano-outubro-novembro.md`.
+
+---
+
+## Para quem é técnico
+
+Detalhes de porta, banco, escopo por papel, resolução de problemas do
+PostgreSQL e as armadilhas do PowerShell 5.1 estão em
+**`docs/ambiente-banco.md`**. A documentação da API roda em
+`https://localhost:5021/scalar/v1` com o servidor no ar.
