@@ -317,7 +317,8 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            pageError = ex.Message;
+            if (!SessaoMorreu(ex))
+                pageError = ex.Message;
         }
         finally
         {
@@ -353,7 +354,8 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            modalError = ex.Message;
+            if (!SessaoMorreu(ex))
+                modalError = ex.Message;
         }
         finally
         {
@@ -439,7 +441,8 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            modalError = ex.Message;
+            if (!SessaoMorreu(ex))
+                modalError = ex.Message;
         }
         finally
         {
@@ -459,7 +462,8 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            pageError = ex.Message;
+            if (!SessaoMorreu(ex))
+                pageError = ex.Message;
         }
         catch (HttpRequestException)
         {
@@ -521,7 +525,8 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            modalError = ex.Message;
+            if (!SessaoMorreu(ex))
+                modalError = ex.Message;
         }
         finally
         {
@@ -567,5 +572,18 @@
         return duration.TotalMinutes >= 1
             ? $"{(int)duration.TotalMinutes}m {duration.Seconds:D2}s"
             : $"{duration.Seconds}s";
+    }
+
+    // Sessao expirada nao e erro para LER, e erro para AGIR: a renovacao
+    // automatica ja falhou (ver InformEApiClient.SendAuthorizedAsync), o
+    // AppSession ja foi limpo, e ficar numa tela vazia com um aviso nao da
+    // saida para ninguem. Volta para o login.
+    private bool SessaoMorreu(informE.Desktop.Services.InformEApiException ex)
+    {
+        if (ex.StatusCode != 401)
+            return false;
+
+        Navigation.NavigateTo("/login", replace: true);
+        return true;
     }
 }

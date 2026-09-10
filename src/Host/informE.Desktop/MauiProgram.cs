@@ -50,8 +50,8 @@ public static class MauiProgram
     {
         var doAmbiente = Environment.GetEnvironmentVariable("INFORME_SERVER");
 
-        if (!string.IsNullOrWhiteSpace(doAmbiente))
-            return Normalizar(doAmbiente);
+        if (Aceitavel(doAmbiente, out var doAmbienteValido))
+            return doAmbienteValido;
 
         try
         {
@@ -59,20 +59,44 @@ public static class MauiProgram
             // no `dotnet run` quanto no app publicado.
             var arquivo = Path.Combine(AppContext.BaseDirectory, "informe-server.txt");
 
-            if (File.Exists(arquivo))
-            {
-                var conteudo = File.ReadAllText(arquivo).Trim();
-
-                if (!string.IsNullOrWhiteSpace(conteudo))
-                    return Normalizar(conteudo);
-            }
+            if (File.Exists(arquivo) && Aceitavel(File.ReadAllText(arquivo), out var doArquivo))
+                return doArquivo;
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Arquivo ilegivel nao pode impedir o app de abrir: cai no padrao.
         }
 
         return EnderecoPadrao;
+    }
+
+    // Valida ANTES de entregar para o `new Uri(...)`.
+    //
+    // Sem esta checagem, um endereco malformado -- "192.168.15.9:5020" sem o
+    // "http://", o erro de digitacao mais provavel de todos -- lancava
+    // UriFormatException no CreateMauiApp e o aplicativo morria no boot, SEM
+    // JANELA E SEM MENSAGEM. Trocar o IP na vespera e digitar errado nao pode
+    // ser a diferenca entre demonstrar e nao abrir; cair no padrao e visivel,
+    // porque a tela avisa que nao alcancou o servidor.
+    private static bool Aceitavel(string? valor, out string endereco)
+    {
+        endereco = EnderecoPadrao;
+
+        if (string.IsNullOrWhiteSpace(valor))
+            return false;
+
+        var candidato = Normalizar(valor.Trim());
+
+        if (!Uri.TryCreate(candidato, UriKind.Absolute, out var uri))
+            return false;
+
+        // Só http/https: "informe-server.txt" com um caminho de arquivo dentro
+        // (file://) produziria um BaseAddress que falha em toda chamada.
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            return false;
+
+        endereco = candidato;
+        return true;
     }
 
     // BaseAddress exige a barra final: sem ela, "auth/login" sobrescreveria o

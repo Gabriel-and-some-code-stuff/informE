@@ -3,6 +3,7 @@
 @layout informE.Desktop.Components.Layout.App.AppLayout
 @using informE.Contracts.Dtos.Api
 @inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
 
 <PageTitle>Equipamentos | informE</PageTitle>
 
@@ -247,7 +248,7 @@
         }
         catch (Exception ex)
         {
-            pageError = Mensagem(ex);
+            pageError = TrataOuMensagem(ex);
         }
         finally
         {
@@ -286,7 +287,7 @@
         }
         catch (Exception ex)
         {
-            pageError = Mensagem(ex);
+            pageError = TrataOuMensagem(ex);
         }
     }
 
@@ -321,7 +322,7 @@
         }
         catch (Exception ex)
         {
-            detailError = Mensagem(ex);
+            detailError = TrataOuMensagem(ex);
         }
     }
 
@@ -381,6 +382,19 @@
             { TotalHours: < 24 } => $"há {(int)decorrido.TotalHours} h",
             _ => local.ToString("dd/MM HH:mm")
         };
+    }
+
+    // Intercepta 401 antes de virar texto na tela: sessao expirada volta para
+    // o login em vez de deixar a tela vazia com um aviso sem saida.
+    private string TrataOuMensagem(Exception ex)
+    {
+        if (ex is informE.Desktop.Services.InformEApiException api && api.StatusCode == 401)
+        {
+            Navigation.NavigateTo("/login", replace: true);
+            return string.Empty;
+        }
+
+        return Mensagem(ex);
     }
 
     private static string Mensagem(Exception ex) => ex switch
