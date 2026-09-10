@@ -51,7 +51,17 @@ public static class DependencyInjection
 
         services.Configure<SmtpOptions>(config.GetSection(SmtpOptions.SectionName));
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
-        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        // Sem `Smtp:Host` preenchido, o SmtpEmailSender LANCA -- e isso derrubava
+        // o /auth/forgot-password com 409, deixando a redefinicao de senha
+        // inutilizavel em qualquer maquina de desenvolvimento. A escolha e feita
+        // aqui, uma vez, em vez de o use case ter que saber disso.
+        var smtpConfigurado = !string.IsNullOrWhiteSpace(
+            config.GetSection(SmtpOptions.SectionName)[nameof(SmtpOptions.Host)]);
+
+        if (smtpConfigurado)
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        else
+            services.AddScoped<IEmailSender, EmailParaArquivoSender>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAgentAuthenticator, AgentAuthenticator>();
 

@@ -14,6 +14,27 @@ public sealed class InformEApiClient(HttpClient http)
         return await ReadAsync<LoginResponseDto>(response, ct, ContextoDaChamada.Login);
     }
 
+    // ── Redefinicao de senha ─────────────────────────────────────────────────
+    // Anonimas: quem pede reset, por definicao, nao consegue autenticar.
+
+    public async Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsJsonAsync(
+            "auth/forgot-password", new ForgotPasswordRequestDto(email), ct);
+
+        return await ReadAsync<ForgotPasswordResponseDto>(response, ct);
+    }
+
+    public async Task ResetPasswordAsync(string token, string novaSenha, CancellationToken ct = default)
+    {
+        using var response = await http.PostAsJsonAsync(
+            "auth/reset-password", new ResetPasswordRequestDto(token, novaSenha), ct);
+
+        // Contexto Login: 400/401 aqui e "link invalido ou vencido", nao sessao
+        // expirada -- quem esta nesta tela nunca teve sessao.
+        await EnsureSuccessAsync(response, ct, ContextoDaChamada.Login);
+    }
+
     public async Task<IReadOnlyList<MachineActionDto>> GetActionsAsync(CancellationToken ct = default) =>
         await GetAsync<List<MachineActionDto>>("actions", ct) ?? [];
 

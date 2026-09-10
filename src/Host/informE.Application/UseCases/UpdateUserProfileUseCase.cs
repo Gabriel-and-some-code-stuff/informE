@@ -34,8 +34,18 @@ public class UpdateUserProfileUseCase(
         var user = await userRepository.GetByIdAsync(userId, ct)
             ?? throw new InvalidOperationException($"Usuário {userId} não encontrado.");
 
-        if (!string.IsNullOrWhiteSpace(novoUsername))
+        if (!string.IsNullOrWhiteSpace(novoUsername)
+            && !string.Equals(novoUsername, user.Username, StringComparison.OrdinalIgnoreCase))
+        {
+            // Mesmo furo que o e-mail tinha: `users.username` e UNICO, e sem
+            // esta checagem renomear para um nome ja usado estourava 23505 no
+            // SaveChanges e virava 500 sem explicacao.
+            var nomeOcupado = await userRepository.GetByUsernameAsync(novoUsername, ct);
+            if (nomeOcupado is not null)
+                throw new InvalidOperationException($"Já existe usuário com o nome {novoUsername}.");
+
             user.UpdateUsername(novoUsername);
+        }
 
         if (!string.IsNullOrWhiteSpace(novoEmail) && !string.Equals(novoEmail, user.Email, StringComparison.OrdinalIgnoreCase))
         {

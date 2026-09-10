@@ -27,6 +27,16 @@ public class UserRepository(AppDbContext db) : IUserRepository
         return db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizado, ct);
     }
 
+    // Insensivel a caixa, pelo mesmo motivo do e-mail: "Carlos" e "carlos" sao
+    // a mesma pessoa para quem digita, e deixar as duas contas existirem cria
+    // ambiguidade que ninguem consegue resolver depois.
+    public Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default)
+    {
+        var normalizado = username.Trim().ToLowerInvariant();
+
+        return db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == normalizado, ct);
+    }
+
     // Filtros da tela de Administração de Contas — mesmo desenho do
     // DeviceRepository.ListAsync: cada filtro é opcional e só entra na query
     // quando vem preenchido.

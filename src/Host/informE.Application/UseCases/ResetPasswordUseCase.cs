@@ -1,3 +1,4 @@
+using informE.Application;
 using informE.Application.Exceptions;
 using informE.Application.Interfaces;
 using informE.Application.Interfaces.Repositories;
@@ -14,8 +15,14 @@ public class ResetPasswordUseCase(
 {
     public async Task ExecuteAsync(string token, string novaSenha, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(novaSenha))
-            throw new ArgumentException("A nova senha não pode ser vazia.");
+        // MESMA regra da criacao de conta.
+        //
+        // Antes aqui so recusava senha VAZIA: redefinir aceitava "123" enquanto
+        // criar usuario exigia 8 caracteres. Como redefinir e o caminho por onde
+        // uma conta de administrador troca de senha, a porta dos fundos era mais
+        // fraca que a da frente. A validacao vem ANTES de resgatar o token: link
+        // de uso unico nao pode ser gasto por senha que vai ser recusada.
+        PoliticaDeSenha.Validar(novaSenha);
 
         var (id, segredo) = QuebrarToken(token);
 

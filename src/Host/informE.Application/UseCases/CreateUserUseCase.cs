@@ -36,9 +36,18 @@ public class CreateUserUseCase(
         // melhor do que um 409 de e-mail que o usuário nem deveria poder usar.
         dominioDeEmail.Validar(request.Email);
 
-        var jaExiste = await userRepository.GetByEmailAsync(request.Email, ct);
-        if (jaExiste is not null)
+        PoliticaDeSenha.Validar(request.Password);
+
+        var emailOcupado = await userRepository.GetByEmailAsync(request.Email, ct);
+        if (emailOcupado is not null)
             throw new InvalidOperationException($"Já existe usuário com o e-mail {request.Email}.");
+
+        // `users.username` tambem e UNICO. Sem esta checagem o INSERT violava
+        // ix_users_username, o Npgsql lancava 23505 e a tela recebia 500
+        // "Erro interno" -- sem dizer que o problema era o nome repetido.
+        var nomeOcupado = await userRepository.GetByUsernameAsync(request.Username, ct);
+        if (nomeOcupado is not null)
+            throw new InvalidOperationException($"Já existe usuário com o nome {request.Username}.");
 
         // O construtor de User valida username/email/role e lança se inválido.
         var user = new User(

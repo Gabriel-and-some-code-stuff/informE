@@ -25,6 +25,17 @@ public record RefreshRequestDto(string RefreshToken);
 
 public record ForgotPasswordRequestDto(string Email);
 
+// Resposta do pedido de redefinicao.
+//
+// `LinkDeDesenvolvimento` vem preenchido APENAS em Development e apenas quando
+// nao existe SMTP configurado -- sem isso nao ha como a pessoa receber o token,
+// e o fluxo nao pode ser demonstrado nem testado. Em producao vem sempre null:
+// o link vai por e-mail e mais ninguem o ve.
+//
+// O campo tambem nao revela se a conta existe: quando nao existe, vem null, que
+// e o mesmo valor de producao.
+public record ForgotPasswordResponseDto(string? LinkDeDesenvolvimento);
+
 public record ResetPasswordRequestDto(string Token, string NovaSenha);
 
 // ── Usuários ──────────────────────────────────────────────────────────────────

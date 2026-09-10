@@ -88,17 +88,29 @@ public static class AuthEndpoints
             ForgotPasswordRequestDto corpo,
             RequestPasswordResetUseCase useCase,
             IOptions<SmtpOptions> smtp,
+            IHostEnvironment ambiente,
             CancellationToken ct) =>
         {
-            await useCase.ExecuteAsync(corpo.Email, smtp.Value.ResetPasswordUrl, ct);
-            return Results.NoContent();
+            var link = await useCase.ExecuteAsync(corpo.Email, smtp.Value.ResetPasswordUrl, ct);
+
+            // O link só sai na resposta em DESENVOLVIMENTO e SEM SMTP.
+            //
+            // Sem isto o fluxo era indemonstravel: nao ha servidor de e-mail em
+            // maquina de desenvolvimento, entao o token nascia e ninguem o
+            // recebia. Em producao (ou com SMTP configurado) o campo vem null e
+            // o link viaja apenas pelo e-mail, como deve.
+            var expor = ambiente.IsDevelopment() && string.IsNullOrWhiteSpace(smtp.Value.Host);
+
+            return Results.Ok(new ForgotPasswordResponseDto(expor ? link : null));
         })
         .WithName("PedirRedefinicaoDeSenha")
         .WithSummary("Envia link de redefinição para o e-mail institucional.")
         .WithDescription(
-            "Devolve 204 SEMPRE, exista a conta ou não — resposta diferente permitiria descobrir " +
-            "quais e-mails têm conta. Conta desativada também não recebe link.")
-        .Produces(StatusCodes.Status204NoContent)
+            "Devolve 200 SEMPRE, exista a conta ou não — resposta diferente permitiria descobrir " +
+            "quais e-mails têm conta. Conta desativada também não recebe link. " +
+            "`linkDeDesenvolvimento` só vem preenchido em Development e sem SMTP configurado; " +
+            "em produção é sempre null e o link viaja apenas por e-mail.")
+        .Produces<ForgotPasswordResponseDto>()
         .AllowAnonymous();
 
         grupo.MapPost("/reset-password", async (

@@ -101,7 +101,7 @@ public static class SeedData
         Usuario("admin", "admin@cps.sp.gov.br", senhaHash, UserRole.SuperAdmin),
         Usuario("jessica", "jessica@cps.sp.gov.br", senhaHash, UserRole.Admin),
         Usuario("romeu", "romeu@cps.sp.gov.br", senhaHash, UserRole.Viewer),
-        Usuario("celina", "celina@cps.sp.gov.br", senhaHash, UserRole.Viewer),
+        Usuario("celia", "celia@cps.sp.gov.br", senhaHash, UserRole.Viewer),
         Usuario("gislene", "gislene@cps.sp.gov.br", senhaHash, UserRole.Viewer),
         Usuario("alexandre", "alexandre@cps.sp.gov.br", senhaHash, UserRole.Viewer),
         Inativo(Usuario("luci", "luci@cps.sp.gov.br", senhaHash, UserRole.Viewer)),
@@ -190,7 +190,7 @@ public static class SeedData
         ["Lab 1"] = "romeu",
         ["Lab 2"] = "alexandre",
         ["Lab 3"] = "gislene",
-        ["Lab 4"] = "celina",
+        ["Lab 4"] = "celia",
     };
 
     private static List<Group> MontarGrupos(Guid ownerId, List<User> usuarios)
