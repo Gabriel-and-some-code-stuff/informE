@@ -49,6 +49,25 @@
 
     <script src="_framework/blazor.webview.js" autostart="false"></script>
 
+    <script>
+        // F11 alterna tela cheia.
+        //
+        // A janela abre em FullScreen (ver App.xaml.cs), e nesse modo NAO ha
+        // barra de titulo -- logo, nao ha botao de fechar nem de restaurar.
+        // Sem uma saida, a unica opcao seria Alt+F4.
+        //
+        // O listener vive aqui porque, num BlazorWebView, a tecla chega no
+        // conteudo web; a janela nativa nunca a ve.
+        document.addEventListener('keydown', function (evento) {
+            if (evento.key !== 'F11') return;
+
+            evento.preventDefault();
+
+            // O nome do assembly precisa bater com o do projeto.
+            DotNet.invokeMethod('informE.Desktop', 'AlternarTelaCheia');
+        });
+    </script>
+
 </body>
 
 </html>
