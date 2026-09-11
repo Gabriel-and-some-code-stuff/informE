@@ -119,25 +119,9 @@ informE/
 
 ## 3. Modelo de Domínio (o que vocês pediram: entidades, enums, interfaces)
 
-> Todos os `Id` são `Guid` (mapeados como `uuid` no Postgres).
->
-> **Datas: SEMPRE `DateTimeOffset.UtcNow`. Nunca `.Now`.** Isto não é preferência
-> de estilo — é obrigação técnica: o Npgsql **recusa** gravar `DateTimeOffset`
-> com offset diferente de zero em coluna `timestamptz`:
->
-> ```
-> Cannot write DateTimeOffset with Offset=-03:00:00 to PostgreSQL type
-> 'timestamp with time zone', only offset 0 (UTC) is supported.
-> ```
->
-> Este documento já afirmou o contrário ("captura hora local + offset, adequado
-> para servidor on-prem"). Estava errado, e o erro passou despercebido por meses
-> porque nada no sistema chegava a escrever no banco: os testes unitários não
-> tocam Postgres e o Server não tinha endpoint nenhum. O primeiro INSERT real —
-> o seed de desenvolvimento — falhou em todas as tabelas com data.
->
-> Converter para UTC na borda (exibir no fuso do usuário) é responsabilidade da
-> UI, não do domínio.
+> Todos os `Id` são `Guid` (mapeados como `uuid` no Postgres). Datas com `DateTimeOffset.Now`
+> (captura hora local + offset) — padrão adotado pelo time nas entidades; adequado para
+> servidor on-prem que roda no mesmo fuso do cliente.
 > Entidades e enums ficam em **`informE.Domain`** (o centro, sem dependências).
 
 ### 3.1 Enums (`informE.Domain/Enums`)
