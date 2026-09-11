@@ -28,7 +28,9 @@ public class RecordDeviceHeartbeatUseCase(
         // Regra de limiar vive no Domain (Device.EvaluateHealth), não aqui.
         var health = Device.EvaluateHealth(telemetry.CpuPercent, telemetry.RamPercent, telemetry.DiskPercent);
 
-        device.MarkSeen(telemetry.Timestamp, health, telemetry.UptimeSeconds);
+        device.MarkSeen(
+            telemetry.Timestamp, health, telemetry.UptimeSeconds,
+            telemetry.CpuPercent, telemetry.RamPercent, telemetry.DiskPercent);
 
         await unitOfWork.SaveChangesAsync(ct);
 

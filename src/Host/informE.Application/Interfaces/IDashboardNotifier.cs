@@ -12,4 +12,9 @@ public interface IDashboardNotifier
     // mudam no mesmo heartbeat, então viajam no mesmo evento.
     Task DeviceStatusChangedAsync(Guid deviceId, EndpointStatus status, HealthStatus health, CancellationToken ct = default);
     Task TaskProgressAsync(Guid taskId, Domain.Enums.TaskStatus status, CancellationToken ct = default);
+
+    // Grão de MÁQUINA — a tela de Execuções lista uma linha por log, não por
+    // tarefa. É o que faz a execução em paralelo aparecer como paralela.
+    Task ExecutionLogUpdatedAsync(Guid logId, Guid taskId, Domain.Enums.TaskStatus status,
+        int? durationMs, string? output, CancellationToken ct = default);
 }

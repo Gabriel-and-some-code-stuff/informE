@@ -26,7 +26,7 @@ public class DeviceDailyMetrics
         PeakRamPercent = peakRamPercent;
         PeakDiskPercent = peakDiskPercent;
         ActiveUsersCount = activeUsersCount;
-        Date = DateOnly.FromDateTime(DateTime.Today);
+        Date = DateOnly.FromDateTime(DateTime.UtcNow.Date);
     }
 
     // Chamado a cada leitura de telemetria — agrega os picos do dia.

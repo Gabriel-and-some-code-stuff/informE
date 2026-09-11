@@ -25,4 +25,8 @@ public class SignalRDashboardNotifier(IHubContext<DashboardHub, IDashboardClient
 
     public Task TaskProgressAsync(Guid taskId, TaskStatus status, CancellationToken ct = default) =>
         hub.Clients.All.TaskProgress(taskId, status.ToString());
+
+    public Task ExecutionLogUpdatedAsync(Guid logId, Guid taskId, TaskStatus status,
+        int? durationMs, string? output, CancellationToken ct = default) =>
+        hub.Clients.All.ExecutionLogUpdated(logId, taskId, status.ToString(), durationMs, output);
 }

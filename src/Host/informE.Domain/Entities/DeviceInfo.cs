@@ -33,7 +33,7 @@ public class DeviceInfo
         StorageType = storageType;
         Bios = bios;
         MotherBoard = motherBoard;
-        CollectedAt = DateTimeOffset.Now;
+        CollectedAt = DateTimeOffset.UtcNow;
     }
 
     // Métodos de validação

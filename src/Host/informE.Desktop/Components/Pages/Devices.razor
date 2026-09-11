@@ -1,0 +1,392 @@
+@page "/equipamentos"
+@page "/devices"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+
+<PageTitle>Equipamentos | informE</PageTitle>
+
+<div class="devices-page">
+    <header class="devices-header">
+        <div>
+            <h1>Equipamentos</h1>
+            <p>Parque monitorado em tempo real</p>
+        </div>
+
+        <button class="refresh-button" type="button" @onclick="LoadAsync" disabled="@loading">
+            <span>⟳</span>
+            Atualizar
+        </button>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(pageError))
+    {
+        <div class="page-message error" role="alert">
+            <span>!</span>
+            <div>
+                <strong>Não foi possível carregar os equipamentos</strong>
+                <small>@pageError</small>
+            </div>
+            <button type="button" @onclick="LoadAsync">Tentar novamente</button>
+        </div>
+    }
+
+    <section class="devices-summary" aria-label="Resumo do parque">
+        <article class="summary-card">
+            <span class="summary-label">Total</span>
+            <strong class="summary-value">@resumo.Total</strong>
+        </article>
+        <article class="summary-card online">
+            <span class="summary-label">Online</span>
+            <strong class="summary-value">@resumo.Online</strong>
+        </article>
+        <article class="summary-card offline">
+            <span class="summary-label">Offline</span>
+            <strong class="summary-value">@resumo.Offline</strong>
+        </article>
+        <article class="summary-card problem">
+            <span class="summary-label">Com problema</span>
+            <strong class="summary-value">@resumo.ComProblema</strong>
+        </article>
+    </section>
+
+    <section class="devices-filters" aria-label="Filtros">
+        <label class="filter-field">
+            <span>Laboratório</span>
+            <select value="@selectedGroupId" @onchange="OnGroupChanged">
+                <option value="">Todos</option>
+                @foreach (var group in groups)
+                {
+                    <option value="@group.Id">@group.Name</option>
+                }
+            </select>
+        </label>
+
+        <label class="filter-field">
+            <span>Conexão</span>
+            <select value="@selectedStatus" @onchange="OnStatusChanged">
+                <option value="">Todas</option>
+                <option value="Online">Online</option>
+                <option value="Offline">Offline</option>
+                <option value="Unknown">Desconhecida</option>
+            </select>
+        </label>
+
+        <label class="filter-field grow">
+            <span>Buscar</span>
+            <input type="search"
+                   placeholder="Nome, IP ou sistema operacional"
+                   value="@busca"
+                   @oninput="OnBuscaInput" />
+        </label>
+    </section>
+
+    <section class="devices-panel" aria-label="Lista de equipamentos">
+        @if (loading)
+        {
+            <div class="loading-state">
+                <span class="loader"></span>
+                <p>Carregando equipamentos do servidor...</p>
+            </div>
+        }
+        else if (devices.Count == 0)
+        {
+            <div class="empty-state">
+                <strong>Nenhum equipamento encontrado</strong>
+                <span>Ajuste os filtros ou registre um agente em uma máquina.</span>
+            </div>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="devices-table">
+                    <thead>
+                        <tr>
+                            <th>Máquina</th>
+                            <th>Laboratório</th>
+                            <th>Função</th>
+                            <th>Conexão</th>
+                            <th>Saúde</th>
+                            <th>CPU</th>
+                            <th>RAM</th>
+                            <th>Disco</th>
+                            <th>Uptime</th>
+                            <th>Último sinal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var device in devices)
+                        {
+                            <tr class="@(selectedDetail?.Equipamento.Id == device.Id ? "selected" : null)"
+                                @onclick="() => OpenDetailAsync(device.Id)">
+                                <td>
+                                    <strong>@device.Hostname</strong>
+                                    <small>@device.LastIp</small>
+                                </td>
+                                <td>@(device.GroupName ?? "—")</td>
+                                <td>@device.Role</td>
+                                <td>
+                                    <span class="status-wrap @device.Status.ToLowerInvariant()">
+                                        @TraduzirStatus(device.Status)
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="health-wrap @device.Health.ToLowerInvariant()">
+                                        @device.Health
+                                    </span>
+                                </td>
+                                <td>@Percentual(device.CpuPercent)</td>
+                                <td>@Percentual(device.RamPercent)</td>
+                                <td>@Percentual(device.DiskPercent)</td>
+                                <td>@Uptime(device.UptimeSeconds)</td>
+                                <td>@UltimoSinal(device.LastSeenAt)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@if (selectedDetail is not null)
+{
+    <div class="detail-backdrop" @onclick="CloseDetail"></div>
+    <aside class="detail-drawer" aria-label="Detalhe do equipamento">
+        <header class="detail-header">
+            <div>
+                <h2>@selectedDetail.Equipamento.Hostname</h2>
+                <p>@(selectedDetail.Equipamento.GroupName ?? "Sem laboratório") · @selectedDetail.Equipamento.Os</p>
+            </div>
+            <button type="button" class="detail-close" @onclick="CloseDetail" aria-label="Fechar">✕</button>
+        </header>
+
+        <section class="detail-block">
+            <h3>Estado atual</h3>
+            <dl class="detail-grid">
+                <div><dt>Conexão</dt><dd>@TraduzirStatus(selectedDetail.Equipamento.Status)</dd></div>
+                <div><dt>Saúde</dt><dd>@selectedDetail.Equipamento.Health</dd></div>
+                <div><dt>CPU</dt><dd>@Percentual(selectedDetail.Equipamento.CpuPercent)</dd></div>
+                <div><dt>RAM</dt><dd>@Percentual(selectedDetail.Equipamento.RamPercent)</dd></div>
+                <div><dt>Disco</dt><dd>@Percentual(selectedDetail.Equipamento.DiskPercent)</dd></div>
+                <div><dt>Uptime</dt><dd>@Uptime(selectedDetail.Equipamento.UptimeSeconds)</dd></div>
+                <div><dt>Último sinal</dt><dd>@UltimoSinal(selectedDetail.Equipamento.LastSeenAt)</dd></div>
+                <div><dt>IP</dt><dd>@selectedDetail.Equipamento.LastIp</dd></div>
+            </dl>
+        </section>
+
+        <section class="detail-block">
+            <h3>Hardware</h3>
+            @if (selectedDetail.Hardware is null)
+            {
+                <p class="detail-unavailable">
+                    Não disponível — o agente instalado coleta apenas CPU, memória, disco e
+                    tempo ligado. O inventário de hardware não é coletado nesta versão.
+                </p>
+            }
+            else
+            {
+                <dl class="detail-grid">
+                    <div><dt>Processador</dt><dd>@Texto(selectedDetail.Hardware.Cpu)</dd></div>
+                    <div><dt>GPU</dt><dd>@Texto(selectedDetail.Hardware.Gpu)</dd></div>
+                    <div><dt>Memória</dt><dd>@Medida(selectedDetail.Hardware.RamGb, "GB") @selectedDetail.Hardware.RamType</dd></div>
+                    <div><dt>Armazenamento</dt><dd>@Medida(selectedDetail.Hardware.StorageGb, "GB") @selectedDetail.Hardware.StorageType</dd></div>
+                    <div><dt>Placa-mãe</dt><dd>@Texto(selectedDetail.Hardware.MotherBoard)</dd></div>
+                    <div><dt>BIOS</dt><dd>@Texto(selectedDetail.Hardware.Bios)</dd></div>
+                    <div><dt>Coletado em</dt><dd>@UltimoSinal(selectedDetail.Hardware.CollectedAt)</dd></div>
+                </dl>
+            }
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(detailError))
+        {
+            <p class="detail-unavailable">@detailError</p>
+        }
+    </aside>
+}
+
+@code {
+    private readonly List<DeviceListItemDto> devices = [];
+    private readonly List<GroupListItemDto> groups = [];
+
+    private DeviceSummaryDto resumo = new(0, 0, 0, 0);
+    private DeviceDetailDto? selectedDetail;
+
+    private bool loading = true;
+    private string? pageError;
+    private string? detailError;
+
+    private string selectedGroupId = string.Empty;
+    private string selectedStatus = string.Empty;
+    private string busca = string.Empty;
+
+    // A busca dispara a cada tecla. Sem o cancelamento, digitar "PC-10" manda 5
+    // requisições e a resposta da 2ª pode chegar depois da 5ª, mostrando o
+    // resultado errado na tela. O token cancela a anterior a cada tecla nova.
+    private CancellationTokenSource? buscaCts;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        pageError = null;
+
+        try
+        {
+            // Grupos só na primeira carga: alimentam o filtro e não mudam a cada
+            // atualização da tabela.
+            if (groups.Count == 0)
+            {
+                var lista = await Api.GetGroupsAsync();
+                groups.Clear();
+                groups.AddRange(lista);
+            }
+
+            await CarregarDispositivosAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            pageError = Mensagem(ex);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task CarregarDispositivosAsync(CancellationToken ct)
+    {
+        var groupId = Guid.TryParse(selectedGroupId, out var id) ? id : (Guid?)null;
+
+        var resposta = await Api.GetDevicesFiltradosAsync(groupId, selectedStatus, busca, ct);
+
+        devices.Clear();
+        devices.AddRange(resposta.Itens);
+        resumo = resposta.Resumo;
+    }
+
+    private async Task AplicarFiltrosAsync()
+    {
+        // Cancela a busca em voo antes de começar a próxima.
+        buscaCts?.Cancel();
+        buscaCts?.Dispose();
+        buscaCts = new CancellationTokenSource();
+        var ct = buscaCts.Token;
+
+        pageError = null;
+
+        try
+        {
+            await CarregarDispositivosAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Filtro trocado no meio — a chamada mais nova assume, sem erro na tela.
+        }
+        catch (Exception ex)
+        {
+            pageError = Mensagem(ex);
+        }
+    }
+
+    private Task OnGroupChanged(ChangeEventArgs args)
+    {
+        selectedGroupId = args.Value?.ToString() ?? string.Empty;
+        return AplicarFiltrosAsync();
+    }
+
+    private Task OnStatusChanged(ChangeEventArgs args)
+    {
+        selectedStatus = args.Value?.ToString() ?? string.Empty;
+        return AplicarFiltrosAsync();
+    }
+
+    private Task OnBuscaInput(ChangeEventArgs args)
+    {
+        busca = args.Value?.ToString() ?? string.Empty;
+        return AplicarFiltrosAsync();
+    }
+
+    private async Task OpenDetailAsync(Guid deviceId)
+    {
+        detailError = null;
+
+        try
+        {
+            selectedDetail = await Api.GetDeviceAsync(deviceId);
+
+            if (selectedDetail is null)
+                detailError = "Este equipamento não foi encontrado no servidor.";
+        }
+        catch (Exception ex)
+        {
+            detailError = Mensagem(ex);
+        }
+    }
+
+    private void CloseDetail()
+    {
+        selectedDetail = null;
+        detailError = null;
+    }
+
+    // ── Formatação ────────────────────────────────────────────────────────────
+    // Null NUNCA vira 0. Máquina offline não tem leitura, e "0%" seria uma
+    // informação falsa apresentada como real — a regra de integração do
+    // documento de pendências pede estado neutro.
+
+    private static string Percentual(float? valor) =>
+        valor is null ? "—" : $"{valor.Value:0.#}%";
+
+    private static string Texto(string? valor) =>
+        string.IsNullOrWhiteSpace(valor) ? "Não disponível" : valor;
+
+    private static string Medida(int? valor, string unidade) =>
+        valor is null or 0 ? "Não disponível" : $"{valor} {unidade}";
+
+    private static string TraduzirStatus(string status) => status switch
+    {
+        "Online" => "Online",
+        "Offline" => "Offline",
+        _ => "Desconhecida"
+    };
+
+    private static string Uptime(int? segundos)
+    {
+        if (segundos is null or < 0)
+            return "—";
+
+        var duracao = TimeSpan.FromSeconds(segundos.Value);
+
+        return duracao.TotalDays >= 1
+            ? $"{(int)duracao.TotalDays}d {duracao.Hours}h"
+            : $"{duracao.Hours}h {duracao.Minutes}min";
+    }
+
+    private static string UltimoSinal(DateTimeOffset? quando)
+    {
+        if (quando is null)
+            return "Nunca";
+
+        // O servidor grava tudo em UTC (ver DatasEmUtcTests); a tela mostra no
+        // fuso de quem está olhando.
+        var local = quando.Value.ToLocalTime();
+        var decorrido = DateTimeOffset.Now - quando.Value;
+
+        return decorrido switch
+        {
+            { TotalMinutes: < 1 } => "agora",
+            { TotalMinutes: < 60 } => $"há {(int)decorrido.TotalMinutes} min",
+            { TotalHours: < 24 } => $"há {(int)decorrido.TotalHours} h",
+            _ => local.ToString("dd/MM HH:mm")
+        };
+    }
+
+    private static string Mensagem(Exception ex) => ex switch
+    {
+        informE.Desktop.Services.InformEApiException api => api.Message,
+        HttpRequestException => "O servidor não respondeu. Verifique se o informE.Server está no ar.",
+        _ => "Ocorreu um erro inesperado ao falar com o servidor."
+    };
+}

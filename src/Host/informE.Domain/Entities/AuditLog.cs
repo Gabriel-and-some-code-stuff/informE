@@ -30,7 +30,7 @@ public class AuditLog
             IpAddress = ipAddress;
 
         UserId = userId;
-        CreatedAt = DateTimeOffset.Now;
+        CreatedAt = DateTimeOffset.UtcNow;
     }
 
     // Métodos de validação

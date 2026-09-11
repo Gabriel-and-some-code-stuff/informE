@@ -44,4 +44,18 @@ public class TaskExecutionLog
     {
         return Enum.IsDefined(typeof(TaskStatus), taskStatus);
     }
+
+    // O comando nem chegou a sair: máquina offline no disparo, ou falha de envio.
+    //
+    // Fechar como Failed em vez de deixar Pending é o que permite a tarefa
+    // terminar. MachineTask só fecha quando nenhum log está pendente — um log
+    // eternamente Pending deixava a execução inteira travada em Running.
+    // DurationMs = 0 porque nada rodou; null significaria "ainda não sei".
+    public void FalharNoDespacho(string motivo)
+    {
+        Status = TaskStatus.Failed;
+        OutputLog = motivo;
+        ExecutedAt = DateTimeOffset.UtcNow;
+        DurationMs = 0;
+    }
 }

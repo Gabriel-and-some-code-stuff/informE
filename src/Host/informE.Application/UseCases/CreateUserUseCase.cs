@@ -11,20 +11,17 @@ namespace informE.Application.UseCases;
 public class CreateUserUseCase(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
+    DominioDeEmailPolicy dominioDeEmail,
     IUnitOfWork unitOfWork)
 {
-    // SuperAdmin cria Admin e Viewer. Admin cria SOMENTE Viewer.
+    // SuperAdmin cria qualquer papel, inclusive outro SuperAdmin.
+    // Admin cria SOMENTE Viewer — não promove ninguém ao próprio nível.
     //
     // O documento de análise do Figma diz "o ADMIN pode criar ADMIN E VIEWER",
-    // mas isso foi corrigido pelo time: Admin não promove ninguém ao próprio
-    // nível. Bate com docs/politica-login-sessao.md §1, que já dizia que Admin
-    // gerencia apenas Usuários Comuns.
-    //
-    // Em aberto: SuperAdmin pode criar outro SuperAdmin? Hoje NÃO — a regra
-    // ditada foi "ADMIN E VIEWER". Se puder, é uma linha aqui.
+    // mas o time corrigiu. Bate com docs/politica-login-sessao.md §1.
     private static readonly Dictionary<UserRole, UserRole[]> PodeCriar = new()
     {
-        [UserRole.SuperAdmin] = [UserRole.Admin, UserRole.Viewer],
+        [UserRole.SuperAdmin] = [UserRole.SuperAdmin, UserRole.Admin, UserRole.Viewer],
         [UserRole.Admin] = [UserRole.Viewer],
         [UserRole.Viewer] = [],
     };
@@ -33,6 +30,11 @@ public class CreateUserUseCase(
     {
         if (!PodeCriar.TryGetValue(criadoPor, out var permitidos) || !permitidos.Contains(request.Role))
             throw new ForbiddenRoleAssignmentException(criadoPor, request.Role);
+
+        // Só e-mail institucional. Antes da checagem de duplicidade porque é mais
+        // barata e a mensagem é mais útil: "não é institucional" explica o erro
+        // melhor do que um 409 de e-mail que o usuário nem deveria poder usar.
+        dominioDeEmail.Validar(request.Email);
 
         var jaExiste = await userRepository.GetByEmailAsync(request.Email, ct);
         if (jaExiste is not null)

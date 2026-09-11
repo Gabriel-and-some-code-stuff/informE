@@ -1,3 +1,4 @@
+using informE.Application;
 using informE.Application.Exceptions;
 using informE.Application.Interfaces;
 using informE.Application.Interfaces.Repositories;
@@ -21,13 +22,17 @@ public class CreateUserUseCaseTests
         _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((User?)null);
     }
 
-    private CreateUserUseCase CriarUseCase() => new(_users, _hasher, _uow);
+    // Lista vazia = sem restricao de dominio. Os testes de papel nao devem
+    // depender do dominio do e-mail; a regra tem teste proprio em
+    // DominioDeEmailPolicyTests.
+    private CreateUserUseCase CriarUseCase() => new(_users, _hasher, new DominioDeEmailPolicy([]), _uow);
 
     private static CreateUserRequest Request(UserRole papel) =>
         new("prof", "prof@etec.sp.gov.br", "senha", papel);
 
     // SuperAdmin cria Admin e Viewer. Admin cria SOMENTE Viewer.
     [Theory]
+    [InlineData(UserRole.SuperAdmin, UserRole.SuperAdmin)]
     [InlineData(UserRole.SuperAdmin, UserRole.Admin)]
     [InlineData(UserRole.SuperAdmin, UserRole.Viewer)]
     [InlineData(UserRole.Admin, UserRole.Viewer)]
@@ -42,7 +47,6 @@ public class CreateUserUseCaseTests
     [Theory]
     [InlineData(UserRole.Admin, UserRole.Admin)]        // Admin não promove ao próprio nível
     [InlineData(UserRole.Admin, UserRole.SuperAdmin)]   // nem acima
-    [InlineData(UserRole.SuperAdmin, UserRole.SuperAdmin)] // regra ditada foi "Admin e Viewer"
     [InlineData(UserRole.Viewer, UserRole.Viewer)]      // Viewer não cria ninguém
     [InlineData(UserRole.Viewer, UserRole.Admin)]
     public async Task Deve_recusar_o_que_esta_fora_da_regra(UserRole criador, UserRole alvo)
