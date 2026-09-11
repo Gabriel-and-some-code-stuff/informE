@@ -1,7 +1,11 @@
+using informE.Application;
 using informE.Application.Interfaces;
 using informE.Application.Interfaces.Repositories;
+using informE.Infrastructure.BackgroundJobs;
+using informE.Infrastructure.Email;
 using informE.Infrastructure.Persistence;
 using informE.Infrastructure.Persistence.Repositories;
+using informE.Infrastructure.Persistence.Seeding;
 using informE.Infrastructure.Realtime;
 using informE.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +32,26 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
+
+        // A politica de dominio de e-mail vive na Application (nao le config),
+        // entao a lista e resolvida AQUI e injetada pronta. Singleton: e uma
+        // lista imutavel lida do appsettings no boot.
+        //
+        // A distincao entre "chave ausente" e "lista vazia" e intencional: ausente
+        // cai no padrao institucional (a regra nao pode falhar aberta), vazia
+        // desliga a restricao de propósito.
+        var secaoAuth = config.GetSection(AuthOptions.SectionName);
+        var auth = secaoAuth.Get<AuthOptions>() ?? new AuthOptions();
+
+        var dominios = secaoAuth.GetSection(nameof(AuthOptions.DominiosPermitidos)).Exists()
+            ? auth.DominiosPermitidos
+            : AuthOptions.PadraoInstitucional;
+
+        services.AddSingleton(new DominioDeEmailPolicy(dominios));
+
+        services.Configure<SmtpOptions>(config.GetSection(SmtpOptions.SectionName));
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAgentAuthenticator, AgentAuthenticator>();
 
@@ -45,12 +68,29 @@ public static class DependencyInjection
         services.AddScoped<IDeviceDailyMetricsRepository, DeviceDailyMetricsRepository>();
         services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<INetworkGrowthRepository, NetworkGrowthRepository>();
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 
         // Adaptadores SignalR dos ports de tempo real. Os Hubs em si são mapeados
         // pelo Server (app.MapHub<AgentHub>/<DashboardHub>) — aqui só entram as
         // implementações que publicam via IHubContext.
+        // AddSignalR() mora AQUI, e não no Server, porque é esta camada que
+        // registra os adaptadores abaixo — e eles dependem de IHubContext<>, que
+        // só existe depois desta chamada. Sem isso, a Infrastructure registrava
+        // algo que ela mesma não conseguia satisfazer e a aplicação nem subia.
+        services.AddSignalR();
+
         services.AddScoped<IDashboardNotifier, SignalRDashboardNotifier>();
         services.AddScoped<ICommandDispatcher, SignalRCommandDispatcher>();
+
+        // Migration + seed. Scoped porque depende do AppDbContext.
+        services.AddScoped<DatabaseBootstrapper>();
+
+        // Varreduras periódicas — o que é "ausência de evento" e por isso não cabe
+        // num caso de uso reativo. Ver comentários nas classes.
+        services.Configure<MonitoringOptions>(config.GetSection(MonitoringOptions.SectionName));
+        services.AddHostedService<DeviceOfflineSweeper>();
+        services.AddHostedService<ExpiredSessionSweeper>();
+        services.AddHostedService<KeyRotationSweeper>();
 
         return services;
     }

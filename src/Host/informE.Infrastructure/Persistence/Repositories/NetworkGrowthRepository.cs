@@ -10,7 +10,7 @@ public class NetworkGrowthRepository(AppDbContext db) : INetworkGrowthRepository
     // em vez de duplicar (a tabela tem grão de 1 linha por dia do tenant).
     public async Task SnapshotTodayAsync(int totalDevices, int totalGroups, CancellationToken ct = default)
     {
-        var hoje = DateOnly.FromDateTime(DateTimeOffset.Now.Date);
+        var hoje = DateOnly.FromDateTime(DateTimeOffset.UtcNow.Date);
 
         var existente = await db.NetworkGrowthSnapshots
             .FirstOrDefaultAsync(s => s.Date == hoje, ct);

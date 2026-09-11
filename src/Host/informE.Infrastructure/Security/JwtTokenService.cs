@@ -13,7 +13,7 @@ public class JwtTokenService(IOptions<JwtOptions> options) : IJwtTokenService
 {
     private readonly JwtOptions _options = options.Value;
 
-    public string CreateAccessToken(User user)
+    public string CreateAccessToken(User user, Guid sessionId)
     {
         var claims = new[]
         {
@@ -21,6 +21,10 @@ public class JwtTokenService(IOptions<JwtOptions> options) : IJwtTokenService
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+
+            // docs/politica-login-sessao.md §2.2 já previa este claim. É o que
+            // permite /auth/logout revogar a sessão certa.
+            new Claim(JwtRegisteredClaimNames.Sid, sessionId.ToString()),
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Key));

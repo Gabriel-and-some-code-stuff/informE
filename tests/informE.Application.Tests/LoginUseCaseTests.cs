@@ -22,7 +22,7 @@ public class LoginUseCaseTests
 
     public LoginUseCaseTests()
     {
-        _jwt.CreateAccessToken(Arg.Any<User>()).Returns("access-token");
+        _jwt.CreateAccessToken(Arg.Any<User>(), Arg.Any<Guid>()).Returns("access-token");
         _jwt.CreateRefreshToken().Returns(("refresh-token", DateTimeOffset.Now.AddDays(7)));
         _hasher.Hash(Arg.Any<string>()).Returns("hash-fake");
     }
@@ -75,8 +75,14 @@ public class LoginUseCaseTests
         var resposta = await CriarUseCase().ExecuteAsync(Request());
 
         Assert.Equal("access-token", resposta.AccessToken);
-        Assert.Equal("refresh-token", resposta.RefreshToken);
         Assert.Equal(UserRole.Admin, resposta.Role);
+
+        // O refresh token vai no formato "{sessionId}.{segredo}" — o Id acha a
+        // linha e o segredo prova a posse, porque o hash Argon2id tem salt
+        // aleatório e não permite `WHERE refresh_token_hash = ?`.
+        // Ver RefreshTokenUseCase.
+        Assert.EndsWith(".refresh-token", resposta.RefreshToken);
+        Assert.True(Guid.TryParse(resposta.RefreshToken.Split('.')[0], out _));
         await _users.Received(1).AddSessionAsync(Arg.Any<Session>(), Arg.Any<CancellationToken>());
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -159,6 +165,55 @@ public class LoginUseCaseTests
 
         Assert.Equal("access-token", resposta.AccessToken);
     }
+
+    // O limite é de DISPOSITIVOS, não de sessões. Sem esta distinção, fechar o
+    // navegador e entrar de novo 3 vezes trancava o admin fora da própria conta.
+    [Fact]
+    public async Task Relogin_do_mesmo_dispositivo_nao_consome_slot()
+    {
+        var user = Usuario(UserRole.Admin);
+        _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(user);
+        _hasher.Verify(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+        // 3 sessões vigentes, TODAS do mesmo dispositivo do request.
+        var mesmo = Request().DeviceLabel;
+        _users.GetActiveSessionsAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns([SessaoDe(mesmo), SessaoDe(mesmo), SessaoDe(mesmo)]);
+
+        var resposta = await CriarUseCase().ExecuteAsync(Request());
+
+        Assert.Equal("access-token", resposta.AccessToken);
+    }
+
+    [Fact]
+    public async Task Relogin_do_mesmo_dispositivo_revoga_a_sessao_anterior()
+    {
+        var user = Usuario(UserRole.Admin);
+        var anterior = SessaoDe(Request().DeviceLabel);
+        _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(user);
+        _hasher.Verify(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+        _users.GetActiveSessionsAsync(user.Id, Arg.Any<CancellationToken>()).Returns([anterior]);
+
+        await CriarUseCase().ExecuteAsync(Request());
+
+        // Não fica sessão órfã do mesmo aparelho acumulando no banco.
+        Assert.False(anterior.IsActive);
+    }
+
+    [Fact]
+    public async Task Tres_dispositivos_DIFERENTES_ainda_bloqueiam_o_quarto()
+    {
+        var user = Usuario(UserRole.Admin);
+        _users.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(user);
+        _hasher.Verify(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+        _users.GetActiveSessionsAsync(user.Id, Arg.Any<CancellationToken>())
+            .Returns([SessaoDe("Chrome — Windows"), SessaoDe("Firefox — Linux"), SessaoDe("Safari — macOS")]);
+
+        await Assert.ThrowsAsync<DeviceLimitReachedException>(() => CriarUseCase().ExecuteAsync(Request()));
+    }
+
+    private static Session SessaoDe(string? deviceLabel) =>
+        new("192.168.0.11", DateTimeOffset.UtcNow.AddDays(7), "hash", Guid.NewGuid(), deviceLabel);
 
     private static Session SessaoVigente() =>
         new("192.168.0.11", DateTimeOffset.Now.AddDays(7), "hash", Guid.NewGuid());

@@ -11,20 +11,22 @@ public class SignalRCommandDispatcher(
     IHubContext<AgentHub, IAgentClient> hub,
     IEndpointConnectionRegistry registry) : ICommandDispatcher
 {
-    public Task DispatchAsync(Guid deviceId, CommandDto command, CancellationToken ct = default)
+    public async Task<bool> DispatchAsync(Guid deviceId, CommandDto command, CancellationToken ct = default)
     {
         var connectionId = registry.GetConnectionId(deviceId);
 
         // Device offline não é erro de programação: é o estado normal de uma
-        // máquina desligada. O TaskExecutionLog fica Pending e o comando é
-        // reentregue quando o agente reconectar.
+        // máquina desligada. Quem chama decide o que fazer — hoje o
+        // DispatchTaskUseCase marca aquele log como Failed, para a tarefa
+        // conseguir fechar.
         //
-        // ponytail: a reentrega ainda NÃO existe — precisa o agente pedir a fila
-        // pendente no OnConnectedAsync (RF10 já modela a fila no banco).
-        // Por ora o comando simplesmente não sai, e o log fica Pending.
+        // ponytail: a reentrega na reconexao ainda NAO existe — precisa o agente
+        // pedir a fila pendente no OnConnectedAsync (RF10 ja modela a fila no
+        // banco). Falhar explicito e melhor que travar em silencio.
         if (connectionId is null)
-            return Task.CompletedTask;
+            return false;
 
-        return hub.Clients.Client(connectionId).RunCommand(command);
+        await hub.Clients.Client(connectionId).RunCommand(command);
+        return true;
     }
 }

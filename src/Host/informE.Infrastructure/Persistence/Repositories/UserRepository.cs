@@ -1,5 +1,6 @@
 using informE.Application.Interfaces.Repositories;
 using informE.Domain.Entities;
+using informE.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace informE.Infrastructure.Persistence.Repositories;
@@ -11,6 +12,34 @@ public class UserRepository(AppDbContext db) : IUserRepository
 
     public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) =>
         db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
+
+    // Filtros da tela de Administração de Contas — mesmo desenho do
+    // DeviceRepository.ListAsync: cada filtro é opcional e só entra na query
+    // quando vem preenchido.
+    public Task<List<User>> ListAsync(UserRole? papel, bool? ativo, string? busca,
+        CancellationToken ct = default)
+    {
+        var query = db.Users.AsQueryable();
+
+        if (papel is not null)
+            query = query.Where(u => u.Role == papel);
+
+        if (ativo is not null)
+            query = query.Where(u => u.IsActive == ativo);
+
+        if (!string.IsNullOrWhiteSpace(busca))
+        {
+            // ILIKE do Postgres: case-insensitive sem ToLower() dos dois lados
+            // (que impediria o uso de índice).
+            var padrao = $"%{busca.Trim()}%";
+            query = query.Where(u =>
+                EF.Functions.ILike(u.Username, padrao) ||
+                EF.Functions.ILike(u.Email, padrao) ||
+                EF.Functions.ILike(u.Code, padrao));
+        }
+
+        return query.OrderBy(u => u.Username).ToListAsync(ct);
+    }
 
     public async Task AddAsync(User user, CancellationToken ct = default) =>
         await db.Users.AddAsync(user, ct);

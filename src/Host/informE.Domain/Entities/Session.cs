@@ -35,7 +35,7 @@ public class Session
         if (ValidateIpAddress(ipAddress))
             IpAddress = ipAddress;
 
-        var agora = DateTimeOffset.Now;
+        var agora = DateTimeOffset.UtcNow;
 
         LoginAt = agora;
         LastSeenAt = agora; // acabou de nascer: último acesso é o próprio login
@@ -62,7 +62,20 @@ public class Session
     }
 
     // Compara com Now — ExpiresAt é definido pelo servidor no construtor, não pelo client.
-    public bool IsExpired() => DateTimeOffset.Now > ExpiresAt;
+    public bool IsExpired() => DateTimeOffset.UtcNow > ExpiresAt;
+
+    // Rotação do refresh token (POST /auth/refresh). O token antigo deixa de valer
+    // no instante em que o hash é substituído — é o que impede reusar um refresh
+    // token que vazou. Renova a validade junto: a sessão vive enquanto for usada.
+    public void RotateRefreshToken(string novoHash, DateTimeOffset novaValidade)
+    {
+        if (string.IsNullOrWhiteSpace(novoHash))
+            throw new ArgumentException("O hash do refresh token não pode ser vazio.");
+
+        RefreshTokenHash = novoHash;
+        ExpiresAt = novaValidade;
+        LastSeenAt = DateTimeOffset.UtcNow;
+    }
 
     public void Touch(DateTimeOffset now)
     {

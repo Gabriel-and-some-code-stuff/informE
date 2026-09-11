@@ -1,4 +1,4 @@
-# setup-dev.ps1 — ambiente informE sem privilégio de admin
+﻿# setup-dev.ps1 — ambiente informE sem privilégio de admin
 # Uso: powershell -ExecutionPolicy Bypass -File setup-dev.ps1
 #
 # Pré-condições (já instalados pela TI ou pelo time):
@@ -140,15 +140,24 @@ if (Test-Path "$PSScriptRoot\docker-compose.yml") {
     }
 
     if ($healthy) {
-        Write-Host "  Postgres pronto. Aplicando migrations..."
-        dotnet ef database update -p "$PSScriptRoot\src\Host\informE.Infrastructure" -s "$PSScriptRoot\src\Host\informE.Server"
-        Write-Host "  Banco criado e migrations aplicadas."
+        # NAO roda mais `dotnet ef database update` aqui. O proprio Server aplica
+        # as migrations e semeia no boot (ver DatabaseBootstrapper), entao isto
+        # era redundante — e pior: exigia a tool `dotnet-ef` instalada, que nenhum
+        # passo deste script instala. Com $ErrorActionPreference='Stop', o setup
+        # inteiro morria no ultimo passo, depois de ja ter instalado .NET, MAUI e gh.
+        Write-Host "  Postgres pronto."
     } else {
-        Write-Warning "  Postgres nao ficou 'healthy' a tempo. Rode manualmente: docker compose up -d && dotnet ef database update ..."
+        Write-Warning "  Postgres nao ficou 'healthy' a tempo. Rode manualmente: docker compose up -d"
     }
 } else {
     Write-Host "`n  (rode dentro do repo clonado para subir o banco automaticamente)" -ForegroundColor DarkGray
 }
+
+# ── Certificado de desenvolvimento ────────────────────────────────────────────
+# O Server roda em https://localhost:5021 e os hubs SignalR sobem como wss://.
+# Sem confiar no dev-cert, o navegador barra o Scalar e o agente nem conecta.
+Write-Host "`n[extra] Confiando no certificado de desenvolvimento do .NET..." -ForegroundColor Cyan
+dotnet dev-certs https --trust
 
 # ── Resumo ────────────────────────────────────────────────────────────────────
 Write-Host "`n══════════════════════════════════════════" -ForegroundColor Green
