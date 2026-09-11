@@ -1,0 +1,175 @@
+@page "/groups"
+@page "/grupos"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Grupos | informE</PageTitle>
+
+<div class="groups-page">
+    <header class="page-heading">
+        <div>
+            <h1>Grupos</h1>
+            <p>Visão geral de todos os grupos da escola</p>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="groups-message error" role="alert">
+            <div>
+                <strong>Não foi possível carregar os grupos</strong>
+                <small>@errorMessage</small>
+            </div>
+            <button type="button" @onclick="LoadAsync">Tentar novamente</button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="groups-loading">
+            <span class="loader"></span>
+            <span>Carregando grupos...</span>
+        </div>
+    }
+    else
+    {
+        <section class="summary-grid" aria-label="Resumo dos grupos">
+            <article class="summary-card">
+                <span class="summary-icon cyan"><LucideIcon Name="flask-conical" Size="20" /></span>
+                <span>Grupos</span>
+                <strong>@groups.Count</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-icon cyan"><LucideIcon Name="monitor" Size="20" /></span>
+                <span>Total de Máquinas</span>
+                <strong>@totalDevices</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-icon green"><LucideIcon Name="circle-check" Size="20" /></span>
+                <span>Online</span>
+                <strong class="green-text">@onlineDevices</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-icon yellow"><LucideIcon Name="triangle-alert" Size="20" /></span>
+                <span>Com Problema</span>
+                <strong class="yellow-text">@problemDevices</strong>
+            </article>
+        </section>
+
+        <section class="groups-grid">
+            @foreach (var item in groupCards)
+            {
+                <article class="group-card" @onclick="() => OpenGroup(item.Group.Id)">
+                    <header>
+                        <span class="lab-icon"><LucideIcon Name="flask-conical" Size="22" /></span>
+                        <div>
+                            <strong>@item.Group.Name</strong>
+                            @if (!string.IsNullOrWhiteSpace(item.Group.Description))
+                            {
+                                <small>@item.Group.Description</small>
+                            }
+                        </div>
+                        <span class="chevron"><LucideIcon Name="chevron-right" Size="18" /></span>
+                    </header>
+
+                    <div class="group-stats">
+                        <div><span>Total de Máquinas</span><strong>@item.Total</strong></div>
+                        <div><span>Online</span><strong class="green-text">@item.Online</strong></div>
+                        <div><span>Offline</span><strong>@item.Offline</strong></div>
+                        <div><span>Com Problema</span><strong class="@(item.Problems > 0 ? "yellow-text" : "green-text")">@item.Problems</strong></div>
+                    </div>
+
+                    <div class="group-footer">
+                        <span>@item.ProfessorCount professor@(item.ProfessorCount == 1 ? "" : "es")</span>
+                        <span>@item.StudentCount aluno@(item.StudentCount == 1 ? "" : "s")</span>
+                    </div>
+                </article>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private readonly List<GroupListItemDto> groups = [];
+    private readonly List<GroupCardViewModel> groupCards = [];
+    private bool loading = true;
+    private string? errorMessage;
+    private int totalDevices;
+    private int onlineDevices;
+    private int problemDevices;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login/admin");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        errorMessage = null;
+        groups.Clear();
+        groupCards.Clear();
+
+        try
+        {
+            var groupResult = await Api.GetGroupsAsync();
+            groups.AddRange(groupResult.OrderBy(x => x.Name));
+
+            var allDevices = await Api.GetDevicesAsync();
+            totalDevices = allDevices.Resumo.Total;
+            onlineDevices = allDevices.Resumo.Online;
+            problemDevices = allDevices.Itens.Count(x => x.Status == "Online" && (x.Health is "Aviso" or "Critico" or "Erro"));
+
+            foreach (var group in groups)
+            {
+                var devices = allDevices.Itens
+                    .Where(x => string.Equals(x.GroupName, group.Name, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                groupCards.Add(new GroupCardViewModel(
+                    group,
+                    group.TotalDeDispositivos,
+                    devices.Count(x => x.Status == "Online"),
+                    devices.Count(x => x.Status == "Offline"),
+                    devices.Count(x => x.Status == "Online" && (x.Health is "Aviso" or "Critico" or "Erro")),
+                    devices.Count(x => x.Role == "Professor"),
+                    devices.Count(x => x.Role != "Professor")));
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            errorMessage = "A busca dos dados demorou mais que o esperado. Tente novamente.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "O informE.Server não respondeu em https://localhost:5021.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void OpenGroup(Guid groupId) => Navigation.NavigateTo($"/groups/{groupId}");
+
+    private sealed record GroupCardViewModel(
+        GroupListItemDto Group,
+        int Total,
+        int Online,
+        int Offline,
+        int Problems,
+        int ProfessorCount,
+        int StudentCount);
+}

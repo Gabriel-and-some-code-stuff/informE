@@ -1,61 +1,66 @@
 @inherits LayoutComponentBase
+@using informE.Contracts.Dtos.Api
 @inject NavigationManager Navigation
 @inject informE.Desktop.Services.InformEApiClient Api
 
 <div class="app-shell @(IsViewer ? "viewer-shell" : "admin-shell")">
-    <aside class="sidebar @(menuOpen ? "open" : null)">
+    <aside class="sidebar @(menuOpen ? "open" : null) @(sidebarCollapsed ? "collapsed" : null)">
         <div class="sidebar-brand">
-            <button class="brand-mark" type="button" @onclick="ToggleMenu" aria-label="Alternar menu">
-                <img src="images/logo-full.png" alt="informE" />
+            <a class="brand-mark" href="@(IsViewer ? "/dashboard/viewer" : "/dashboard/admin")" aria-label="Página inicial">
+                <img class="brand-full" src="images/logo-full.png" alt="informE" />
+                <img class="brand-icon" src="images/logo-icon.png" alt="" aria-hidden="true" />
+            </a>
+            <button class="collapse-button" type="button" @onclick="ToggleSidebar" aria-label="@(sidebarCollapsed ? "Expandir menu" : "Recolher menu")" title="@(sidebarCollapsed ? "Expandir menu" : "Recolher menu")">
+                <LucideIcon Name="chevron-left" Size="18" />
             </button>
         </div>
 
         <nav class="sidebar-nav" aria-label="Navegação principal">
-            <a class="nav-link @(IsActive("/dashboard") ? "active" : null)" href="@(IsViewer ? "/dashboard/viewer" : "/dashboard/admin")">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <a class="nav-link @(IsActive("/dashboard") ? "active" : null)" href="@(IsViewer ? "/dashboard/viewer" : "/dashboard/admin")" data-tooltip="Dashboard">
+                <LucideIcon Name="layout-dashboard" Size="20" />
                 <span>Dashboard</span>
             </a>
 
             @if (IsViewer)
             {
-                <a class="nav-link @(IsActive("/equipamentos") || IsActive("/devices") ? "active" : null)" href="/equipamentos">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                <a class="nav-link @(IsActive("/machines") ? "active" : null)" href="/machines" data-tooltip="Máquinas">
+                    <LucideIcon Name="monitor" Size="20" />
                     <span>Máquinas</span>
                 </a>
             }
             else
             {
-                <button class="nav-link" type="button">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v5l-5 10a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3L14 8V3"/><path d="M8 15h8"/></svg>
+                <a class="nav-link @(IsActive("/groups") || IsActive("/grupos") ? "active" : null)" href="/groups" data-tooltip="Grupos">
+                    <LucideIcon Name="flask-conical" Size="20" />
                     <span>Grupos</span>
-                </button>
-                <a class="nav-link @(IsActive("/equipamentos") || IsActive("/devices") ? "active" : null)" href="/equipamentos">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                </a>
+                <a class="nav-link @(IsActive("/equipments") || IsActive("/equipamentos") ? "active" : null)" href="/equipments" data-tooltip="Equipamentos">
+                    <LucideIcon Name="monitor" Size="20" />
                     <span>Equipamentos</span>
                 </a>
-                <a class="nav-link @(IsActive("/executions") || IsActive("/execucoes") ? "active" : null)" href="/executions">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7V5Z"/></svg>
+                <a class="nav-link @(IsActive("/executions") || IsActive("/execucoes") ? "active" : null)" href="/executions" data-tooltip="Execuções">
+                    <LucideIcon Name="play" Size="20" />
                     <span>Execuções</span>
                 </a>
-                <button class="nav-link" type="button">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"/><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z"/><path d="M12 11v10"/></svg>
+                <a class="nav-link @(IsActive("/inventory") ? "active" : null)" href="/inventory" data-tooltip="Inventário">
+                    <LucideIcon Name="package" Size="20" />
                     <span>Inventário</span>
-                </button>
-                <a class="nav-link @(IsActive("/contas") || IsActive("/administracao-de-contas") ? "active" : null)" href="/contas">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                </a>
+                <a class="nav-link @(IsActive("/accounts") ? "active" : null)" href="/accounts" data-tooltip="Administração de Contas">
+                    <LucideIcon Name="users" Size="20" />
                     <span>Administração de Contas</span>
                 </a>
             }
 
-            <button class="nav-link" type="button">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.36.7.66.95.3.25.68.4 1.07.4H21v4h-.1A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+            <a class="nav-link @(IsActive("/settings") ? "active" : null)" href="/settings" data-tooltip="Configurações">
+                <LucideIcon Name="settings" Size="20" />
                 <span>Configurações</span>
-            </button>
+            </a>
         </nav>
 
         <div class="account-area">
             <div class="account-menu">
-                <button type="button">Meu Perfil</button>
+                <a href="/profile">Meu Perfil</a>
                 <button class="logout-button" type="button" @onclick="Logout">Sair da Conta</button>
             </div>
             <div class="account-card">
@@ -64,23 +69,23 @@
                     <strong>@UserName</strong>
                     <small>@UserEmail</small>
                 </span>
-                <span class="account-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+                <span class="account-chevron">⌃</span>
             </div>
         </div>
     </aside>
 
     <div class="main-area">
         <header class="topbar">
-            <button class="mobile-menu" type="button" @onclick="ToggleMenu" aria-label="Abrir menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+            <button class="mobile-menu" type="button" @onclick="ToggleMenu" aria-label="Abrir menu">☰</button>
 
             <div class="search-box">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                <input aria-label="Busca" placeholder="Buscar dispositivos, tickets, usuários..." />
+                <LucideIcon Name="search" Size="18" />
+                <input aria-label="Busca" placeholder="@(IsViewer ? "Buscar máquinas..." : "Buscar dispositivos, grupos, usuários...")" />
             </div>
 
             <div class="topbar-actions">
                 <button class="status-pill sync" type="button" @onclick="Synchronize">
-                    <span class="sync-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-13.7-5.7L4 7.5"/><path d="M4 4v3.5H7.5"/><path d="M4 13a8 8 0 0 0 13.7 5.7L20 16.5"/><path d="M20 20v-3.5h-3.5"/></svg></span>
+                    <span class="sync-icon">↻</span>
                     <span>Sincronizado</span>
                     <small>@syncText</small>
                 </button>
@@ -88,10 +93,36 @@
                     <span class="online-dot"></span>
                     <span>Servidor Online</span>
                 </div>
-                <button class="notification-button" type="button" aria-label="Notificações">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
-                    <span></span>
-                </button>
+                <div class="notification-area">
+                    <button class="notification-button" type="button" aria-label="Notificações" @onclick="ToggleNotifications">
+                        <LucideIcon Name="bell" Size="19" />
+                        @if (recentAlerts.Count > 0) { <span></span> }
+                    </button>
+                    @if (notificationsOpen)
+                    {
+                        <div class="notification-panel">
+                            <div class="notification-head"><strong>Notificações</strong><small>@recentAlerts.Count recentes</small></div>
+                            @if (alertsLoading)
+                            {
+                                <p class="notification-empty">Carregando alertas...</p>
+                            }
+                            else if (recentAlerts.Count == 0)
+                            {
+                                <p class="notification-empty">Nenhum alerta recente.</p>
+                            }
+                            else
+                            {
+                                @foreach (var alert in recentAlerts)
+                                {
+                                    <button class="notification-item" type="button" @onclick="() => OpenAlert(alert)">
+                                        <span class="notification-dot"></span>
+                                        <span><strong>@alert.DeviceHostname</strong><small>@alert.Categoria · @alert.OcorridoEm.ToLocalTime().ToString("dd/MM HH:mm")</small></span>
+                                    </button>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         </header>
 
@@ -108,16 +139,20 @@
 
 @code {
     private bool menuOpen;
+    private bool sidebarCollapsed;
+    private bool notificationsOpen;
+    private bool alertsLoading;
     private string syncText = "há 2 min";
+    private readonly List<AlertListItemDto> recentAlerts = [];
 
-    // O menu decide pelo PAPEL de quem esta logado, nao pela URL.
+    // O menu decide pelo PAPEL de quem está logado, não pela URL.
     //
     // BUG CORRIGIDO: era `Navigation.Uri.Contains("/viewer")`. Um Usuario Comum
-    // que navegasse para /equipamentos deixava de ter "/viewer" no endereco,
+    // que navegasse para /equipamentos deixava de ter "/viewer" no endereço,
     // IsViewer virava false, e o menu de ADMINISTRADOR aparecia inteiro --
     // Grupos, Inventario, Administracao de Contas. O servidor recusa as
-    // chamadas, mas oferecer o que vai ser recusado e defeito por si: parece
-    // falha de seguranca e nao ha como a pessoa saber que nao devia clicar.
+    // chamadas, mas oferecer o que vai ser recusado é defeito por si: parece
+    // falha de segurança e não há como a pessoa saber que não devia clicar.
     //
     // O papel vem do token, gravado no AppSession no login.
     private static bool IsViewer =>
@@ -132,7 +167,7 @@
         {
             var email = informE.Desktop.Components.State.AppSession.Email;
             return string.IsNullOrWhiteSpace(email)
-                ? (IsViewer ? "viewer@informe.local" : "admin@informe.local")
+                ? "—"
                 : email;
         }
     }
@@ -143,7 +178,7 @@
         {
             var username = informE.Desktop.Components.State.AppSession.Username;
             return string.IsNullOrWhiteSpace(username)
-                ? (IsViewer ? "End User" : "Admin User")
+                ? "Usuário"
                 : username;
         }
     }
@@ -159,9 +194,55 @@
         menuOpen = !menuOpen;
     }
 
+    private void ToggleSidebar()
+    {
+        sidebarCollapsed = !sidebarCollapsed;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!IsViewer && informE.Desktop.Components.State.AppSession.IsAuthenticated)
+            await LoadAlertsAsync();
+    }
+
     private void Synchronize()
     {
         syncText = "agora";
+        _ = LoadAlertsAsync();
+    }
+
+    private async Task ToggleNotifications()
+    {
+        notificationsOpen = !notificationsOpen;
+        if (notificationsOpen && recentAlerts.Count == 0)
+            await LoadAlertsAsync();
+    }
+
+    private async Task LoadAlertsAsync()
+    {
+        if (IsViewer) return;
+        alertsLoading = true;
+        try
+        {
+            var response = await Api.GetAlertsAsync(dias: 7, recentes: 5);
+            recentAlerts.Clear();
+            recentAlerts.AddRange(response.Recentes.OrderByDescending(x => x.OcorridoEm).Take(5));
+        }
+        catch
+        {
+            recentAlerts.Clear();
+        }
+        finally
+        {
+            alertsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OpenAlert(AlertListItemDto alert)
+    {
+        notificationsOpen = false;
+        Navigation.NavigateTo($"/equipments/{alert.DeviceId}");
     }
 
     private async Task Logout()

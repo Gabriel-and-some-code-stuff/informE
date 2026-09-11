@@ -76,6 +76,25 @@
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+        <PackageReference Include="LucideBlazor" Version="1.0.5" />
+        <PackageReference Include="Blazor-ApexCharts-MAUI" Version="7.0.0" />
+    </ItemGroup>
+
+    <!-- Excluir duplicatas "(2)" que foram copiadas para dentro do próprio projeto.
+         Mantemos as pastas no disco por enquanto, mas não deixamos o build compilar.
+         (remove duplicatas que geram CS0101/CS0111 no build) -->
+    <ItemGroup>
+        <Compile Remove="MauiProgram (2).cs" />
+        <Compile Remove="Services\InformEApiClient (2).cs" />
+        <Compile Remove="Components\State\AppSession (2).cs" />
+
+        <Compile Remove="App.xaml (2).cs" />
+        <Compile Remove="MainPage.xaml (2).cs" />
+        <Compile Remove="Platforms\Windows\App.xaml (2).cs" />
+
+        <MauiXaml Remove="App (2).xaml" />
+        <MauiXaml Remove="MainPage (2).xaml" />
+        <MauiXaml Remove="Platforms\Windows\App (2).xaml" />
     </ItemGroup>
 
     <ItemGroup>

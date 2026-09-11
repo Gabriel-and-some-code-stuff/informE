@@ -1,0 +1,288 @@
+@page "/inventory"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Inventário | informE</PageTitle>
+
+<div class="inventory-page">
+    <header class="page-header">
+        <div>
+            <h1>Inventário</h1>
+            <p>Composição dos dispositivos monitorados.</p>
+        </div>
+        <select value="@(selectedGroup?.ToString() ?? string.Empty)" @onchange="ChangeGroup">
+            <option value="">Todos os Grupos</option>
+            @foreach (var g in groups)
+            {
+                <option value="@g.Id">@g.Name</option>
+            }
+        </select>
+    </header>
+
+    <section class="inventory-tools compact">
+        <span>@filteredDevices.Count máquina@(filteredDevices.Count == 1 ? "" : "s") no inventário</span>
+    </section>
+
+    @if (loading)
+    {
+        <div class="state">Carregando inventário...</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div class="state error">@error</div>
+    }
+    else
+    {
+        <section class="top-cards">
+            <article>
+                <LucideIcon Name="monitor" Size="20" />
+                <strong>@devices.Count</strong>
+                <span>Total de Dispositivos</span>
+            </article>
+            <article>
+                <LucideIcon Name="boxes" Size="20" />
+                <strong>—</strong>
+                <span>Média de softwares por máquina</span>
+            </article>
+        </section>
+
+        <section class="charts-grid">
+            <article class="panel">
+                <h2>Sistemas Operacionais</h2>
+                @if (OsData.Count == 0)
+                {
+                    <p class="empty">Sem dados.</p>
+                }
+                else
+                {
+                    <ApexChart TItem="ChartPoint" Height="280">
+                        <ApexPointSeries TItem="ChartPoint"
+                                         Items="OsData"
+                                         Name="Dispositivos"
+                                         SeriesType="SeriesType.Donut"
+                                         XValue="@(x => x.Label)"
+                                         YAggregate="@(x => x.Sum(v => v.Value))" />
+                    </ApexChart>
+                }
+            </article>
+
+            <article class="panel">
+                <h2>Hardware</h2>
+                <ApexChart TItem="ChartPoint" Height="280">
+                    <ApexPointSeries TItem="ChartPoint"
+                                     Items="HardwareMockData"
+                                     Name="Dispositivos"
+                                     SeriesType="SeriesType.Donut"
+                                     XValue="@(x => x.Label)"
+                                     YAggregate="@(x => x.Sum(v => v.Value))" />
+                </ApexChart>
+                <small class="chart-note">Distribuição demonstrativa para apresentação.</small>
+            </article>
+        </section>
+
+        <section class="table-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Inventário detalhado por máquina</h2>
+                    <small>Dados reais do cadastro e do inventário disponível.</small>
+                </div>
+                <span>@filteredDevices.Count registros</span>
+            </div>
+
+            @if (filteredDevices.Count == 0)
+            {
+                <div class="empty-table">Nenhuma máquina encontrada.</div>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Dispositivo</th>
+                                <th>Grupo</th>
+                                <th>Processador</th>
+                                <th>RAM</th>
+                                <th>Disco</th>
+                                <th>BIOS</th>
+                                <th>Sistema</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in pagedDevices)
+                            {
+                                var hardware = hardwareByDevice.GetValueOrDefault(d.Id);
+                                <tr @onclick="() => OpenDevice(d.Id)">
+                                    <td><strong>@d.Hostname</strong></td>
+                                    <td>@(d.GroupName ?? "—")</td>
+                                    <td>@(hardware?.Cpu ?? "—")</td>
+                                    <td>@FormatRam(hardware)</td>
+                                    <td>@FormatStorage(hardware)</td>
+                                    <td>@(hardware?.Bios ?? "—")</td>
+                                    <td>@d.Os</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (TotalPages > 1)
+                {
+                    <div class="pagination">
+                        <button type="button" @onclick="PreviousPage" disabled="@(page == 1)">‹</button>
+                        <span>Página @(page) de @TotalPages</span>
+                        <button type="button" @onclick="NextPage" disabled="@(page == TotalPages)">›</button>
+                    </div>
+                }
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private readonly List<GroupListItemDto> groups = [];
+    private readonly List<DeviceListItemDto> devices = [];
+    private readonly List<DeviceListItemDto> filteredDevices = [];
+    private readonly List<DeviceListItemDto> pagedDevices = [];
+    private readonly Dictionary<Guid, HardwareDto?> hardwareByDevice = [];
+
+    private bool loading = true;
+    private string? error;
+    private Guid? selectedGroup;
+    private int page = 1;
+    private const int PageSize = 10;
+
+    private List<ChartPoint> OsData => filteredDevices
+        .GroupBy(x => string.IsNullOrWhiteSpace(x.Os) ? "Não informado" : x.Os)
+        .Select(x => new ChartPoint(x.Key, x.Count()))
+        .OrderByDescending(x => x.Value)
+        .ToList();
+
+    private static readonly List<ChartPoint> HardwareMockData =
+    [
+        new("Intel Core i5", 46),
+        new("Intel Core i3", 28),
+        new("Intel Core i7", 17),
+        new("AMD Ryzen", 14)
+    ];
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(filteredDevices.Count / (double)PageSize));
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login/admin");
+            return;
+        }
+
+        try
+        {
+            groups.AddRange(await Api.GetGroupsAsync());
+            await LoadDevices();
+        }
+        catch (Exception ex)
+        {
+            error = Friendly(ex);
+            loading = false;
+        }
+    }
+
+    private async Task LoadDevices()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            var result = await Api.GetDevicesAsync(selectedGroup);
+            devices.Clear();
+            devices.AddRange(result.Itens.OrderBy(x => x.Hostname));
+            page = 1;
+            await ApplyFilterAsync();
+        }
+        catch (Exception ex)
+        {
+            error = Friendly(ex);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task ChangeGroup(ChangeEventArgs e)
+    {
+        selectedGroup = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        await LoadDevices();
+    }
+
+    private async Task ApplyFilterAsync()
+    {
+        filteredDevices.Clear();
+        filteredDevices.AddRange(devices.OrderBy(x => x.Hostname));
+        if (page > TotalPages) page = TotalPages;
+        await RefreshPageAsync();
+    }
+
+    private async Task RefreshPageAsync()
+    {
+        pagedDevices.Clear();
+        pagedDevices.AddRange(filteredDevices.Skip((page - 1) * PageSize).Take(PageSize));
+
+        foreach (var device in pagedDevices)
+        {
+            if (hardwareByDevice.ContainsKey(device.Id))
+                continue;
+
+            try
+            {
+                var detail = await Api.GetDeviceAsync(device.Id);
+                hardwareByDevice[device.Id] = detail?.Hardware;
+            }
+            catch
+            {
+                hardwareByDevice[device.Id] = null;
+            }
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (page <= 1) return;
+        page--;
+        await RefreshPageAsync();
+    }
+
+    private async Task NextPage()
+    {
+        if (page >= TotalPages) return;
+        page++;
+        await RefreshPageAsync();
+    }
+
+    private void OpenDevice(Guid id) => Navigation.NavigateTo($"/equipments/{id}");
+
+    private static string FormatRam(HardwareDto? hardware)
+    {
+        if (hardware?.RamGb is null) return "—";
+        return string.IsNullOrWhiteSpace(hardware.RamType)
+            ? $"{hardware.RamGb} GB"
+            : $"{hardware.RamGb} GB {hardware.RamType}";
+    }
+
+    private static string FormatStorage(HardwareDto? hardware)
+    {
+        if (hardware?.StorageGb is null) return "—";
+        return string.IsNullOrWhiteSpace(hardware.StorageType)
+            ? $"{hardware.StorageGb} GB"
+            : $"{hardware.StorageGb} GB {hardware.StorageType}";
+    }
+
+    private static string Friendly(Exception ex) => ex is HttpRequestException
+        ? "Não foi possível conectar ao servidor."
+        : ex.Message;
+
+    private sealed record ChartPoint(string Label, int Value);
+}

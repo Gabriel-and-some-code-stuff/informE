@@ -1,0 +1,125 @@
+@page "/machines"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Máquinas | informE</PageTitle>
+
+<div class="viewer-machines-page">
+    <header class="page-header">
+        <div>
+            <h1>Máquinas</h1>
+            <p>@(string.IsNullOrWhiteSpace(groupName) ? "Equipamentos do seu grupo" : $"{groupName} · {devices.Count} máquinas")</p>
+        </div>
+    </header>
+
+    @if (loading)
+    {
+        <div class="state-card">Carregando máquinas...</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div class="state-card error">@error</div>
+    }
+    else
+    {
+        <section class="summary-grid">
+            <article><span>Total</span><strong>@devices.Count</strong><small>máquinas</small></article>
+            <article><span>Online</span><strong class="online">@devices.Count(x => x.Status == "Online")</strong><small>conectadas</small></article>
+            <article><span>Offline</span><strong>@devices.Count(x => x.Status == "Offline")</strong><small>sem conexão</small></article>
+            <article><span>Alertas</span><strong class="warning">@alertCount</strong><small>últimos 7 dias</small></article>
+        </section>
+
+        @if (ProfessorDevice is not null)
+        {
+            <section class="professor-card" @onclick="() => OpenDevice(ProfessorDevice.Id)">
+                <div class="professor-icon"><LucideIcon Name="monitor-cog" Size="23" /></div>
+                <div class="professor-main"><span>Computador do Professor</span><strong>@ProfessorDevice.Hostname</strong><small>@Fallback(ProfessorDevice.Os) · @Fallback(ProfessorDevice.LastIp)</small></div>
+                <div class="professor-metric"><span>CPU</span><strong>@Percent(ProfessorDevice.CpuPercent)</strong></div>
+                <div class="professor-metric"><span>RAM</span><strong>@Percent(ProfessorDevice.RamPercent)</strong></div>
+                <span class="status @(ProfessorDevice.Status.ToLowerInvariant())">@ProfessorDevice.Status</span>
+                <LucideIcon Name="chevron-right" Size="19" />
+            </section>
+        }
+
+        <section class="machines-panel">
+            <div class="panel-head"><div><h2>Máquinas dos Alunos</h2><span>@StudentDevices.Count equipamentos</span></div></div>
+            @if (PagedStudents.Count == 0)
+            {
+                <div class="empty">Nenhuma máquina encontrada.</div>
+            }
+            else
+            {
+                <div class="machine-list">
+                    @foreach (var device in PagedStudents)
+                    {
+                        <button class="machine-row" type="button" @onclick="() => OpenDevice(device.Id)">
+                            <div class="machine-name"><span class="machine-dot @(device.Status.ToLowerInvariant())"></span><div><strong>@device.Hostname</strong><small>@Fallback(device.LastIp)</small></div></div>
+                            <div><span>CPU</span><strong>@Percent(device.CpuPercent)</strong></div>
+                            <div><span>RAM</span><strong>@Percent(device.RamPercent)</strong></div>
+                            <div><span>Uptime</span><strong>@Uptime(device.UptimeSeconds)</strong></div>
+                            <span class="status @(device.Status.ToLowerInvariant())">@device.Status</span>
+                            <span class="details">Detalhes <LucideIcon Name="chevron-right" Size="16" /></span>
+                        </button>
+                    }
+                </div>
+                <div class="pagination">
+                    <button disabled="@(page <= 1)" @onclick="Prev">Anterior</button>
+                    <span>Página @(page) de @TotalPages</span>
+                    <button disabled="@(page >= TotalPages)" @onclick="Next">Próxima</button>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private readonly List<DeviceListItemDto> devices = [];
+    private bool loading = true;
+    private string? error;
+    private string? groupName;
+    private int alertCount;
+    private int page = 1;
+    private const int PageSize = 10;
+
+    private DeviceListItemDto? ProfessorDevice => devices.FirstOrDefault(x => string.Equals(x.Role, "Professor", StringComparison.OrdinalIgnoreCase));
+    private List<DeviceListItemDto> StudentDevices => devices.Where(x => !string.Equals(x.Role, "Professor", StringComparison.OrdinalIgnoreCase)).OrderBy(x => x.Hostname).ToList();
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(StudentDevices.Count / (double)PageSize));
+    private List<DeviceListItemDto> PagedStudents => StudentDevices.Skip((page - 1) * PageSize).Take(PageSize).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated || !string.Equals(informE.Desktop.Components.State.AppSession.Role, "Viewer", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("/login/viewer");
+            return;
+        }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true; error = null;
+        try
+        {
+            var groups = await Api.GetGroupsAsync();
+            var group = groups.OrderBy(x => x.Name).FirstOrDefault(x => x.Name.Contains("3", StringComparison.OrdinalIgnoreCase)) ?? groups.OrderBy(x => x.Name).FirstOrDefault();
+            if (group is null) { error = "Nenhum grupo disponível para demonstração."; return; }
+            groupName = group.Name;
+            var result = await Api.GetDevicesAsync(group.Id);
+            devices.Clear(); devices.AddRange(result.Itens);
+            try { alertCount = (await Api.GetAlertsAsync(7, 20, group.Id)).Total; } catch { alertCount = 0; }
+        }
+        catch (Exception ex) { error = Friendly(ex); }
+        finally { loading = false; }
+    }
+
+    private void OpenDevice(Guid id) => Navigation.NavigateTo($"/machines/{id}");
+    private void Prev(){ if(page > 1) page--; }
+    private void Next(){ if(page < TotalPages) page++; }
+    private static string Fallback(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private static string Percent(float? value) => value is null ? "—" : $"{Math.Round(value.Value)}%";
+    private static string Uptime(int? seconds){ if(seconds is null)return "—"; var s=TimeSpan.FromSeconds(seconds.Value); return s.Days>0?$"{s.Days}d {s.Hours}h":$"{s.Hours}h {s.Minutes}m"; }
+    private static string Friendly(Exception ex) => ex is HttpRequestException ? "Não foi possível conectar ao servidor." : ex.Message;
+}

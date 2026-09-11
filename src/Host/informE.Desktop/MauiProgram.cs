@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using informE.Desktop.Services;
+using ApexCharts;
 
 namespace informE.Desktop;
 
@@ -16,6 +17,7 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
+        builder.Services.AddApexChartsMaui();
 
         // Endereco do Host, em ordem de precedencia:
         //   1. variavel de ambiente INFORME_SERVER  (ex.: http://192.168.15.9:5020)

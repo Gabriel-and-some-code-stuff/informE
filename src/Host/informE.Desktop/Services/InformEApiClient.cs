@@ -73,12 +73,20 @@ public sealed class InformEApiClient(HttpClient http)
     // historico diario (grafico de barras) e os alertas recentes.
     public async Task<AlertsResponseDto> GetAlertsAsync(
         int dias = 7,
-        Guid? grupoId = null,
+        int recentes = 8,
+        Guid? groupId = null,
         CancellationToken ct = default)
     {
-        var route = grupoId is null ? $"alerts?dias={dias}" : $"alerts?dias={dias}&grupoId={grupoId}";
+        var query = new List<string>
+        {
+            $"dias={Math.Clamp(dias, 1, 90)}",
+            $"recentes={Math.Clamp(recentes, 1, 200)}"
+        };
 
-        return await GetAsync<AlertsResponseDto>(route, ct)
+        if (groupId is not null)
+            query.Add($"grupoId={groupId}");
+
+        return await GetAsync<AlertsResponseDto>($"alerts?{string.Join("&", query)}", ct)
             ?? new AlertsResponseDto(0, new Dictionary<string, int>(), [], []);
     }
 
@@ -129,6 +137,28 @@ public sealed class InformEApiClient(HttpClient http)
     {
         using var response = await SendAuthorizedAsync(
             HttpMethod.Patch, $"users/{id}/active", () => JsonContent.Create(new SetActiveRequestDto(ativo)), ct);
+        await EnsureSuccessAsync(response, ct);
+    }
+
+    // ── Perfil e sessoes do proprio usuario ──────────────────────────────────
+    // Portados da geracao (2): caem no mesmo maquinario de renovacao automatica
+    // de SendAuthorizedAsync, por isso vivem aqui e nao num clone sem refresh.
+    //
+    // NOTA: ChangeMyPasswordAsync (endpoint /users/me/password) NAO foi portado
+    // porque o servidor atual nao expõe essa rota e o DTO ChangeOwnPasswordRequestDto
+    // nao existe em informE.Contracts. A tela de Perfil (Profile.razor) nao oferece
+    // alteracao de senha; o metodo sera portado junto com o backend.
+
+    public async Task<UserListItemDto?> GetMeAsync(CancellationToken ct = default) =>
+        await GetAsync<UserListItemDto>("users/me", ct);
+
+    public async Task<IReadOnlyList<SessionListItemDto>> GetMySessionsAsync(CancellationToken ct = default) =>
+        await GetAsync<List<SessionListItemDto>>("users/me/sessions", ct) ?? [];
+
+    public async Task RevokeMySessionAsync(Guid sessionId, CancellationToken ct = default)
+    {
+        using var response = await SendAuthorizedAsync(
+            HttpMethod.Delete, $"users/me/sessions/{sessionId}", content: null, ct);
         await EnsureSuccessAsync(response, ct);
     }
 

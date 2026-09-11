@@ -1,0 +1,61 @@
+@page "/machines/{DeviceId:guid}"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Detalhes da Máquina | informE</PageTitle>
+
+<div class="viewer-detail-page">
+    <button class="back" @onclick="GoBack"><LucideIcon Name="arrow-left" Size="17" /> Voltar para Máquinas</button>
+    @if (loading)
+    {
+        <div class="state">Carregando equipamento...</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div class="state error">@error</div>
+    }
+    else if (detail is not null)
+    {
+        var d = detail.Equipamento;
+        var h = detail.Hardware;
+        <header class="device-hero">
+            <div><span class="eyebrow">Máquina monitorada</span><div class="title-row"><h1>@d.Hostname</h1><span class="status @(d.Status.ToLowerInvariant())">@d.Status</span></div><p>@Fallback(d.Os) · @Fallback(d.LastIp) · @(d.GroupName ?? "Sem grupo")</p></div>
+            <div class="readonly"><LucideIcon Name="eye" Size="16" /> Somente leitura</div>
+        </header>
+        <section class="metrics">
+            <article><span>CPU</span><strong>@Percent(d.CpuPercent)</strong><div><i style="width:@Width(d.CpuPercent)"></i></div></article>
+            <article><span>RAM</span><strong>@Percent(d.RamPercent)</strong><div><i style="width:@Width(d.RamPercent)"></i></div></article>
+            <article><span>Disco</span><strong>@Percent(d.DiskPercent)</strong><div><i style="width:@Width(d.DiskPercent)"></i></div></article>
+            <article><span>Uptime</span><strong>@Uptime(d.UptimeSeconds)</strong><small>Último sinal: @LastSeen(d.LastSeenAt)</small></article>
+        </section>
+        <section class="info-card">
+            <div class="card-head"><LucideIcon Name="info" Size="18" /><h2>Informações do Sistema</h2></div>
+            <div class="info-grid">
+                <div><span>Nome do computador</span><strong>@d.Hostname</strong></div>
+                <div><span>Grupo</span><strong>@(d.GroupName ?? "—")</strong></div>
+                <div><span>Endereço IP</span><strong>@Fallback(d.LastIp)</strong></div>
+                <div><span>Sistema operacional</span><strong>@Fallback(d.Os)</strong></div>
+                <div><span>Processador</span><strong>@Hardware(h?.Cpu)</strong></div>
+                <div><span>Memória instalada</span><strong>@(h?.RamGb is null ? "Não disponível" : $"{h.RamGb} GB")</strong></div>
+                <div><span>Armazenamento</span><strong>@(h?.StorageGb is null ? "Não disponível" : $"{h.StorageGb} GB")</strong></div>
+                <div><span>BIOS</span><strong>@Hardware(h?.Bios)</strong></div>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid DeviceId { get; set; }
+    private DeviceDetailDto? detail; private bool loading=true; private string? error;
+    protected override async Task OnParametersSetAsync(){ if(!informE.Desktop.Components.State.AppSession.IsAuthenticated || !string.Equals(informE.Desktop.Components.State.AppSession.Role,"Viewer",StringComparison.OrdinalIgnoreCase)){Navigation.NavigateTo("/login/viewer");return;} await LoadAsync(); }
+    private async Task LoadAsync(){loading=true;error=null;try{detail=await Api.GetDeviceAsync(DeviceId);}catch(Exception ex){error=ex is HttpRequestException?"Não foi possível conectar ao servidor.":ex.Message;}finally{loading=false;}}
+    private void GoBack()=>Navigation.NavigateTo("/machines");
+    private static string Fallback(string? v)=>string.IsNullOrWhiteSpace(v)?"—":v;
+    private static string Hardware(string? v)=>string.IsNullOrWhiteSpace(v)?"Não disponível":v;
+    private static string Percent(float? v)=>v is null?"—":$"{Math.Round(v.Value)}%";
+    private static string Width(float? v)=>$"{Math.Clamp(v??0,0,100):0}%";
+    private static string Uptime(int? s){if(s is null)return "—";var t=TimeSpan.FromSeconds(s.Value);return t.Days>0?$"{t.Days}d {t.Hours}h {t.Minutes}m":$"{t.Hours}h {t.Minutes}m";}
+    private static string LastSeen(DateTimeOffset? v){if(v is null)return "—";var d=DateTimeOffset.Now-v.Value;if(d.TotalMinutes<1)return "agora";if(d.TotalMinutes<60)return $"{(int)d.TotalMinutes} min atrás";if(d.TotalHours<24)return $"{(int)d.TotalHours}h atrás";return $"{(int)d.TotalDays}d atrás";}
+}

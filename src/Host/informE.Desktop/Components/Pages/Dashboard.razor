@@ -10,44 +10,27 @@
 <div class="dashboard-page @(IsViewer ? "viewer-dashboard" : "admin-dashboard")">
     <header class="dashboard-header">
         <div>
-            @if (IsViewer)
-            {
-                <div class="monitoring-status"><span></span>Monitoramento ativo</div>
-            }
-
             <h1>Dashboard</h1>
-
-            @if (IsViewer)
-            {
-                <p class="viewer-group">Grupo 3</p>
-            }
-            else
-            {
-                <p>Visão geral de monitoramento e operações</p>
-            }
+            <p>@(IsViewer ? "Visão do grupo associado à sua conta" : "Visão geral dos laboratórios e equipamentos")</p>
         </div>
 
-        @if (!IsViewer)
+        @if (!IsViewer && groups.Count > 0)
         {
             <div class="lab-filter-wrap">
                 <button class="lab-filter-button" type="button" @onclick="ToggleLabFilter">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M9 3h6M10 3v5l-5 10a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3L14 8V3" />
-                        <path d="M8 15h8" />
-                    </svg>
-                    <span>@LabFilterLabel</span>
-                    <span class="filter-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+                    <LucideIcon Name="filter" Size="17" />
+                    <span>@GroupFilterLabel</span>
+                    <LucideIcon Name="chevron-down" Size="15" />
                 </button>
-
-                @if (labFilterOpen)
+                @if (groupFilterOpen)
                 {
                     <div class="lab-filter-menu">
-                        <div class="filter-title">Filtrar laboratórios</div>
-                        @foreach (var lab in labs)
+                        <div class="filter-title">Filtrar grupos</div>
+                        @foreach (var group in groups)
                         {
                             <label>
-                                <input type="checkbox" checked="@lab.Selected" @onchange="e => ToggleLab(lab, e)" />
-                                <span>@lab.Name</span>
+                                <input type="checkbox" checked="@group.Selected" @onchange="e => ToggleGroup(group, e)" />
+                                <span>@group.Name</span>
                             </label>
                         }
                     </div>
@@ -56,487 +39,324 @@
         }
     </header>
 
-    <section class="metrics-grid @(IsViewer ? "viewer-metrics" : null)" aria-label="Indicadores principais">
-        @if (!IsViewer)
-        {
-            <article class="metric-card">
-                <div class="metric-top">
-                    <span class="metric-icon cyan"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v5l-5 10a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3L14 8V3"/><path d="M8 15h8"/></svg></span>
-                    <span class="metric-trend positive">↗ +0</span>
-                </div>
-                <strong>@AdminGroupCount</strong>
-                <span>Grupos</span>
-            </article>
-        }
-
-        <article class="metric-card">
-            <div class="metric-top">
-                <span class="metric-icon @(IsViewer ? "purple" : "cyan")"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
-                @if (!IsViewer)
-                {
-                    <span class="metric-trend positive">↗ +0</span>
-                }
-            </div>
-            <strong>@(IsViewer ? viewerTotal : AdminTotalMachines)</strong>
-            <span>Total de Máquinas</span>
-        </article>
-
-        <article class="metric-card">
-            <div class="metric-top">
-                <span class="metric-icon green"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m8.5 10.5 2.2 2.2 4.3-4.3"/></svg></span>
-                @if (!IsViewer)
-                {
-                    <span class="metric-trend positive">↗ +3</span>
-                }
-            </div>
-            <strong class="green-text">@(IsViewer ? viewerOnline : AdminOnlineMachines)</strong>
-            <span>@(IsViewer ? "Online" : "Máquinas Online")</span>
-        </article>
-
-        <article class="metric-card">
-            <div class="metric-top">
-                <span class="metric-icon gray"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m9.5 8.5 5 5M14.5 8.5l-5 5"/></svg></span>
-                @if (!IsViewer)
-                {
-                    <span class="metric-trend negative">↘ -2</span>
-                }
-            </div>
-            <strong class="gray-text">@(IsViewer ? viewerOffline : AdminOfflineMachines)</strong>
-            <span>@(IsViewer ? "Offline" : "Máquinas Offline")</span>
-        </article>
-
-        <article class="metric-card">
-            <div class="metric-top">
-                <span class="metric-icon warning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 16.5v.5"/></svg></span>
-                @if (!IsViewer)
-                {
-                    <span class="metric-trend negative">↘ -3</span>
-                }
-            </div>
-            <strong class="warning-text">@(IsViewer ? viewerAlertas : AdminActiveAlerts)</strong>
-            <span>Alertas Ativos</span>
-        </article>
-    </section>
-
-    @if (IsViewer)
+    @if (loading)
     {
-        <section class="viewer-content-grid">
-            <article class="panel incident-panel viewer-incidents">
-                <div class="history-heading">
-                    <div>
-                        <h2>Incidentes de Alerta</h2>
-                        <p>@viewerAlertas alertas no período · Clique nas barras para detalhar</p>
-                    </div>
-                    <div class="period-toggle" aria-label="Período do gráfico">
-                        <button type="button" class="@(period == 7 ? "active" : null)" @onclick="() => SetPeriod(7)">7 dias</button>
-                        <button type="button" class="@(period == 15 ? "active" : null)" @onclick="() => SetPeriod(15)">15 dias</button>
-                    </div>
-                </div>
+        <div class="dashboard-state"><span class="loader"></span><span>Carregando dados...</span></div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="dashboard-message error">
+            <LucideIcon Name="triangle-alert" Size="19" />
+            <div><strong>Não foi possível carregar o dashboard</strong><span>@errorMessage</span></div>
+            <button type="button" @onclick="LoadAsync">Tentar novamente</button>
+        </div>
+    }
+    else if (IsViewer)
+    {
+        <section class="metrics-grid viewer-metrics" aria-label="Resumo do grupo">
+            <article class="metric-card"><span class="metric-icon cyan"><LucideIcon Name="monitor" Size="20" /></span><strong>@FilteredDevices.Count</strong><span>Total</span></article>
+            <article class="metric-card"><span class="metric-icon green"><LucideIcon Name="circle-check" Size="20" /></span><strong class="green-text">@FilteredDevices.Count(x => x.Status == "Online")</strong><span>Online</span></article>
+            <article class="metric-card"><span class="metric-icon gray"><LucideIcon Name="circle-x" Size="20" /></span><strong class="gray-text">@FilteredDevices.Count(x => x.Status == "Offline")</strong><span>Offline</span></article>
+            <article class="metric-card"><span class="metric-icon warning"><LucideIcon Name="triangle-alert" Size="20" /></span><strong class="warning-text">@(alerts?.Total ?? 0)</strong><span>Alertas</span></article>
+        </section>
 
-                <div class="chart-wrap @(period == 15 ? "fifteen-days" : null)">
-                    <div class="chart-grid">
-                        <span>12</span><span>9</span><span>6</span><span>3</span><span>0</span>
-                    </div>
-                    <div class="bars">
-                        @foreach (var day in ViewerChart)
-                        {
-                            <button type="button" class="bar-column" title="Detalhar @day.Label" @onclick="() => ShowDetails(day)">
-                                <span class="bar-stack">
-                                    @if (day.Windows > 0) { <i class="windows" style="height:@BarHeight(day.Windows)"></i> }
-                                    @if (day.Network > 0) { <i class="network" style="height:@BarHeight(day.Network)"></i> }
-                                    @if (day.Agent > 0) { <i class="agent" style="height:@BarHeight(day.Agent)"></i> }
-                                    @if (day.Storage > 0) { <i class="storage" style="height:@BarHeight(day.Storage)"></i> }
-                                    @if (day.Offline > 0) { <i class="offline" style="height:@BarHeight(day.Offline)"></i> }
-                                    @if (day.Hardware > 0) { <i class="hardware" style="height:@BarHeight(day.Hardware)"></i> }
-                                </span>
-                                <small>@day.Label</small>
-                            </button>
-                        }
-                    </div>
-                </div>
+        <section class="viewer-group-banner panel">
+            <div><span>Seu laboratório</span><h2>@(groups.FirstOrDefault()?.Name ?? "Grupo")</h2><p>Acompanhe o status e a saúde das máquinas disponíveis para consulta.</p></div>
+            <button type="button" @onclick="OpenViewerMachines">Ver Máquinas <LucideIcon Name="arrow-right" Size="16" /></button>
+        </section>
 
-                <div class="chart-legend">
-                    <span><i class="hardware"></i>Hardware</span>
-                    <span><i class="storage"></i>Armazenamento</span>
-                    <span><i class="network"></i>Rede</span>
-                    <span><i class="offline"></i>Offline</span>
-                    <span><i class="agent"></i>Agente</span>
-                    <span><i class="windows"></i>Windows</span>
+        <section class="dashboard-grid viewer-grid">
+            <article class="panel viewer-machine-panel">
+                <div class="panel-heading"><div><h2>Máquinas do Grupo</h2><p>Status mais recente dos equipamentos</p></div><LucideIcon Name="monitor" Size="20" /></div>
+                <div class="viewer-machine-list">
+                    @foreach (var machine in FilteredDevices.OrderByDescending(x => x.Role == "Professor").ThenBy(x => x.Hostname).Take(7))
+                    {
+                        <button type="button" @onclick="() => OpenViewerMachine(machine.Id)">
+                            <span class="viewer-machine-name"><i class="@(machine.Status.ToLowerInvariant())"></i><strong>@machine.Hostname</strong><small>@machine.Role</small></span>
+                            <span>@(machine.CpuPercent is null ? "CPU —" : $"CPU {Math.Round(machine.CpuPercent.Value)}%")</span>
+                            <span>@(machine.RamPercent is null ? "RAM —" : $"RAM {Math.Round(machine.RamPercent.Value)}%")</span>
+                            <em>@machine.Status</em>
+                        </button>
+                    }
                 </div>
             </article>
-
-            <article class="panel recent-panel viewer-recent">
-                <div class="panel-title-row">
-                    <h2>Alertas Recentes</h2>
-                    <span class="pulse-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>
-                </div>
-
-                <div class="viewer-alert-list">
-                    <div class="viewer-alert-item">
-                        <div><strong>PC-12</strong><span class="alert-badge storage">CPU Alto</span></div>
-                        <span>83% utilização</span>
-                        <small>10 min atrás</small>
-                        <div class="hover-detail">Windows 11 Pro · 192.168.3.12 · Grupo 3</div>
-                    </div>
-                    <div class="viewer-alert-item">
-                        <div><strong>PC-08</strong><span class="alert-badge offline">Offline</span></div>
-                        <span>Sem sinal há 4h</span>
-                        <small>4h atrás</small>
-                        <div class="hover-detail">Último sinal às 08:14 · Grupo 3</div>
-                    </div>
-                </div>
-            </article>
-
-            <article class="panel quick-actions">
-                <h2>Ações Rápidas</h2>
-                <button class="primary-action" type="button">▣ <span>Ver Todas as Máquinas do Grupo</span></button>
-                <div class="group-status">
-                    <strong>✓ &nbsp; Grupo em operação</strong>
-                    <span>19 de 21 máquinas online · 1 alerta ativo</span>
+            <article class="panel health-panel">
+                <div class="panel-heading"><div><h2>Saúde do Grupo</h2><p>Máquinas online</p></div><LucideIcon Name="activity" Size="20" /></div>
+                <div class="health-list">
+                    <div><span><i class="healthy"></i>Saudável</span><strong>@OnlineDevices.Count(x => x.Health == "Saudavel")</strong></div>
+                    <div><span><i class="warning"></i>Aviso</span><strong>@OnlineDevices.Count(x => x.Health == "Aviso")</strong></div>
+                    <div><span><i class="critical"></i>Crítico</span><strong>@OnlineDevices.Count(x => x.Health == "Critico")</strong></div>
+                    <div><span><i class="error"></i>Erro</span><strong>@OnlineDevices.Count(x => x.Health == "Erro")</strong></div>
                 </div>
             </article>
         </section>
     }
     else
     {
-        <section class="admin-content-grid">
-            <article class="panel recent-panel admin-recent">
-                <div class="panel-title-row">
-                    <h2>Alertas Recentes</h2>
-                    <button type="button" class="link-button">⌁ &nbsp; Ver todos</button>
-                </div>
-
-                <div class="recent-list">
-                    @if (!FilteredAdminAlerts.Any())
-                    {
-                        <div class="empty-filter-state">Selecione pelo menos um laboratório para visualizar os alertas.</div>
-                    }
-                    else
-                    {
-                        @foreach (var alert in FilteredAdminAlerts)
-                        {
-                            <div class="recent-item">
-                                <div class="recent-main"><strong>@alert.Device</strong><span>@alert.Lab</span></div>
-                                <small>@alert.Message · @alert.Time</small>
-                                <div class="hover-detail">@alert.Detail</div>
-                            </div>
-                        }
-                    }
-                </div>
+        <section class="metrics-grid" aria-label="Indicadores principais">
+            <article class="metric-card">
+                <span class="metric-icon cyan"><LucideIcon Name="layers-3" Size="20" /></span>
+                <strong>@SelectedGroupCount</strong>
+                <span>Grupos</span>
             </article>
-
-            <article class="panel incident-panel admin-incidents">
-                <div class="history-heading">
-                    <div>
-                        <h2>Histórico de Alertas</h2>
-                        <p>@AdminChartAlertCount alertas no período · Clique nas barras para detalhar</p>
-                    </div>
-                    <div class="period-toggle" aria-label="Período do gráfico">
-                        <button type="button" class="@(period == 7 ? "active" : null)" @onclick="() => SetPeriod(7)">7 dias</button>
-                        <button type="button" class="@(period == 15 ? "active" : null)" @onclick="() => SetPeriod(15)">15 dias</button>
-                    </div>
-                </div>
-
-                <div class="chart-wrap @(period == 15 ? "fifteen-days" : null)">
-                    <div class="chart-grid">
-                        <span>12</span><span>9</span><span>6</span><span>3</span><span>0</span>
-                    </div>
-                    <div class="bars">
-                        @foreach (var day in AdminChart)
-                        {
-                            <button type="button" class="bar-column" title="Detalhar @day.Label" @onclick="() => ShowDetails(day)">
-                                <span class="bar-stack">
-                                    @if (day.Windows > 0) { <i class="windows" style="height:@BarHeight(day.Windows)"></i> }
-                                    @if (day.Network > 0) { <i class="network" style="height:@BarHeight(day.Network)"></i> }
-                                    @if (day.Agent > 0) { <i class="agent" style="height:@BarHeight(day.Agent)"></i> }
-                                    @if (day.Storage > 0) { <i class="storage" style="height:@BarHeight(day.Storage)"></i> }
-                                    @if (day.Offline > 0) { <i class="offline" style="height:@BarHeight(day.Offline)"></i> }
-                                    @if (day.Hardware > 0) { <i class="hardware" style="height:@BarHeight(day.Hardware)"></i> }
-                                </span>
-                                <small>@day.Label</small>
-                            </button>
-                        }
-                    </div>
-                </div>
-
-                <div class="chart-legend">
-                    <span><i class="hardware"></i>Hardware</span>
-                    <span><i class="storage"></i>Armazenamento</span>
-                    <span><i class="network"></i>Rede</span>
-                    <span><i class="offline"></i>Offline</span>
-                    <span><i class="agent"></i>Agente</span>
-                    <span><i class="windows"></i>Windows</span>
-                </div>
+            <article class="metric-card">
+                <span class="metric-icon cyan"><LucideIcon Name="monitor" Size="20" /></span>
+                <strong>@FilteredDevices.Count</strong>
+                <span>Total de Máquinas</span>
+            </article>
+            <article class="metric-card">
+                <span class="metric-icon green"><LucideIcon Name="circle-check" Size="20" /></span>
+                <strong class="green-text">@FilteredDevices.Count(x => x.Status == "Online")</strong>
+                <span>Máquinas Online</span>
+            </article>
+            <article class="metric-card">
+                <span class="metric-icon gray"><LucideIcon Name="circle-x" Size="20" /></span>
+                <strong class="gray-text">@FilteredDevices.Count(x => x.Status == "Offline")</strong>
+                <span>Máquinas Offline</span>
+            </article>
+            <article class="metric-card">
+                <span class="metric-icon warning"><LucideIcon Name="triangle-alert" Size="20" /></span>
+                <strong class="warning-text">@OnlineDevices.Count(x => IsProblem(x.Health))</strong>
+                <span>Com Problema</span>
             </article>
         </section>
+
+        <section class="dashboard-grid admin-grid">
+            <article class="panel group-chart-panel">
+                <div class="panel-heading"><div><h2>Saúde dos Grupos</h2><p>Online / Offline</p></div><LucideIcon Name="bar-chart-3" Size="20" /></div>
+                <ApexChart TItem="GroupChartPoint" Options="chartOptions" Height="320">
+                </ApexChart>
+            </article>
+
+            <article class="panel alerts-panel">
+                <div class="panel-heading"><div><h2>Alertas Recentes</h2><p>Últimas ocorrências</p></div><LucideIcon Name="bell-ring" Size="20" /></div>
+                @if (alerts is null || alerts.Recentes.Count == 0)
+                {
+                    <p class="empty-alerts">Nenhum alerta nos últimos 7 dias.</p>
+                }
+                else
+                {
+                    <div class="alerts-list">
+                        @foreach (var alert in alerts.Recentes.Take(5))
+                        {
+                            <div class="alert-row">
+                                <span class="alert-category @CategoryClass(alert.Categoria)">@CategoryLabel(alert.Categoria)</span>
+                                <div class="alert-content">
+                                    <strong>@alert.DeviceHostname</strong>
+                                    <small>@alert.Tipo · @FormatRelativeTime(alert.OcorridoEm)</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </article>
+        </section>
+
+        <article class="panel history-panel">
+            <div class="panel-heading"><div><h2>Histórico de Alertas (7 dias)</h2><p>Distribuição por categoria</p></div><LucideIcon Name="activity" Size="20" /></div>
+            <div class="history-chart">
+                <ApexChart TItem="GroupChartPoint" Options="historyChartOptions" Height="220">
+                </ApexChart>
+            </div>
+
+            @if (selectedHistoryDay is not null)
+            {
+                <div class="history-detail">
+                    <div class="history-detail-header">
+                        <strong>@selectedHistoryDay.Dia.ToString("dd/MM")</strong>
+                        <button type="button" @onclick="CloseHistoryDetails">×</button>
+                    </div>
+                    <div class="history-detail-body">
+                        @foreach (var cat in historyCategories)
+                        {
+                            var count = CategoryCount(selectedHistoryDay, cat.Key);
+                            if (count > 0)
+                            {
+                                <div class="history-category-row @cat.Css">
+                                    <span>@cat.Label</span>
+                                    <strong>@OccurrenceText(count)</strong>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </article>
     }
 </div>
 
-@if (selectedDay is not null)
-{
-    <div class="detail-backdrop" @onclick="CloseDetails">
-        <section class="detail-modal" @onclick:stopPropagation="true" aria-modal="true" role="dialog" aria-labelledby="detail-title">
-            <button class="detail-close" type="button" @onclick="CloseDetails" aria-label="Fechar">×</button>
-            <h2 id="detail-title">⚠ Detalhamento — @selectedDay.Label</h2>
-            <p>Incidentes por tipo neste dia:</p>
-
-            <div class="detail-list">
-                <div class="detail-row"><span><i class="hardware"></i>Hardware</span><strong class="hardware">@OccurrenceText(selectedDay.Hardware)</strong></div>
-                <div class="detail-row"><span><i class="storage"></i>Armazenamento</span><strong class="storage">@OccurrenceText(selectedDay.Storage)</strong></div>
-                <div class="detail-row"><span><i class="network"></i>Rede</span><strong class="network">@OccurrenceText(selectedDay.Network)</strong></div>
-                <div class="detail-row"><span><i class="offline"></i>Offline</span><strong class="offline">@OccurrenceText(selectedDay.Offline)</strong></div>
-                <div class="detail-row"><span><i class="agent"></i>Agente</span><strong class="agent">@OccurrenceText(selectedDay.Agent)</strong></div>
-                <div class="detail-row"><span><i class="windows"></i>Windows</span><strong class="windows">@OccurrenceText(selectedDay.Windows)</strong></div>
-            </div>
-        </section>
-    </div>
-}
-
 @code {
-    [Parameter]
-    public string? AccessType { get; set; }
+    [Parameter] public string? AccessType { get; set; }
 
-    private bool labFilterOpen;
-    private int period = 7;
-    private AlertDay? selectedDay;
+    private bool loading = true;
+    private string? errorMessage;
 
-    private bool IsViewer => AccessType?.Equals("viewer", StringComparison.OrdinalIgnoreCase) == true;
+    private bool IsViewer =>
+        string.Equals(informE.Desktop.Components.State.AppSession.Role, "Viewer", StringComparison.OrdinalIgnoreCase);
 
-    // ── Estado real do Viewer ────────────────────────────────────────────────
-    // O Dashboard do Admin segue com massa de demonstracao (decisao registrada
-    // em docs/pendencias-front-auditoria.md). O do Viewer e real, porque o
-    // escopo dele -- um laboratorio -- e o que o fluxo precisa provar.
-    private int viewerTotal;
-    private int viewerOnline;
-    private int viewerOffline;
-    private int viewerAlertas;
-    private string? viewerLab;
-    private List<AlertDay> viewerHistorico = [];
+    private readonly List<GroupFilterItem> groups = [];
+    private bool groupFilterOpen;
+    private readonly List<DeviceListItemDto> allDevices = [];
+    private AlertsResponseDto? alerts;
+
+    private AlertHistoryDayDto? selectedHistoryDay;
+
+    private ApexChartOptions<GroupChartPoint> chartOptions = new();
+    private ApexChartOptions<GroupChartPoint> historyChartOptions = new();
+
+    private readonly List<HistoryCategory> historyCategories = new()
+    {
+        new("Hardware", "hardware", "Hardware"),
+        new("Armazenamento", "storage", "Armazenamento"),
+        new("Rede", "network", "Rede"),
+        new("Windows", "windows", "Windows"),
+        new("Agente", "agent", "Agente"),
+        new("Offline", "offline", "Offline")
+    };
+
+    private List<DeviceListItemDto> FilteredDevices =>
+        groups.Where(g => g.Selected).Any()
+            ? allDevices.Where(d => groups.Any(g => g.Selected && string.Equals(g.Name, d.GroupName, StringComparison.OrdinalIgnoreCase))).ToList()
+            : allDevices;
+
+    private List<DeviceListItemDto> OnlineDevices => FilteredDevices.Where(x => x.Status == "Online").ToList();
+
+    private int SelectedGroupCount => groups.Count(g => g.Selected);
+
+    private string GroupFilterLabel =>
+        groups.Count(g => g.Selected) == 0 ? "Todos os grupos" : $"{groups.Count(g => g.Selected)} selecionado(s)";
+
+    private static bool IsProblem(string health) => health is "Aviso" or "Critico" or "Erro";
+
+    private static string CategoryClass(string category) => category.ToLowerInvariant() switch
+    {
+        "hardware" => "hardware",
+        "armazenamento" => "storage",
+        "rede" => "network",
+        "windows" => "windows",
+        "agente" => "agent",
+        "offline" => "offline",
+        _ => "default"
+    };
+
+    private static string CategoryLabel(string category) => category switch
+    {
+        "Armazenamento" => "Armazenamento",
+        "Hardware" => "Hardware",
+        "Rede" => "Rede",
+        "Windows" => "Windows",
+        "Agente" => "Agente",
+        "Offline" => "Offline",
+        _ => category
+    };
+
+    private static string AlertLabel(AlertListItemDto alert) => $"{CategoryLabel(alert.Categoria)} · {alert.Tipo}";
+
+    private static string FormatRelativeTime(DateTimeOffset value)
+    {
+        var elapsed = DateTimeOffset.UtcNow - value.ToUniversalTime();
+        if (elapsed.TotalMinutes < 1) return "agora";
+        if (elapsed.TotalHours < 1) return $"há {(int)elapsed.TotalMinutes} min";
+        if (elapsed.TotalDays < 1) return $"há {(int)elapsed.TotalHours} h";
+        if (elapsed.TotalDays < 7) return $"há {(int)elapsed.TotalDays} d";
+        return value.LocalDateTime.ToString("dd/MM HH:mm");
+    }
+
+    private void OpenHistoryDetails(AlertHistoryDayDto day) => selectedHistoryDay = day;
+    private void CloseHistoryDetails() => selectedHistoryDay = null;
+
+    private static int CategoryCount(AlertHistoryDayDto day, string category) =>
+        day.PorCategoria.TryGetValue(category, out var count) ? count : 0;
+
+    private static string HistorySegmentHeight(int count, int maxAlerts) =>
+        $"{Math.Max(5, count * 100d / Math.Max(1, maxAlerts)):0.#}%";
+
+    private static string OccurrenceText(int count) =>
+        count == 1 ? "1 ocorrência" : $"{count} ocorrências";
+
+    private void ToggleLabFilter() => groupFilterOpen = !groupFilterOpen;
+
+    private void ToggleGroup(GroupFilterItem group, ChangeEventArgs e) => group.Selected = e.Value is true;
+
+    private void OpenViewerMachines() => Navigation.NavigateTo("/machines");
+
+    private void OpenViewerMachine(Guid deviceId) => Navigation.NavigateTo($"/machines/{deviceId}");
 
     protected override async Task OnInitializedAsync()
     {
-        if (!IsViewer)
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+        {
+            Navigation.NavigateTo(IsViewer ? "/login/viewer" : "/login/admin");
             return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        errorMessage = null;
 
         try
         {
-            // 1. Qual e o meu laboratorio.
-            //
-            // /groups ja vem ESCOPADO pelo servidor: um Viewer recebe apenas os
-            // grupos de que e dono (Group.OwnerId). A tela nao filtra nada --
-            // se filtrasse, bastaria burlar o filtro para ver o parque todo.
-            var meus = await Api.GetGroupsAsync();
-            var lab = meus.FirstOrDefault();
-
-            if (lab is null)
+            if (IsViewer)
             {
-                // Viewer sem laboratorio atribuido: estado honesto, nao zero
-                // disfarcado de "tudo bem".
-                viewerLab = null;
-                return;
+                var viewerGroup = (await Api.GetGroupsAsync()).FirstOrDefault();
+                if (viewerGroup is null)
+                {
+                    errorMessage = "Nenhum grupo associado à sua conta.";
+                    return;
+                }
+
+                groups.Add(new GroupFilterItem(viewerGroup.Id, viewerGroup.Name, true));
+
+                var viewerResult = await Api.GetDevicesAsync(viewerGroup.Id);
+                allDevices.AddRange(viewerResult.Itens);
+
+                try { alerts = await Api.GetAlertsAsync(dias: 7, recentes: 4, groupId: viewerGroup.Id); }
+                catch { alerts = new AlertsResponseDto(0, new Dictionary<string, int>(), [], []); }
+            }
+            else
+            {
+                var apiGroups = await Api.GetGroupsAsync();
+                groups.AddRange(apiGroups.Select(g => new GroupFilterItem(g.Id, g.Name, true)));
+
+                var result = await Api.GetDevicesAsync();
+                allDevices.AddRange(result.Itens);
+
+                alerts = await Api.GetAlertsAsync(dias: 7, recentes: 4);
             }
 
-            viewerLab = lab.Name;
-
-            // 2. Maquinas do laboratorio. O resumo vem calculado do servidor.
-            var equipamentos = await Api.GetDevicesFiltradosAsync(lab.Id);
-            viewerTotal = equipamentos.Resumo.Total;
-            viewerOnline = equipamentos.Resumo.Online;
-            viewerOffline = equipamentos.Resumo.Offline;
-
-            // 3. Alertas do laboratorio, na janela que a tela esta mostrando.
-            var alertas = await Api.GetAlertsAsync(period, lab.Id);
-            viewerAlertas = alertas.Total;
-            viewerHistorico = ConverterHistorico(alertas);
+            ConfigureChart();
+            ConfigureHistoryChart();
         }
-        catch (informE.Desktop.Services.InformEApiException ex) when (ex.StatusCode == 401)
+        catch (HttpRequestException)
         {
-            Navigation.NavigateTo("/login", replace: true);
+            errorMessage = "O informE.Server não respondeu em https://localhost:5021.";
         }
-        catch (Exception)
+        catch (informE.Desktop.Services.InformEApiException ex)
         {
-            // Dashboard com dado velho e melhor que dashboard que nao abre: os
-            // valores ficam em zero e o grafico cai na massa de reserva.
+            errorMessage = ex.Message;
         }
-    }
-
-    // As 6 faixas do /alerts na ordem que o record AlertDay espera. A ordem
-    // importa e nao e alfabetica -- e a ordem das cores do grafico.
-    private static List<AlertDay> ConverterHistorico(AlertsResponseDto alertas) =>
-        [.. alertas.Historico.Select(d => new AlertDay(
-            d.Dia.ToString("ddd", new System.Globalization.CultureInfo("pt-BR")),
-            Faixa(d, "Hardware"),
-            Faixa(d, "Armazenamento"),
-            Faixa(d, "Rede"),
-            Faixa(d, "Offline"),
-            Faixa(d, "Agente"),
-            Faixa(d, "Windows")))];
-
-    private static int Faixa(AlertHistoryDayDto dia, string nome) =>
-        dia.PorCategoria.TryGetValue(nome, out var quantidade) ? quantidade : 0;
-
-    private readonly List<LabOption> labs =
-    [
-        new("Laboratório 1", "Lab 1", true, 21, 20, 2),
-        new("Laboratório 2", "Lab 2", true, 22, 21, 3),
-        new("Laboratório 3", "Lab 3", true, 20, 18, 1),
-        new("Laboratório 4", "Lab 4", true, 21, 19, 4),
-        new("Biblioteca", "Biblioteca", true, 21, 20, 2)
-    ];
-
-    private readonly List<RecentAlert> adminAlerts =
-    [
-        new("PC-03", "Lab 2", "CPU Alto", "2 min atrás", "CPU 91% · Windows 11 Pro · 192.168.2.13"),
-        new("BIB-PC-02", "Biblioteca", "CPU Alto", "10 min atrás", "CPU 86% · Windows 11 Pro · 192.168.2.22"),
-        new("PC-15", "Lab 4", "Disco Cheio", "15 min atrás", "Armazenamento 94% · Windows 10 Pro · 192.168.4.15"),
-        new("PROF-LAB4", "Lab 4", "RAM Alta", "23 min atrás", "RAM 88% · Windows 11 Pro · 192.168.4.2")
-    ];
-
-    private int AdminGroupCount => labs.Count(x => x.Selected);
-    private int AdminTotalMachines => labs.Where(x => x.Selected).Sum(x => x.TotalMachines);
-    private int AdminOnlineMachines => labs.Where(x => x.Selected).Sum(x => x.OnlineMachines);
-    private int AdminOfflineMachines => AdminTotalMachines - AdminOnlineMachines;
-    private int AdminActiveAlerts => labs.Where(x => x.Selected).Sum(x => x.ActiveAlerts);
-
-    private IEnumerable<RecentAlert> FilteredAdminAlerts =>
-        adminAlerts.Where(alert => labs.Any(lab => lab.Selected && lab.Code == alert.Lab));
-
-    private double AdminFilterRatio => AdminGroupCount == 0 ? 0 : AdminActiveAlerts / 12d;
-
-    private int AdminChartAlertCount =>
-        AdminGroupCount == 0 ? 0 : (int)Math.Round((period == 7 ? 48 : 96) * AdminFilterRatio);
-
-    private List<AlertDay> AdminChart => FilterAdminChart(period == 7 ? AdminSevenDays : AdminFifteenDays);
-    // Historico real quando o servidor respondeu; a massa fixa e so reserva
-    // para o caso de a chamada falhar -- assim a tela nunca fica vazia numa
-    // demonstracao, mas tambem nao inventa dado quando existe o verdadeiro.
-    private List<AlertDay> ViewerChart =>
-        viewerHistorico.Count > 0
-            ? viewerHistorico
-            : (period == 7 ? ViewerSevenDays : ViewerFifteenDays);
-
-    private string LabFilterLabel
-    {
-        get
+        finally
         {
-            var count = labs.Count(x => x.Selected);
-
-            if (count == labs.Count)
-                return "Todos os Laboratórios";
-
-            if (count == 0)
-                return "Nenhum laboratório";
-
-            return count == 1 ? "1 laboratório selecionado" : $"{count} laboratórios selecionados";
+            loading = false;
         }
     }
 
-    private void ToggleLabFilter() => labFilterOpen = !labFilterOpen;
+    private void ConfigureChart() => chartOptions = new ApexChartOptions<GroupChartPoint>();
 
-    private void ToggleLab(LabOption lab, ChangeEventArgs args)
+    private void ConfigureHistoryChart() => historyChartOptions = new ApexChartOptions<GroupChartPoint>();
+
+    private sealed class GroupFilterItem(Guid id, string name, bool selected)
     {
-        lab.Selected = bool.TryParse(args.Value?.ToString(), out var value) && value;
-        selectedDay = null;
-    }
-
-    private List<AlertDay> FilterAdminChart(List<AlertDay> source)
-    {
-        if (AdminGroupCount == labs.Count)
-            return source;
-
-        if (AdminGroupCount == 0)
-            return source.Select(day => new AlertDay(day.Label, 0, 0, 0, 0, 0, 0)).ToList();
-
-        var ratio = AdminFilterRatio;
-
-        return source.Select(day => new AlertDay(
-            day.Label,
-            ScaleChartValue(day.Hardware, ratio),
-            ScaleChartValue(day.Storage, ratio),
-            ScaleChartValue(day.Network, ratio),
-            ScaleChartValue(day.Offline, ratio),
-            ScaleChartValue(day.Agent, ratio),
-            ScaleChartValue(day.Windows, ratio)
-        )).ToList();
-    }
-
-    private static int ScaleChartValue(int value, double ratio)
-    {
-        if (value == 0 || ratio <= 0)
-            return 0;
-
-        return Math.Max(1, (int)Math.Round(value * ratio, MidpointRounding.AwayFromZero));
-    }
-
-    private void SetPeriod(int value)
-    {
-        period = value;
-        selectedDay = null;
-    }
-
-    private void ShowDetails(AlertDay day) => selectedDay = day;
-    private void CloseDetails() => selectedDay = null;
-
-    private static string BarHeight(int value) => $"{value * 13}px";
-    private static string OccurrenceText(int value) => $"{value} {(value == 1 ? "ocorrência" : "ocorrências")}";
-
-    private static readonly List<AlertDay> AdminSevenDays =
-    [
-        new("Dom", 0, 0, 0, 0, 0, 0),
-        new("Seg", 0, 0, 1, 0, 2, 3),
-        new("Ter", 0, 0, 0, 0, 0, 2),
-        new("Qua", 5, 3, 0, 0, 2, 1),
-        new("Qui", 0, 1, 0, 0, 0, 2),
-        new("Sex", 4, 0, 0, 0, 0, 0),
-        new("Sáb", 0, 0, 0, 0, 0, 0)
-    ];
-
-    private static readonly List<AlertDay> ViewerSevenDays =
-    [
-        new("Dom", 0, 0, 0, 0, 0, 0),
-        new("Seg", 2, 0, 0, 3, 0, 0),
-        new("Ter", 0, 3, 0, 0, 3, 0),
-        new("Qua", 5, 0, 3, 0, 0, 0),
-        new("Qui", 0, 0, 0, 0, 0, 2),
-        new("Sex", 3, 2, 0, 0, 0, 0),
-        new("Sáb", 0, 0, 0, 0, 0, 0)
-    ];
-
-    private static readonly List<AlertDay> AdminFifteenDays =
-    [
-        new("16", 1, 0, 0, 0, 0, 1), new("17", 0, 1, 0, 0, 1, 1), new("18", 2, 0, 1, 0, 0, 1),
-        new("19", 1, 1, 0, 1, 0, 2), new("20", 0, 0, 1, 0, 2, 1), new("21", 3, 1, 0, 0, 0, 1),
-        new("22", 1, 2, 0, 0, 1, 1), new("23", 0, 1, 1, 1, 0, 2), new("24", 2, 0, 0, 0, 1, 1),
-        new("25", 1, 1, 0, 0, 2, 1), new("26", 4, 1, 0, 0, 1, 1), new("27", 0, 2, 1, 0, 0, 2),
-        new("28", 2, 0, 0, 1, 1, 1), new("29", 1, 1, 0, 0, 1, 2), new("30", 3, 0, 1, 0, 0, 1)
-    ];
-
-    private static readonly List<AlertDay> ViewerFifteenDays =
-    [
-        new("16", 1, 0, 0, 0, 1, 0), new("17", 0, 1, 0, 1, 0, 1), new("18", 1, 0, 1, 0, 1, 0),
-        new("19", 2, 1, 0, 0, 0, 0), new("20", 0, 0, 1, 1, 1, 0), new("21", 1, 1, 0, 0, 0, 1),
-        new("22", 1, 0, 0, 1, 1, 0), new("23", 0, 1, 1, 0, 0, 1), new("24", 2, 0, 0, 0, 1, 0),
-        new("25", 1, 1, 0, 0, 0, 1), new("26", 2, 0, 1, 0, 0, 1), new("27", 0, 1, 0, 1, 1, 0),
-        new("28", 1, 0, 0, 0, 1, 1), new("29", 1, 1, 0, 0, 0, 1), new("30", 2, 0, 0, 1, 0, 1)
-    ];
-
-    private sealed record RecentAlert(string Device, string Lab, string Message, string Time, string Detail);
-
-    private sealed class LabOption(
-        string name,
-        string code,
-        bool selected,
-        int totalMachines,
-        int onlineMachines,
-        int activeAlerts)
-    {
+        public Guid Id { get; } = id;
         public string Name { get; } = name;
-        public string Code { get; } = code;
         public bool Selected { get; set; } = selected;
-        public int TotalMachines { get; } = totalMachines;
-        public int OnlineMachines { get; } = onlineMachines;
-        public int ActiveAlerts { get; } = activeAlerts;
     }
 
-    private sealed record AlertDay(string Label, int Hardware, int Storage, int Network, int Offline, int Agent, int Windows);
+    private sealed record GroupChartPoint(string Group, int Online, int Offline);
+
+    private sealed record HistoryCategory(string Key, string Css, string Label);
 }

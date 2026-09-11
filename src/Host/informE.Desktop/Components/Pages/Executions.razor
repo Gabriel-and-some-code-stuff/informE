@@ -16,7 +16,7 @@
         </div>
 
         <button class="new-execution-button" type="button" @onclick="OpenNewExecution">
-            <span class="btn-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span>＋</span>
             Nova Execução
         </button>
     </header>
@@ -89,10 +89,7 @@
                                 <td>@FormatTime(item.ExecutedAt)</td>
                                 <td>@FormatDuration(item.DurationMs)</td>
                                 <td>
-                                    @* Estava fixo em "—", ignorando o criadoPor que a API
-                                       passou a devolver. A coluna existia sem nunca mostrar
-                                       nada. *@
-                                    <span class="responsible">@(item.CriadoPor ?? "—")</span>
+                                    <span class="responsible">@(string.IsNullOrWhiteSpace(item.CriadoPor) ? "—" : item.CriadoPor)</span>
                                 </td>
                                 <td class="row-actions">
                                     @if (!string.IsNullOrWhiteSpace(item.Output))
@@ -132,15 +129,11 @@
                     <label for="execution-group">Laboratório</label>
                     <select id="execution-group" value="@selectedGroupId" @onchange="OnGroupChangedAsync" disabled="@modalDataLoading">
                         <option value="">Selecione o laboratório</option>
-                        @* Maquina recem-registrada nasce SEM laboratorio (o agente
-                           nao sabe a qual lab pertence). Sem esta opcao ela era
-                           invisivel aqui: o select de dispositivo so abria depois de
-                           escolher um lab, e ela nao estava em nenhum. *@
-                        <option value="todos">Todas as máquinas (inclusive sem laboratório)</option>
                         @foreach (var group in groups)
                         {
                             <option value="@group.Id">@group.Name (@group.TotalDeDispositivos máquinas)</option>
                         }
+                        <option value="todos">Todas as máquinas (inclusive sem laboratório)</option>
                     </select>
                 </div>
 
@@ -150,8 +143,6 @@
                         <option value="">@(devicesLoading ? "Carregando máquinas..." : "Selecione o dispositivo")</option>
                         @if (AlvoEscolhido && !devicesLoading)
                         {
-                            @* "all" despacha para o GRUPO inteiro, o que so faz
-                               sentido quando um laboratorio de verdade foi escolhido. *@
                             @if (!TodasAsMaquinas)
                             {
                                 <option value="all">Todas as máquinas do laboratório</option>
@@ -184,26 +175,10 @@
                         <span class="schedule-label">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
                             Agendar execução
-                            <em class="schedule-soon">em breve</em>
                         </span>
 
-                        @*
-                            Desligado na origem, de propósito.
-
-                            O backend ACEITA o ScheduledAt e despacha na hora, ignorando o
-                            valor (item 7 de docs/pendencias-front-auditoria.md) — falta um
-                            BackgroundService que varra tarefas pendentes com horário no
-                            passado.
-
-                            Antes, o toggle abria os campos de data/hora e o botão Executar
-                            simplesmente ficava inerte: quem ligasse achava que o app tinha
-                            travado. Bloquear na entrada é honesto; bloquear na saída parece
-                            defeito.
-
-                            Para reativar quando o sweeper existir: apague o `disabled`.
-                        *@
-                        <label class="switch disabled" aria-label="Agendar execução — em breve">
-                            <input type="checkbox" @bind="scheduleEnabled" disabled />
+                        <label class="switch" aria-label="Agendar execução">
+                            <input type="checkbox" @bind="scheduleEnabled" />
                             <span></span>
                         </label>
                     </div>
@@ -247,7 +222,7 @@
             </div>
 
             <footer class="modal-footer">
-                <button class="execute-button" type="button" @onclick="SubmitExecutionAsync" disabled="@(submitting || modalDataLoading || scheduleEnabled)">
+                <button class="execute-button" type="button" @onclick="SubmitExecutionAsync" disabled="@(submitting || modalDataLoading)">
                     @if (scheduleEnabled)
                     {
                         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
@@ -291,24 +266,25 @@
     private bool modalDataLoading;
     private bool devicesLoading;
 
-    // "todos" = o parque inteiro que o papel permite ver, incluindo maquina sem
-    // laboratorio. Guid.TryParse nao serve para reconhecer essa opcao, por isso
-    // as duas propriedades.
     private const string TodosOsLabs = "todos";
 
     private bool TodasAsMaquinas => selectedGroupId == TodosOsLabs;
 
     private bool AlvoEscolhido => TodasAsMaquinas || Guid.TryParse(selectedGroupId, out _);
+
     private bool newExecutionOpen;
     private bool scheduleEnabled;
     private bool submitting;
     private string? pageError;
     private string? modalError;
+
     private string selectedGroupId = string.Empty;
     private string selectedDeviceId = string.Empty;
     private string selectedAction = string.Empty;
+
     private DateTime scheduledDate = DateTime.Today;
     private TimeOnly scheduledTime = TimeOnly.FromDateTime(DateTime.Now.AddMinutes(30));
+
     private Guid? cancelingTaskId;
     private ExecutionListItemDto? selectedLog;
 
@@ -408,7 +384,7 @@
             return;
         }
 
-        // Com "Todas as máquinas" nao existe grupo para despachar em bloco: e
+        // Com "Todas as máquinas" nao existe grupo para despachar em bloco:
         // obrigatorio escolher a maquina.
         var groupId = TodasAsMaquinas ? Guid.Empty : Guid.Parse(selectedGroupId);
 
@@ -438,8 +414,6 @@
                 modalError = error;
                 return;
             }
-
-            return;
         }
 
         var deviceIds = new List<Guid>();
@@ -552,9 +526,6 @@
         devicesLoading = true;
         try
         {
-            // Sem grupoId a API devolve o parque que o papel permite ver --
-            // inclusive maquina sem laboratorio, que e o caso da maquina
-            // recem-registrada.
             var result = TodasAsMaquinas
                 ? await Api.GetDevicesFiltradosAsync()
                 : await Api.GetDevicesFiltradosAsync(Guid.Parse(selectedGroupId));
@@ -592,32 +563,12 @@
 
     private static string StatusClass(string status) => status.ToLowerInvariant();
 
-    // Desenho do icone de cada status.
-    //
-    // Antes eram GLIFOS Unicode (✓ × ◔ ◷ •) apertados dentro de um circulo de
-    // 18px com borda de 2px. Como texto, cada um tinha tamanho optico e linha
-    // de base propios: o ✓ ficava alto, o × pequeno, e o ◔ era um circulo
-    // DENTRO de outro circulo. Lado a lado na tabela, nada alinhava.
-    //
-    // Agora sao SVG de traco no mesmo viewBox 24 e mesma espessura do resto do
-    // app, e o circulo com borda saiu -- o desenho ja carrega o significado.
-    //
-    // MarkupString e seguro aqui: o conteudo e uma constante deste arquivo,
-    // nunca dado de usuario.
     private static string StatusIconPath(string status) => status switch
     {
-        // Confirmado
         "Succeeded" => """<path d="m4 12.5 5 5L20 6.5"/>""",
-
-        // Falhou / cancelado -- o X e o mesmo, a COR e o que distingue (ver CSS)
         "Failed" or "Canceled" => """<path d="M6 6l12 12M18 6 6 18"/>""",
-
-        // Em andamento: arco aberto, sugere movimento
         "Running" => """<path d="M12 3a9 9 0 1 0 9 9"/>""",
-
-        // Aguardando: relogio
         "Queued" or "Pending" => """<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5l3.5 2"/>""",
-
         _ => """<circle cx="12" cy="12" r="4"/>"""
     };
 
@@ -634,10 +585,6 @@
             : $"{duration.Seconds}s";
     }
 
-    // Sessao expirada nao e erro para LER, e erro para AGIR: a renovacao
-    // automatica ja falhou (ver InformEApiClient.SendAuthorizedAsync), o
-    // AppSession ja foi limpo, e ficar numa tela vazia com um aviso nao da
-    // saida para ninguem. Volta para o login.
     private bool SessaoMorreu(informE.Desktop.Services.InformEApiException ex)
     {
         if (ex.StatusCode != 401)

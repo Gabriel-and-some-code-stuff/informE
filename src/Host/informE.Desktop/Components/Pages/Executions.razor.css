@@ -1,6 +1,6 @@
 .executions-page {
-    min-height: calc(100vh - 64px);
-    padding: 38px 38px 52px;
+    min-height: calc(100vh - 72px);
+    padding: 0;
     background: #080f1d;
     color: #f2f5fa;
     font-family: Inter, "Segoe UI", sans-serif;
@@ -32,7 +32,7 @@
     height: 42px;
     min-width: 150px;
     border: 0;
-    border-radius: 10px;
+    border-radius: 22px;
     background: #10c6f4;
     color: #07131e;
     display: flex;
@@ -54,7 +54,7 @@
 
 .executions-panel {
     border: 1px solid #29354a;
-    border-radius: 10px;
+    border-radius: 19px;
     background: #101827;
     overflow: hidden;
 }
@@ -129,26 +129,23 @@
     gap: 8px;
 }
 
-/* Sem borda e sem circulo: o icone e um SVG de traco, igual ao resto do app.
-   O circulo de 2px em volta de um glifo de 10px era o que fazia cada status
-   parecer de um tamanho diferente. */
 .status-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-}
-
-.status-icon svg {
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .status-pill-execution {
     min-width: 82px;
     height: 25px;
     border: 1px solid currentColor;
-    border-radius: 8px;
+    border-radius: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -254,7 +251,7 @@
     min-height: 58px;
     margin: 0 0 18px;
     padding: 10px 14px;
-    border-radius: 8px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     gap: 11px;
@@ -295,7 +292,7 @@
 
 .page-message button {
     border: 1px solid #435069;
-    border-radius: 6px;
+    border-radius: 10px;
     background: transparent;
     color: #d8dee8;
     padding: 6px 10px;
@@ -314,41 +311,14 @@
     backdrop-filter: blur(2px);
 }
 
-/* Cresce com a tela em vez de ficar preso em 520px.
-   Num monitor grande, um cartao de 520px no meio de uma pagina escura parecia
-   um dialogo perdido; agora ocupa espaco de verdade e o log fica legivel sem
-   rolagem horizontal. O `min` com 100% mantem o comportamento em tela pequena. */
-.execution-modal {
-    width: min(100%, 720px);
-    max-height: calc(100vh - 44px);
-    display: flex;
-    flex-direction: column;
-    border: 1px solid #344057;
-    border-radius: 10px;
-    background: #111a2a;
-    box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
-    overflow: hidden;
-}
-
-/* O log e o que mais precisa de area: saida de PowerShell tem linha longa. */
+.execution-modal,
 .log-modal {
-    width: min(100%, 1100px);
-    max-height: calc(100vh - 44px);
-    display: flex;
-    flex-direction: column;
+    width: min(100%, 520px);
     border: 1px solid #344057;
-    border-radius: 10px;
+    border-radius: 18px;
     background: #111a2a;
     box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
     overflow: hidden;
-}
-
-/* O corpo rola; cabecalho e rodape ficam fixos. Sem isto, modal alto empurrava
-   o botao Executar para fora da tela. */
-.execution-modal .modal-body,
-.log-modal .modal-body {
-    flex: 1;
-    overflow-y: auto;
 }
 
 .modal-header {
@@ -405,7 +375,7 @@
     width: 100%;
     height: 44px;
     border: 1px solid #3b4659;
-    border-radius: 8px;
+    border-radius: 14px;
     outline: 0;
     background: #1d2636;
     color: #d8dee8;
@@ -439,7 +409,7 @@
 
 .schedule-box {
     border: 1px solid #3a4558;
-    border-radius: 10px;
+    border-radius: 17px;
     background: #1c2535;
     padding: 16px;
     transition: border-color .2s ease;
@@ -492,7 +462,7 @@
 .switch span {
     position: absolute;
     inset: 0;
-    border-radius: 8px;
+    border-radius: 12px;
     background: #10192a;
     cursor: pointer;
     transition: .2s ease;
@@ -529,7 +499,7 @@
 .picker-input {
     height: 41px;
     border: 1px solid #465169;
-    border-radius: 8px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     overflow: hidden;
@@ -596,7 +566,7 @@
     margin-top: 12px;
     padding: 10px 11px;
     border: 1px solid rgba(255, 78, 88, .3);
-    border-radius: 6px;
+    border-radius: 10px;
     background: rgba(255, 78, 88, .07);
     color: #ff8f96;
     font-size: 10px;
@@ -613,7 +583,7 @@
 .execute-button,
 .secondary-button {
     height: 39px;
-    border-radius: 8px;
+    border-radius: 13px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -662,7 +632,7 @@
     padding: 17px;
     overflow: auto;
     border: 1px solid #313d52;
-    border-radius: 8px;
+    border-radius: 12px;
     background: #09111e;
     color: #b8c4d6;
     font: 11px/1.55 Consolas, "Courier New", monospace;
@@ -721,30 +691,4 @@
     .secondary-button {
         width: 100%;
     }
-}
-
-/* Agendamento desligado até existir o sweeper que despacha na hora marcada.
-   Ver o comentário no markup e o item 7 de docs/pendencias-front-auditoria.md. */
-
-.schedule-soon {
-    margin-left: 9px;
-    padding: 3px 8px;
-    border: 1px solid #283449;
-    border-radius: 999px;
-    color: #768197;
-    font-size: 10px;
-    font-style: normal;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    vertical-align: middle;
-}
-
-.switch.disabled {
-    opacity: .4;
-    cursor: not-allowed;
-}
-
-.switch.disabled input {
-    cursor: not-allowed;
 }

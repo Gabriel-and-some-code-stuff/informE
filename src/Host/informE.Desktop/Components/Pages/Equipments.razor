@@ -1,0 +1,271 @@
+@page "/equipments"
+@page "/equipamentos2"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Equipamentos | informE</PageTitle>
+
+<div class="equipment-page">
+    <header class="page-heading">
+        <div>
+            <h1>Equipamentos</h1>
+            <p>Gerenciamento de dispositivos monitorados</p>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="equipment-message error" role="alert">
+            <span>!</span>
+            <div>
+                <strong>Não foi possível carregar os equipamentos</strong>
+                <small>@errorMessage</small>
+            </div>
+            <button type="button" @onclick="LoadAsync">Tentar novamente</button>
+        </div>
+    }
+
+    <section class="summary-grid" aria-label="Resumo dos equipamentos">
+        <article class="summary-card">
+            <span class="summary-label">Total</span>
+            <div><strong>@summary.Total</strong><small> máquinas</small></div>
+        </article>
+        <article class="summary-card online-card">
+            <span class="summary-label"><span class="mini-dot online"></span> Online</span>
+            <div><strong>@summary.Online</strong><small>@Percent(summary.Online)%</small></div>
+        </article>
+        <article class="summary-card offline-card">
+            <span class="summary-label"><span class="mini-dot offline"></span> Offline</span>
+            <div><strong>@summary.Offline</strong><small>@Percent(summary.Offline)%</small></div>
+        </article>
+        <article class="summary-card health-card">
+            <span class="summary-label"><LucideIcon Name="triangle-alert" Size="15" /> Com problema</span>
+            <div><strong>@summary.ComProblema</strong><small> aviso, crítico ou erro</small></div>
+        </article>
+    </section>
+
+    <section class="filter-panel">
+        <label class="device-search">
+            <LucideIcon Name="search" Size="17" />
+            <input value="@searchText" @oninput="OnSearchInput" placeholder="Buscar por nome, IP ou sistema operacional..." />
+        </label>
+
+        <select value="@selectedGroupId" @onchange="OnGroupChangedAsync" aria-label="Filtrar por grupo">
+            <option value="">Todos os grupos</option>
+            @foreach (var group in groups.OrderBy(x => x.Name))
+            {
+                <option value="@group.Id">@group.Name</option>
+            }
+        </select>
+
+        <select value="@selectedStatus" @onchange="OnStatusChangedAsync" aria-label="Filtrar por conexão">
+            <option value="">Todas as conexões</option>
+            <option value="Online">Online</option>
+            <option value="Offline">Offline</option>
+        </select>
+    </section>
+
+    <section class="equipment-table-card">
+        <div class="table-count">@devices.Count dispositivos encontrados</div>
+
+        @if (loading)
+        {
+            <div class="loading-state"><span class="loader"></span><p>Carregando equipamentos...</p></div>
+        }
+        else if (devices.Count == 0)
+        {
+            <div class="empty-state">
+                <strong>Nenhum equipamento encontrado</strong>
+                <span>Tente alterar a busca ou os filtros.</span>
+            </div>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="equipment-table">
+                    <thead>
+                        <tr>
+                            <th>Dispositivo</th>
+                            <th>Grupo</th>
+                            <th>IP</th>
+                            <th>CPU</th>
+                            <th>RAM</th>
+                            <th>Disco</th>
+                            <th>Uptime</th>
+                            <th>Conexão</th>
+                            <th>Saúde</th>
+                            <th>Último sinal</th>
+                            <th class="details-column"><span class="sr-only">Detalhes</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var device in devices)
+                        {
+                            <tr class="device-row" @onclick="() => OpenDetails(device.Id)">
+                                <td>
+                                    <div class="device-name">
+                                        <strong>@device.Hostname</strong>
+                                        @if (device.Role == "Professor")
+                                        {
+                                            <span class="role-chip">Professor</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td><span class="group-chip">@(device.GroupName ?? "Sem grupo")</span></td>
+                                <td class="mono">@Fallback(device.LastIp)</td>
+                                <td>@FormatPercent(device.CpuPercent)</td>
+                                <td>@FormatPercent(device.RamPercent)</td>
+                                <td>@FormatPercent(device.DiskPercent)</td>
+                                <td>@FormatUptime(device.UptimeSeconds)</td>
+                                <td><span class="connection-pill @ConnectionClass(device.Status)"><i></i>@ConnectionLabel(device.Status)</span></td>
+                                <td><span class="health-pill @HealthClass(device.Health)"><i></i>@HealthLabel(device.Health)</span></td>
+                                <td>@FormatLastSeen(device.LastSeenAt)</td>
+                                <td class="details-cell">
+                                    <button class="details-button" type="button" @onclick:stopPropagation="true" @onclick="() => OpenDetails(device.Id)">
+                                        Detalhes
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    private readonly List<DeviceListItemDto> devices = [];
+    private readonly List<GroupListItemDto> groups = [];
+    private DeviceSummaryDto summary = new(0, 0, 0, 0);
+    private bool loading = true;
+    private string? errorMessage;
+    private string searchText = string.Empty;
+    private string selectedGroupId = string.Empty;
+    private string selectedStatus = string.Empty;
+    private CancellationTokenSource? searchCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login/admin");
+            return;
+        }
+
+        try
+        {
+            groups.AddRange(await Api.GetGroupsAsync());
+        }
+        catch
+        {
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        errorMessage = null;
+
+        try
+        {
+            Guid? groupId = Guid.TryParse(selectedGroupId, out var id) ? id : null;
+            var result = await Api.GetDevicesFiltradosAsync(
+                groupId,
+                string.IsNullOrWhiteSpace(selectedStatus) ? null : selectedStatus,
+                string.IsNullOrWhiteSpace(searchText) ? null : searchText.Trim());
+
+            devices.Clear();
+            devices.AddRange(result.Itens);
+            summary = result.Resumo;
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "O informE.Server não respondeu em https://localhost:5021.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OnGroupChangedAsync(ChangeEventArgs args)
+    {
+        selectedGroupId = args.Value?.ToString() ?? string.Empty;
+        await LoadAsync();
+    }
+
+    private async Task OnStatusChangedAsync(ChangeEventArgs args)
+    {
+        selectedStatus = args.Value?.ToString() ?? string.Empty;
+        await LoadAsync();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs args)
+    {
+        searchText = args.Value?.ToString() ?? string.Empty;
+        searchCts?.Cancel();
+        searchCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(300, searchCts.Token);
+            await LoadAsync();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void OpenDetails(Guid id) => Navigation.NavigateTo($"/equipments/{id}");
+
+    private int Percent(int value) => summary.Total == 0 ? 0 : (int)Math.Round(value * 100d / summary.Total);
+    private static string Fallback(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private static string FormatPercent(float? value) => value is null ? "—" : $"{Math.Round(value.Value)}%";
+
+    private static string FormatUptime(int? seconds)
+    {
+        if (seconds is null) return "—";
+        var span = TimeSpan.FromSeconds(seconds.Value);
+        return span.Days > 0 ? $"{span.Days}d {span.Hours}h" : $"{span.Hours}h {span.Minutes}m";
+    }
+
+    private static string FormatLastSeen(DateTimeOffset? value)
+    {
+        if (value is null) return "—";
+        var diff = DateTimeOffset.Now - value.Value;
+        if (diff.TotalMinutes < 1) return "agora";
+        if (diff.TotalMinutes < 60) return $"{Math.Max(1, (int)diff.TotalMinutes)} min atrás";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h atrás";
+        return $"{(int)diff.TotalDays}d atrás";
+    }
+
+    private static string ConnectionLabel(string status) => status switch { "Online" => "Online", "Offline" => "Offline", _ => "Desconhecido" };
+    private static string ConnectionClass(string status) => status.ToLowerInvariant();
+
+    private static string HealthLabel(string health) => health switch
+    {
+        "Saudavel" => "Saudável",
+        "Aviso" => "Aviso",
+        "Critico" => "Crítico",
+        "Erro" => "Erro",
+        _ => "Desconhecido"
+    };
+
+    private static string HealthClass(string health) => health switch
+    {
+        "Saudavel" => "healthy",
+        "Aviso" => "warning",
+        "Critico" => "critical",
+        "Erro" => "error",
+        _ => "unknown"
+    };
+}
