@@ -183,9 +183,9 @@
             devices.AddRange(result.Itens);
             summary = result.Resumo;
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            errorMessage = "O informE.Server não respondeu em https://localhost:5021.";
+            errorMessage = $"O informE.Server não respondeu em http://localhost:5020. Erro: {ex.Message}";
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {

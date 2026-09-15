@@ -1,4 +1,4 @@
-﻿# novo-agente.ps1 — gera o token de registro de uma maquina nova.
+# novo-agente.ps1 — gera o token de registro de uma maquina nova.
 #
 #   .\novo-agente.ps1                 gera o token e imprime o comando de la
 #   .\novo-agente.ps1 -Publicar       publica tambem o .exe em dist\agente
@@ -20,7 +20,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$raiz = $PSScriptRoot
+$raiz = Split-Path $PSScriptRoot -Parent
 
 function Passo($t) { Write-Host "==> $t" -ForegroundColor Cyan }
 

@@ -1,4 +1,4 @@
-﻿# informe.ps1 — sobe o informE inteiro numa maquina nova.
+# informe.ps1 — sobe o informE inteiro numa maquina nova.
 #
 #   powershell -ExecutionPolicy Bypass -File informe.ps1
 #
@@ -20,7 +20,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$raiz = $PSScriptRoot
+$raiz = Split-Path $PSScriptRoot -Parent
 
 function Passo($texto) { Write-Host "==> $texto" -ForegroundColor Cyan }
 function Ok($texto)    { Write-Host "    $texto" -ForegroundColor Green }
@@ -88,7 +88,7 @@ Passo 'Subindo o Postgres'
 # deixasse com o descritor aberto (o postgres, no caso do pg_ctl) prenderia
 # o ForEach-Object para sempre. Dot-source roda na MESMA sessao, sem pipe e
 # sem o custo de subir outro PowerShell.
-. (Join-Path $raiz 'start-local.ps1')
+. (Join-Path $PSScriptRoot 'start-local.ps1')
 
 if ($SoBanco) { exit 0 }
 

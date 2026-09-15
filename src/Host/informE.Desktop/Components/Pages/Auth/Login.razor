@@ -118,9 +118,9 @@
 
             Navigation.NavigateTo(accountIsViewer ? "/dashboard/viewer" : "/dashboard/admin");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            loginError = "Não foi possível conectar ao informE.Server em https://localhost:5021.";
+            loginError = $"Não foi possível conectar ao informE.Server em http://localhost:5020. Erro: {ex.Message}";
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {

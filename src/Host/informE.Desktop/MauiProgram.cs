@@ -21,7 +21,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton(new HttpClient
         {
-            BaseAddress = new Uri("https://localhost:5021/")
+            BaseAddress = new Uri("http://localhost:5020/")
         });
         builder.Services.AddSingleton<InformEApiClient>();
 

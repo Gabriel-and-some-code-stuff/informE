@@ -318,9 +318,9 @@
             executions.Clear();
             executions.AddRange(result.OrderByDescending(x => x.ExecutedAt));
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            pageError = "O informE.Server não respondeu em https://localhost:5021.";
+            pageError = $"O informE.Server não respondeu em http://localhost:5020. Erro: {ex.Message}";
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {

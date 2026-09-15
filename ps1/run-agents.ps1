@@ -1,4 +1,4 @@
-﻿# run-agents.ps1 — sobe N agentes na MESMA máquina, cada um como um Device distinto.
+# run-agents.ps1 — sobe N agentes na MESMA máquina, cada um como um Device distinto.
 # Uso: powershell -ExecutionPolicy Bypass -File run-agents.ps1 [-Count 3]
 #
 # Para que serve: provar execução simultânea sem precisar de N computadores.
@@ -39,7 +39,7 @@ if ($Count -lt 1 -or $Count -gt 9) {
     exit 1
 }
 
-$projeto = Join-Path $PSScriptRoot "src\Agent\informE.Agent.Worker"
+$projeto = Join-Path (Split-Path $PSScriptRoot -Parent) "src\Agent\informE.Agent.Worker"
 
 Write-Host "Autenticando em $ServerUrl como $Email..." -ForegroundColor Cyan
 

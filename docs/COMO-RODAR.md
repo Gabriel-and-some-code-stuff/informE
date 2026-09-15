@@ -283,3 +283,68 @@ Detalhes de porta, banco, escopo por papel, resolução de problemas do
 PostgreSQL e as armadilhas do PowerShell 5.1 estão em
 **`docs/ambiente-banco.md`**. A documentação da API roda em
 `https://localhost:5021/scalar/v1` com o servidor no ar.
+
+---
+
+## Rodar via Docker Compose (ambiente alternativo)
+
+Para quem prefere subir o banco **e** o servidor juntos em containers,
+sem depender do PostgreSQL instalado localmente.
+
+**Pré-requisitos:** Docker Desktop instalado e rodando.
+
+### Compose principal (Alpine / images menores)
+
+```bash
+docker compose -f docker-compose2.yml up
+```
+
+É o padrão recomendado (DNS explícito e imagens menores).
+
+---
+
+### Compose padrão (imagens Debian)
+
+```bash
+docker compose up
+```
+
+Sobe `informe-postgres` e `informe-server`. O servidor usa `dotnet watch run`
+com hot reload — qualquer mudança em `.cs` recompila automaticamente.
+
+- API disponível em: `http://localhost:5020`
+- Scalar (docs): `http://localhost:5020/scalar/v1`
+
+### Compose Alpine (imagens menores)
+
+Variante com `postgres:16-alpine` e `dotnet/sdk:10.0-alpine`. Ocupa
+**~465 MB** em vez de ~1,35 GB das imagens Debian.
+
+```bash
+docker compose -f docker-compose2.yml up
+```
+
+Na **primeira vez** leva mais tempo — o SDK Alpine precisa baixar os
+pacotes NuGet do zero. Da segunda em diante o cache entra em ação.
+
+> **Se aparecer `NU1301: Network unreachable`** ao restaurar pacotes:
+> já está corrigido no `docker-compose2.yml` com DNS explícito (`8.8.8.8`).
+> Caso persista, verifique se o Docker Desktop tem acesso à internet.
+
+### Parar tudo
+
+```bash
+docker compose down        # mantém o banco (volume sobrevive)
+docker compose down -v     # apaga tudo, incluindo dados do banco
+```
+
+### Observações
+
+- O servidor roda com o perfil `docker` do `launchSettings.json`
+  (HTTP puro, sem HTTPS — dev cert não funciona dentro de container).
+- Arquivos `obj/` e `bin/` gerados pelo container vão para `/tmp` dentro
+  do container e **não interferem** com o Visual Studio no host
+  (ver `Directory.Build.props`).
+- Para registrar agentes enquanto o compose está no ar, use
+  `ps1/novo-agente.ps1` normalmente — ele aponta para `http://localhost:5020`.
+
