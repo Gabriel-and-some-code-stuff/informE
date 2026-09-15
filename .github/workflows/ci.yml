@@ -15,13 +15,15 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet build informE.Agent.slnx -c Release --nologo
 
-  # ponytail: informE.Desktop (MAUI) fica de fora do CI por ora — o workload
-  # MAUI + windows-latest deixava o pipeline lento demais pro ritmo do time.
-  # Builda Server (que arrasta Contracts/Domain/Application/Infrastructure)
-  # + UI direto, sem passar pela .slnx inteira, e roda os testes. Isso já cobre
-  # tudo que não é MAUI. Pra voltar a validar o Desktop no CI: trocar runs-on
-  # pra windows-latest, restaurar o workload maui-windows e buildar
-  # informE.Host.slnx como antes (ver histórico do git deste arquivo).
+  # Builda Server (que arrasta Contracts/Domain/Application/Infrastructure) e
+  # roda os testes. Rápido, no ubuntu, e é o retorno que interessa em segundos.
+  #
+  # O passo "Build UI" foi REMOVIDO: ele compilava src/Host/informE.UI, que tem
+  # três arquivos e todos são do template — Component1.razor,
+  # ExampleJsInterop.cs e _Imports.razor. O CI ficava verde validando um
+  # Component1.razor enquanto o frontend de verdade (informE.Desktop, ~24
+  # arquivos) não era compilado por ninguém. Quem cobre o Desktop agora é o job
+  # build-desktop, abaixo.
   build-host:
     runs-on: ubuntu-latest
     steps:
@@ -33,12 +35,35 @@ jobs:
       - name: Build Server (Domain + Application + Infrastructure + Contracts)
         run: dotnet build src/Host/informE.Server/informE.Server.csproj -c Release --nologo
 
-      - name: Build UI
-        run: dotnet build src/Host/informE.UI/informE.UI.csproj -c Release --nologo
-
       # Reativado: estavam comentados e os 50 testes não rodavam em push nenhum.
       # Ambos verificados em Release antes de destravar (34 Domain + 16 Application).
       - name: Test
         run: |
           dotnet test tests/informE.Domain.Tests -c Release --nologo
           dotnet test tests/informE.Application.Tests -c Release --nologo
+
+  # O frontend, no Windows, porque MAUI exige.
+  #
+  # POR QUE VALE O CUSTO: sao ~4000 linhas de tela, e ate agora NENHUMA passava
+  # por CI -- o job build-host compilava o projeto de template no lugar. Um erro
+  # de compilacao no Desktop chegava so na maquina de quem fosse rodar, e no
+  # pior momento possivel.
+  #
+  # Job separado, e nao um passo dentro do build-host, de proposito: roda em
+  # paralelo, entao o retorno rapido do ubuntu continua chegando em ~45s mesmo
+  # quando este leva alguns minutos.
+  build-desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # Só o alvo Windows. `dotnet workload restore` traria android/ios/tizen
+      # tambem, que ninguem builda aqui e custam minutos de download.
+      - name: Instalar workload MAUI (Windows)
+        run: dotnet workload install maui-windows --skip-sign-check
+
+      - name: Build Desktop
+        run: dotnet build src/Host/informE.Desktop/informE.Desktop.csproj -c Release -f net10.0-windows10.0.19041.0 --nologo

@@ -13,7 +13,11 @@ public class User
 
     // "ID da conta: USR-0001" na tela de Meu Perfil. Mesma ideia do MachineTask.Code:
     // Guid é a chave, isto é o rótulo humano.
-    public string Code { get; set; } = string.Empty;
+    // `null!` e nao `string.Empty`: o valor vem do banco (sequence). O EF so
+    // OMITE a coluna do INSERT quando ve o sentinel de nao-preenchido, que
+    // para string e `null`. Com string.Empty ele mandava '' em toda linha e o
+    // indice unico rejeitava a segunda.
+    public string Code { get; set; } = null!;
 
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
@@ -33,28 +37,34 @@ public class User
 
     public User(string username, string email, string passwordHash, UserRole role)
     {
-        if (ValidateUsername(username))
-            Username = username;
+        // Os tres validadores LANCAM quando o valor e invalido — por isso a
+        // atribuicao e direta. Antes, ValidateEmail e ValidateRole devolviam
+        // `false` e o `if` simplesmente NAO atribuia: e-mail invalido virava
+        // string.Empty em silencio. Como `users.email` e UNIQUE e NOT NULL, o
+        // primeiro usuario ruim nascia sem e-mail (e sem conseguir logar) e o
+        // segundo estourava 23505 -> 500.
+        ValidateUsername(username);
+        Username = username;
 
-        if (ValidateEmail(email))
-            Email = email;
+        ValidateEmail(email);
+        Email = Normalizar(email);
 
-        if (ValidateRole(role))
-            Role = role;
+        ValidateRole(role);
+        Role = role;
 
         PasswordHash = passwordHash;
-        CreatedAt = DateTimeOffset.Now;
+        CreatedAt = DateTimeOffset.UtcNow;
     }
 
     // Criação dos métodos
 
     public void UpdateUsername(string username)
     {
-        if (ValidateUsername(username))
-            Username = username;
+        ValidateUsername(username);
+        Username = username;
     }
 
-    private static bool ValidateUsername(string username)
+    private static void ValidateUsername(string username)
     {
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("O nome de usuário não pode ser vazio.");
@@ -64,25 +74,46 @@ public class User
 
         if (!username.All(char.IsLetterOrDigit))
             throw new ArgumentException("O nome de usuário contém caracteres inválidos.");
-
-        return true;
     }
 
-    private static bool ValidateEmail(string email)
+    // Valida só o FORMATO. A restrição de domínio institucional (@cps.sp.gov.br)
+    // é da Application, não daqui: a lista de domínios permitidos vem de
+    // configuração e varia por instalação, e o Domain não lê configuração.
+    // Ver DominioDeEmailPolicy e AuthOptions.
+    // E-mail e guardado em minusculas e sem espaco nas pontas.
+    //
+    // O BUG QUE ISTO CONSERTA: a busca por e-mail era `u.Email == email`, exata
+    // e sensivel a caixa. Entao "admin@cps.sp.gov.br" logava e
+    // "Admin@cps.sp.gov.br" devolvia 401 -- a MESMA conta. Como teclado de
+    // celular e campo de WebView capitalizam a primeira letra sozinhos, o login
+    // funcionava ou nao dependendo de como a pessoa digitou. Chegou a ser
+    // relatado como "login hiper inconsistente", e era exatamente isso.
+    //
+    // A parte de dominio de um e-mail e insensivel a caixa por norma (RFC 5321),
+    // e ninguem espera que Admin@ seja outra conta que admin@. Normalizar na
+    // ESCRITA (aqui) e na LEITURA (UserRepository) fecha os dois lados: sem o
+    // lado da escrita, o indice unico de `users.email` aceitaria admin@ e Admin@
+    // como contas distintas.
+    private static string Normalizar(string email) =>
+        email.Trim().ToLowerInvariant();
+
+    private static void ValidateEmail(string email)
     {
-        return EmailRegex.IsMatch(email);
+        if (!EmailRegex.IsMatch(email))
+            throw new ArgumentException($"E-mail inválido: '{email}'.");
     }
 
-    private bool ValidateRole(UserRole role)
+    private static void ValidateRole(UserRole role)
     {
-        return Enum.IsDefined(typeof(UserRole), role);
+        if (!Enum.IsDefined(role))
+            throw new ArgumentException($"Papel {role} não existe.");
     }
 
     // Métodos de domínio
     public void UpdateEmail(string email)
     {
-        if (ValidateEmail(email))
-            Email = email;
+        ValidateEmail(email);
+        Email = Normalizar(email);
     }
 
     // Só troca o flag. A revogação das sessões ativas NÃO acontece aqui de
@@ -93,6 +124,14 @@ public class User
     public void Deactivate() => IsActive = false;
 
     public void Activate() => IsActive = true;
+
+    // Promoção/rebaixamento. Quem PODE fazer isso é decidido na Application
+    // (ChangeUserRoleUseCase) — o Domain só garante que o papel existe.
+    public void ChangeRole(UserRole role)
+    {
+        ValidateRole(role);
+        Role = role;
+    }
 
     // Recebe o hash já calculado — a responsabilidade de hashar é do IPasswordHasher na Application.
     public void ChangePassword(string newHash)

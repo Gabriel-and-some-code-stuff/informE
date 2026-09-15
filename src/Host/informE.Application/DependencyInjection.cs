@@ -13,11 +13,17 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<LoginUseCase>();
+        services.AddScoped<RefreshTokenUseCase>();
         services.AddScoped<CreateUserUseCase>();
+        services.AddScoped<UpdateUserProfileUseCase>();
         services.AddScoped<SetUserActiveUseCase>();
         services.AddScoped<RevokeSessionUseCase>();
+        services.AddScoped<ChangeUserRoleUseCase>();
+        services.AddScoped<RequestPasswordResetUseCase>();
+        services.AddScoped<ResetPasswordUseCase>();
 
         services.AddScoped<EnrollDeviceUseCase>();
+        services.AddScoped<CreateEnrollmentTokenUseCase>();
         services.AddScoped<RecordDeviceHeartbeatUseCase>();
 
         services.AddScoped<DispatchTaskUseCase>();

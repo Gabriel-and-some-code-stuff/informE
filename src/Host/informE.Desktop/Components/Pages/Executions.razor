@@ -1,0 +1,651 @@
+@page "/executions"
+@page "/execucoes"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Execuções | informE</PageTitle>
+
+<div class="executions-page">
+    <header class="executions-header">
+        <div>
+            <h1>Execuções</h1>
+            <p>Gerenciamento de execuções e automações</p>
+        </div>
+
+        <button class="new-execution-button" type="button" @onclick="OpenNewExecution">
+            <span>＋</span>
+            Nova Execução
+        </button>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(pageError))
+    {
+        <div class="page-message error" role="alert">
+            <span>!</span>
+            <div>
+                <strong>Não foi possível carregar as execuções</strong>
+                <small>@pageError</small>
+            </div>
+            <button type="button" @onclick="LoadPageAsync">Tentar novamente</button>
+        </div>
+    }
+
+    <section class="executions-panel" aria-label="Execuções recentes">
+        @if (loading)
+        {
+            <div class="loading-state">
+                <span class="loader"></span>
+                <p>Carregando execuções do servidor...</p>
+            </div>
+        }
+        else if (executions.Count == 0)
+        {
+            <div class="empty-state">
+                <strong>Nenhuma execução encontrada</strong>
+                <span>Quando uma ação for executada, ela aparecerá aqui.</span>
+            </div>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="executions-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Dispositivo</th>
+                            <th>Ação Executada</th>
+                            <th>Status</th>
+                            <th>Horário</th>
+                            <th>Duração</th>
+                            <th>Responsável</th>
+                            <th class="actions-column"><span class="sr-only">Ações</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in executions)
+                        {
+                            <tr>
+                                <td><strong class="execution-code">@item.Code</strong></td>
+                                <td><strong class="device-name">@item.DeviceHostname</strong></td>
+                                <td>
+                                    <span class="action-name">
+                                        <span class="terminal-icon">›_</span>
+                                        @item.ActionName
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="status-wrap @StatusClass(item.Status)">
+                                        <span class="status-icon">@StatusIcon(item.Status)</span>
+                                        <span class="status-pill-execution">@StatusLabel(item.Status)</span>
+                                    </span>
+                                </td>
+                                <td>@FormatTime(item.ExecutedAt)</td>
+                                <td>@FormatDuration(item.DurationMs)</td>
+                                <td>
+                                    <span class="responsible">@(string.IsNullOrWhiteSpace(item.CriadoPor) ? "—" : item.CriadoPor)</span>
+                                </td>
+                                <td class="row-actions">
+                                    @if (!string.IsNullOrWhiteSpace(item.Output))
+                                    {
+                                        <button class="log-button" type="button" @onclick="() => OpenLog(item)" title="Ver log da execução">
+                                            Ver log
+                                        </button>
+                                    }
+
+                                    @if (CanCancel(item.Status))
+                                    {
+                                        <button class="cancel-task-button" type="button" @onclick="() => CancelAsync(item)" disabled="@(cancelingTaskId == item.TaskId)" title="Cancelar execução">
+                                            @(cancelingTaskId == item.TaskId ? "…" : "×")
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@if (newExecutionOpen)
+{
+    <div class="modal-backdrop" @onclick="CloseNewExecution">
+        <section class="execution-modal" role="dialog" aria-modal="true" aria-labelledby="new-execution-title" @onclick:stopPropagation="true">
+            <header class="modal-header">
+                <h2 id="new-execution-title">Nova Execução Remota</h2>
+                <button class="close-modal" type="button" @onclick="CloseNewExecution" aria-label="Fechar">×</button>
+            </header>
+
+            <div class="modal-body">
+                <div class="form-field">
+                    <label for="execution-group">Laboratório</label>
+                    <select id="execution-group" value="@selectedGroupId" @onchange="OnGroupChangedAsync" disabled="@(modalDataLoading || presetDeviceLocked)">
+                        <option value="">Selecione o laboratório</option>
+                        @foreach (var group in groups)
+                        {
+                            <option value="@group.Id">@group.Name (@group.TotalDeDispositivos máquinas)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="execution-device">Dispositivo</label>
+                    <select id="execution-device" @bind="selectedDeviceId" disabled="@(modalDataLoading || devicesLoading || string.IsNullOrWhiteSpace(selectedGroupId) || presetDeviceLocked)">
+                        <option value="">@(devicesLoading ? "Carregando máquinas..." : "Selecione o dispositivo")</option>
+                        @if (!string.IsNullOrWhiteSpace(selectedGroupId) && !devicesLoading)
+                        {
+                            <option value="all">Todas as máquinas do laboratório</option>
+                            @foreach (var device in devices.OrderBy(x => x.Hostname))
+                            {
+                                <option value="@device.Id">@device.Hostname</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="execution-action">Ação</label>
+                    <select id="execution-action" @bind="selectedAction" disabled="@modalDataLoading">
+                        <option value="">Selecione a ação</option>
+                        @foreach (var action in actions)
+                        {
+                            <option value="@action.Kind">@action.DisplayName</option>
+                        }
+                    </select>
+                    @if (SelectedActionDefinition is not null)
+                    {
+                        <small class="action-description">@SelectedActionDefinition.Description</small>
+                    }
+                </div>
+
+                <div class="schedule-box @(scheduleEnabled ? "enabled" : null)">
+                    <div class="schedule-toggle-row">
+                        <span class="schedule-label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+                            Agendar execução
+                        </span>
+
+                        <label class="switch" aria-label="Agendar execução">
+                            <input type="checkbox" @bind="scheduleEnabled" />
+                            <span></span>
+                        </label>
+                    </div>
+
+                    @if (scheduleEnabled)
+                    {
+                        <div class="schedule-fields">
+                            <div class="picker-field">
+                                <label for="execution-date">Data</label>
+                                <div class="picker-input">
+                                    <input id="execution-date" type="date" min="@TodayForInput" @bind="scheduledDate" />
+                                    <button type="button" @onclick="ShowDatePickerAsync" aria-label="Abrir calendário">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="picker-field">
+                                <label for="execution-time">Horário</label>
+                                <div class="picker-input">
+                                    <input id="execution-time" type="time" @bind="scheduledTime" />
+                                    <button type="button" @onclick="ShowTimePickerAsync" aria-label="Abrir seletor de horário">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    }
+                </div>
+
+                @if (modalDataLoading)
+                {
+                    <div class="modal-inline-state"><span class="loader small"></span> Buscando ações e laboratórios...</div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(modalError))
+                {
+                    <div class="modal-error" role="alert">@modalError</div>
+                }
+            </div>
+
+            <footer class="modal-footer">
+                <button class="execute-button" type="button" @onclick="SubmitExecutionAsync" disabled="@(submitting || modalDataLoading)">
+                    @if (scheduleEnabled)
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+                        <span>@(submitting ? "Agendando..." : "Agendar")</span>
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7V5Z"/></svg>
+                        <span>@(submitting ? "Executando..." : "Executar")</span>
+                    }
+                </button>
+                <button class="secondary-button" type="button" @onclick="CloseNewExecution" disabled="@submitting">Cancelar</button>
+            </footer>
+        </section>
+    </div>
+}
+
+@if (selectedLog is not null)
+{
+    <div class="modal-backdrop" @onclick="CloseLog">
+        <section class="log-modal" role="dialog" aria-modal="true" aria-labelledby="log-title" @onclick:stopPropagation="true">
+            <header class="modal-header">
+                <div>
+                    <h2 id="log-title">Log @selectedLog.Code</h2>
+                    <p>@selectedLog.DeviceHostname · @selectedLog.ActionName</p>
+                </div>
+                <button class="close-modal" type="button" @onclick="CloseLog" aria-label="Fechar">×</button>
+            </header>
+            <pre>@selectedLog.Output</pre>
+        </section>
+    </div>
+}
+
+@code {
+    private readonly List<MachineActionDto> actions = [];
+    private readonly List<DeviceListItemDto> devices = [];
+    private readonly List<GroupListItemDto> groups = [];
+    private readonly List<ExecutionListItemDto> executions = [];
+
+    private bool loading = true;
+    private bool modalDataLoading;
+    private bool devicesLoading;
+    private bool newExecutionOpen;
+    private bool scheduleEnabled;
+    private bool submitting;
+    private string? pageError;
+    private string? modalError;
+    private string selectedGroupId = string.Empty;
+    private string selectedDeviceId = string.Empty;
+    private string selectedAction = string.Empty;
+    private DateTime scheduledDate = DateTime.Today;
+    private TimeOnly scheduledTime = TimeOnly.FromDateTime(DateTime.Now.AddMinutes(30));
+    private Guid? cancelingTaskId;
+    private ExecutionListItemDto? selectedLog;
+    private bool presetDeviceLocked;
+
+    private string TodayForInput => DateTime.Today.ToString("yyyy-MM-dd");
+    private MachineActionDto? SelectedActionDefinition => actions.FirstOrDefault(x => x.Kind == selectedAction);
+
+    private string? processedPresetQuery;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login/admin");
+            return;
+        }
+
+        await LoadPageAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+            return;
+
+        var currentQuery = new Uri(Navigation.Uri).Query;
+        if (string.Equals(processedPresetQuery, currentQuery, StringComparison.Ordinal))
+            return;
+
+        processedPresetQuery = currentQuery;
+        var query = ParseQuery();
+        if (query.TryGetValue("new", out var open) && open == "1")
+        {
+            query.TryGetValue("deviceId", out var deviceId);
+            query.TryGetValue("groupId", out var groupId);
+            query.TryGetValue("group", out var groupName);
+            await OpenNewExecutionWithPreset(deviceId, groupId, groupName);
+        }
+    }
+
+    private async Task LoadPageAsync()
+    {
+        loading = true;
+        pageError = null;
+
+        try
+        {
+            var result = await Api.GetExecutionsAsync();
+            executions.Clear();
+            executions.AddRange(result.OrderByDescending(x => x.ExecutedAt));
+        }
+        catch (HttpRequestException ex)
+        {
+            pageError = $"O informE.Server não respondeu em http://localhost:5020. Erro: {ex.Message}";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            pageError = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OpenNewExecution()
+    {
+        presetDeviceLocked = false;
+        await OpenNewExecutionWithPreset(null, null, null);
+    }
+
+    private async Task OpenNewExecutionWithPreset(string? presetDeviceId, string? presetGroupId, string? presetGroupName)
+    {
+        newExecutionOpen = true;
+        modalError = null;
+
+        modalDataLoading = true;
+        try
+        {
+            if (actions.Count == 0)
+            {
+                var actionResult = await Api.GetActionsAsync();
+                actions.Clear();
+                actions.AddRange(actionResult);
+            }
+
+            if (groups.Count == 0)
+            {
+                var groupResult = await Api.GetGroupsAsync();
+                groups.Clear();
+                groups.AddRange(groupResult);
+            }
+
+            GroupListItemDto? presetGroup = null;
+
+            if (Guid.TryParse(presetGroupId, out var parsedGroupId))
+                presetGroup = groups.FirstOrDefault(x => x.Id == parsedGroupId);
+
+            if (presetGroup is null && !string.IsNullOrWhiteSpace(presetGroupName))
+                presetGroup = groups.FirstOrDefault(x => string.Equals(x.Name, presetGroupName, StringComparison.OrdinalIgnoreCase));
+
+            if (presetGroup is not null)
+            {
+                selectedGroupId = presetGroup.Id.ToString();
+                devices.Clear();
+
+                var deviceResult = await Api.GetDevicesAsync(presetGroup.Id);
+                devices.AddRange(deviceResult.Itens);
+
+                if (Guid.TryParse(presetDeviceId, out var deviceId) && devices.Any(x => x.Id == deviceId))
+                    selectedDeviceId = deviceId.ToString();
+                presetDeviceLocked = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(selectedDeviceId) && Guid.TryParse(presetDeviceId, out var fallbackDeviceId))
+            {
+                var allDevices = await Api.GetDevicesAsync();
+                var match = allDevices.Itens.FirstOrDefault(x => x.Id == fallbackDeviceId);
+
+                if (match is not null)
+                {
+                    var group = groups.FirstOrDefault(x => string.Equals(x.Name, match.GroupName, StringComparison.OrdinalIgnoreCase));
+                    if (group is not null)
+                    {
+                        selectedGroupId = group.Id.ToString();
+                        var deviceResult = await Api.GetDevicesAsync(group.Id);
+                        devices.Clear();
+                        devices.AddRange(deviceResult.Itens);
+                        selectedDeviceId = match.Id.ToString();
+                        presetDeviceLocked = true;
+                    }
+                }
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            modalError = "A busca dos dados demorou mais que o esperado. Tente novamente.";
+        }
+        catch (HttpRequestException)
+        {
+            modalError = "Não foi possível buscar os dados do servidor.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            modalError = ex.Message;
+        }
+        finally
+        {
+            modalDataLoading = false;
+        }
+    }
+
+    private void CloseNewExecution()
+    {
+        if (submitting)
+            return;
+
+        newExecutionOpen = false;
+        modalError = null;
+        presetDeviceLocked = false;
+    }
+
+    private async Task SubmitExecutionAsync()
+    {
+        modalError = null;
+
+        if (!Guid.TryParse(selectedGroupId, out var groupId))
+        {
+            modalError = "Selecione um laboratório.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(selectedDeviceId))
+        {
+            modalError = "Selecione um dispositivo ou todas as máquinas do laboratório.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(selectedAction))
+        {
+            modalError = "Selecione uma ação para executar.";
+            return;
+        }
+
+        DateTimeOffset? scheduledAt = null;
+        if (scheduleEnabled)
+        {
+            if (!TryGetScheduledAt(out scheduledAt, out var error))
+            {
+                modalError = error;
+                return;
+            }
+
+        }
+
+        var deviceIds = new List<Guid>();
+        var groupIds = new List<Guid>();
+
+        if (selectedDeviceId == "all")
+        {
+            groupIds.Add(groupId);
+        }
+        else if (Guid.TryParse(selectedDeviceId, out var deviceId))
+        {
+            deviceIds.Add(deviceId);
+        }
+        else
+        {
+            modalError = "O dispositivo selecionado não é válido.";
+            return;
+        }
+
+        submitting = true;
+        try
+        {
+            await Api.DispatchAsync(new DispatchTaskRequestDto(selectedAction, deviceIds, groupIds, scheduledAt));
+            newExecutionOpen = false;
+            selectedGroupId = string.Empty;
+            selectedDeviceId = string.Empty;
+            devices.Clear();
+            selectedAction = string.Empty;
+            scheduleEnabled = false;
+            presetDeviceLocked = false;
+            await LoadPageAsync();
+        }
+        catch (HttpRequestException)
+        {
+            modalError = "O informE.Server não respondeu ao pedido de execução.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            modalError = ex.Message;
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private async Task CancelAsync(ExecutionListItemDto item)
+    {
+        cancelingTaskId = item.TaskId;
+        pageError = null;
+
+        try
+        {
+            await Api.CancelTaskAsync(item.TaskId);
+            await LoadPageAsync();
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            pageError = ex.Message;
+        }
+        catch (HttpRequestException)
+        {
+            pageError = "O servidor não respondeu ao pedido de cancelamento.";
+        }
+        finally
+        {
+            cancelingTaskId = null;
+        }
+    }
+
+    private async Task ShowDatePickerAsync() =>
+        await JS.InvokeVoidAsync("informEPickers.show", "execution-date");
+
+    private async Task ShowTimePickerAsync() =>
+        await JS.InvokeVoidAsync("informEPickers.show", "execution-time");
+
+    private void OpenLog(ExecutionListItemDto item) => selectedLog = item;
+    private void CloseLog() => selectedLog = null;
+
+    private bool TryGetScheduledAt(out DateTimeOffset? value, out string error)
+    {
+        value = null;
+        error = string.Empty;
+
+        var date = DateOnly.FromDateTime(scheduledDate);
+        var localDateTime = date.ToDateTime(scheduledTime);
+        var localOffset = new DateTimeOffset(localDateTime, TimeZoneInfo.Local.GetUtcOffset(localDateTime));
+
+        if (localOffset <= DateTimeOffset.Now)
+        {
+            error = "O agendamento precisa ser para uma data e horário futuros.";
+            return false;
+        }
+
+        value = localOffset;
+        return true;
+    }
+
+    private async Task OnGroupChangedAsync(ChangeEventArgs args)
+    {
+        selectedGroupId = args.Value?.ToString() ?? string.Empty;
+        selectedDeviceId = string.Empty;
+        devices.Clear();
+        modalError = null;
+
+        if (!Guid.TryParse(selectedGroupId, out var groupId))
+            return;
+
+        devicesLoading = true;
+        try
+        {
+            var result = await Api.GetDevicesAsync(groupId);
+            devices.AddRange(result.Itens);
+        }
+        catch (TaskCanceledException)
+        {
+            modalError = "A busca das máquinas demorou mais que o esperado. Tente novamente.";
+        }
+        catch (HttpRequestException)
+        {
+            modalError = "Não foi possível buscar as máquinas do laboratório.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            modalError = ex.Message;
+        }
+        finally
+        {
+            devicesLoading = false;
+        }
+    }
+
+    private Dictionary<string, string> ParseQuery()
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var query = new Uri(Navigation.Uri).Query.TrimStart('?');
+        if (string.IsNullOrWhiteSpace(query)) return result;
+
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pieces = part.Split('=', 2);
+            var key = Uri.UnescapeDataString(pieces[0]);
+            var value = pieces.Length > 1 ? Uri.UnescapeDataString(pieces[1].Replace('+', ' ')) : string.Empty;
+            result[key] = value;
+        }
+
+        return result;
+    }
+
+    private static bool CanCancel(string status) =>
+        status is "Pending" or "Queued" or "Running";
+
+    private static string StatusLabel(string status) => status switch
+    {
+        "Pending" => "Em fila",
+        "Queued" => "Em fila",
+        "Running" => "Executando",
+        "Succeeded" => "Concluído",
+        "Failed" => "Falhou",
+        "Canceled" => "Cancelado",
+        _ => status
+    };
+
+    private static string StatusClass(string status) => status.ToLowerInvariant();
+
+    private static string StatusIcon(string status) => status switch
+    {
+        "Succeeded" => "✓",
+        "Failed" => "×",
+        "Canceled" => "×",
+        "Running" => "◔",
+        "Queued" => "◷",
+        "Pending" => "◷",
+        _ => "•"
+    };
+
+    private static string FormatTime(DateTimeOffset value) => value.ToLocalTime().ToString("HH:mm:ss");
+
+    private static string FormatDuration(int? durationMs)
+    {
+        if (durationMs is null)
+            return "—";
+
+        var duration = TimeSpan.FromMilliseconds(durationMs.Value);
+        return duration.TotalMinutes >= 1
+            ? $"{(int)duration.TotalMinutes}m {duration.Seconds:D2}s"
+            : $"{duration.Seconds}s";
+    }
+}

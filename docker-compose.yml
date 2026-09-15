@@ -1,6 +1,9 @@
-# Postgres de desenvolvimento do informE. Sobe com: docker compose up -d
-# ponytail: só o banco; o Server roda via `dotnet run` no dev. Empacotar o Server
-# em container fica pra sprint de deploy, se precisar.
+# Ambiente de desenvolvimento do informE.
+# Sobe com: docker compose up
+#
+# Serviços:
+#   postgres — banco de dados (volume nomeado, sobrevive a `down`; some com `down -v`)
+#   server  — ASP.NET Core com dotnet watch (hot reload); depende do postgres saudável
 services:
   postgres:
     image: postgres:16
@@ -12,13 +15,34 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # Volume NOMEADO, gerenciado pelo Docker (vive no WSL2, nao no repositorio).
+      # Sobrevive a `docker compose down` e a reboot; so `down -v` apaga.
       - informe_pgdata:/var/lib/postgresql/data
-    # Healthcheck para o setup-dev.ps1 saber quando o banco aceita conexão.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U informe -d informe"]
       interval: 5s
       timeout: 3s
       retries: 10
 
+  server:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: informe-server
+    working_dir: /repo
+    volumes:
+      - .:/repo                        # monta o repo inteiro (watch detecta mudanças)
+      - nuget-cache:/root/.nuget       # cache de pacotes entre rebuilds
+    ports:
+      - "5020:5020"                    # HTTP — HTTPS exigiria montar o dev cert
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:5020;http://+:5021"
+      # Sobrescreve o Host=localhost do appsettings.json pelo nome do serviço no compose
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=informe;Username=informe;Password=informe_dev"
+    command: dotnet watch run --project src/Host/informE.Server --launch-profile docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   informe_pgdata:
+  nuget-cache:      # evita baixar os pacotes do zero a cada `docker compose up`

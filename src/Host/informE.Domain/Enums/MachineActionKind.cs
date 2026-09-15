@@ -10,6 +10,11 @@ namespace informE.Domain.Enums;
 // e argumento de ação é um modelo que ainda não existe — ver docs.
 public enum MachineActionKind
 {
+    // A mais inofensiva do catálogo: só LÊ e reporta, não altera nada na máquina.
+    // É a ação certa para demonstrar o ciclo completo (dispara -> executa -> volta
+    // com output) sem risco nenhum. Roda em segundos.
+    InformacoesDoSistema,
+
     LimpezaDeDisco,
     AtualizacaoWinGet,
     AtualizacaoWindows,

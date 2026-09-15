@@ -1,0 +1,46 @@
+@page "/settings"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+
+<PageTitle>Configurações | informE</PageTitle>
+
+<div class="settings-page">
+    <header>
+        <h1>Configurações</h1>
+        <p>Informações de segurança e da aplicação.</p>
+    </header>
+
+    <section class="settings-grid">
+        <article>
+            <div class="section-title">
+                <LucideIcon Name="shield-check" Size="20"/>
+                <div><h2>Segurança</h2><p>Informações da sessão e da conta autenticada.</p></div>
+            </div>
+            <div class="info-row"><span>Sessão atual</span><strong>Autenticada</strong></div>
+            <div class="info-row"><span>Perfil</span><strong>@Role</strong></div>
+            <div class="info-row"><span>Email</span><strong>@Email</strong></div>
+        </article>
+
+        <article>
+            <div class="section-title">
+                <LucideIcon Name="info" Size="20"/>
+                <div><h2>Sobre</h2><p>Informações do aplicativo.</p></div>
+            </div>
+            <div class="info-row"><span>Produto</span><strong>informE</strong></div>
+            <div class="info-row"><span>Versão</span><strong>1.0</strong></div>
+            <div class="info-row"><span>Plataforma</span><strong>.NET MAUI Blazor</strong></div>
+        </article>
+    </section>
+</div>
+
+@code {
+    private string Role => informE.Desktop.Components.State.AppSession.Role switch
+    {
+        "SuperAdmin" => "Super Administrador",
+        "Admin" => "Administrador",
+        _ => "Visualizador"
+    };
+
+    private string Email => string.IsNullOrWhiteSpace(informE.Desktop.Components.State.AppSession.Email)
+        ? "—"
+        : informE.Desktop.Components.State.AppSession.Email;
+}
