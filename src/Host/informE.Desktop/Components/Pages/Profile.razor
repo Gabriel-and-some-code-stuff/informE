@@ -33,6 +33,12 @@ else if(me is not null){
             <h2>Editar Perfil</h2>
             <label>Nome<input @bind="editName" /></label>
             <label>Email<input @bind="editEmail" type="email" /></label>
+            <div class="password-section">
+                <div class="password-heading"><LucideIcon Name="lock-keyhole" Size="16" /><span>Alterar senha</span><small>opcional</small></div>
+                <label>Senha atual<input @bind="currentPassword" type="password" autocomplete="current-password" /></label>
+                <label>Nova senha<input @bind="newPassword" type="password" autocomplete="new-password" placeholder="Mínimo de 8 caracteres" /></label>
+                <label>Confirmar nova senha<input @bind="confirmPassword" type="password" autocomplete="new-password" /></label>
+            </div>
             @if(!string.IsNullOrWhiteSpace(formError)){<p class="form-error">@formError</p>}
             <div class="modal-actions"><button @onclick="CloseEdit">Cancelar</button><button class="save" disabled="@saving" @onclick="SaveAsync">@(saving ? "Salvando..." : "Salvar")</button></div>
         </div>
@@ -40,17 +46,24 @@ else if(me is not null){
 }
 
 @code{
-    private UserListItemDto? me; private readonly List<SessionListItemDto> sessions=[]; private bool loading=true,showEdit,saving; private string? error,formError; private string editName="",editEmail="";
+    private UserListItemDto? me; private readonly List<SessionListItemDto> sessions=[]; private bool loading=true,showEdit,saving; private string? error,formError; private string editName="",editEmail="",currentPassword="",newPassword="",confirmPassword="";
     protected override async Task OnInitializedAsync()=>await LoadAsync();
     private async Task LoadAsync(){loading=true;error=null;try{me=await Api.GetMeAsync();sessions.Clear();sessions.AddRange(await Api.GetMySessionsAsync());}catch(Exception ex){error=Friendly(ex);}finally{loading=false;}}
-    private void OpenEdit(){if(me is null)return;editName=me.Username;editEmail=me.Email;formError=null;showEdit=true;}
-    private void CloseEdit(){showEdit=false;formError=null;}
+    private void OpenEdit(){if(me is null)return;editName=me.Username;editEmail=me.Email;currentPassword="";newPassword="";confirmPassword="";formError=null;showEdit=true;}
+    private void CloseEdit(){showEdit=false;currentPassword="";newPassword="";confirmPassword="";}
     private async Task SaveAsync(){
         if(me is null || saving)return;
         if(string.IsNullOrWhiteSpace(editName)||string.IsNullOrWhiteSpace(editEmail)){formError="Nome e e-mail são obrigatórios.";return;}
+        var wantsPassword=!string.IsNullOrWhiteSpace(currentPassword)||!string.IsNullOrWhiteSpace(newPassword)||!string.IsNullOrWhiteSpace(confirmPassword);
+        if(wantsPassword){
+            if(string.IsNullOrWhiteSpace(currentPassword)){formError="Informe a senha atual.";return;}
+            if(newPassword.Length<8){formError="A nova senha deve ter pelo menos 8 caracteres.";return;}
+            if(newPassword!=confirmPassword){formError="A confirmação da nova senha não confere.";return;}
+        }
         saving=true;formError=null;
         try{
             await Api.UpdateUserAsync(me.Id,new(editName.Trim(),editEmail.Trim()));
+            if(wantsPassword)await Api.ChangeMyPasswordAsync(currentPassword,newPassword);
             CloseEdit();await LoadAsync();
         }catch(Exception ex){formError=Friendly(ex);}finally{saving=false;}
     }

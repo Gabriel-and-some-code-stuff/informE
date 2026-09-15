@@ -1,16 +1,6 @@
-﻿<ErrorBoundary>
-    <ChildContent>
-        <Router AppAssembly="typeof(MauiProgram).Assembly" NotFoundPage="typeof(Pages.NotFound)">
-            <Found Context="routeData">
-                <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-                <FocusOnNavigate RouteData="routeData" Selector="h1" />
-            </Found>
-        </Router>
-    </ChildContent>
-    <ErrorContent Context="ex">
-        <div style="padding:16px; background:#ffefef; color:#7a0000;">
-            <h3 style="margin:0 0 8px 0;">Blazor error</h3>
-            <pre style="white-space:pre-wrap; font-family:Consolas, monospace;">@ex</pre>
-        </div>
-    </ErrorContent>
-</ErrorBoundary>
+﻿<Router AppAssembly="typeof(MauiProgram).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>

@@ -27,19 +27,6 @@ public static class AppSession
         RefreshTokenExpiresAt = refreshTokenExpiresAt;
     }
 
-    // Renovacao: o refresh token e ROTACIONADO pelo servidor, entao o par novo
-    // tem que substituir o antigo por inteiro. Identidade (email/username/role)
-    // nao muda numa renovacao, por isso nao entra aqui.
-    public static void UpdateTokens(
-        string accessToken,
-        string refreshToken,
-        DateTimeOffset refreshTokenExpiresAt)
-    {
-        AccessToken = accessToken;
-        RefreshToken = refreshToken;
-        RefreshTokenExpiresAt = refreshTokenExpiresAt;
-    }
-
     public static void Clear()
     {
         Email = string.Empty;

@@ -38,6 +38,8 @@ public record ForgotPasswordResponseDto(string? LinkDeDesenvolvimento);
 
 public record ResetPasswordRequestDto(string Token, string NovaSenha);
 
+public record ChangeOwnPasswordRequestDto(string CurrentPassword, string NewPassword);
+
 // ── Usuários ──────────────────────────────────────────────────────────────────
 
 // "+ Novo Usuário" da tela de Administração de Contas. Role em texto: quem

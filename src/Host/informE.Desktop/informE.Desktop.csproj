@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
         <!-- informE é Windows-only: apara os targets mobile. Se um dia quiser cross-platform, restaure os TFMs. -->
@@ -28,11 +28,10 @@
         <MauiXamlInflator>SourceGen</MauiXamlInflator>
 
         <!-- Display name -->
-        <ApplicationTitle>informE</ApplicationTitle>
+        <ApplicationTitle>informE.Desktop</ApplicationTitle>
 
         <!-- App Identifier -->
-        <!-- Era com.companyname.* do template. -->
-        <ApplicationId>br.gov.sp.cps.informe</ApplicationId>
+        <ApplicationId>com.companyname.informe.desktop</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -50,13 +49,7 @@
 
     <ItemGroup>
         <!-- App Icon -->
-        <!-- Icone do informE, nao o roxo #512BD4 do template do .NET.
-             Fonte: o mesmo logo que a interface usa (wwwroot/images/logo-icon.png).
-
-             ponytail: PNG de 120x120. O MauiIcon gera todos os tamanhos a partir
-             daqui, entao no icone de 256px ha perda. Trocar por SVG (ou por um
-             PNG de 512) melhora sem mudar mais nada neste arquivo. -->
-        <MauiIcon Include="Resources\AppIcon\appicon.png" />
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
 
         <!-- Splash Screen -->
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
@@ -78,23 +71,6 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
         <PackageReference Include="LucideBlazor" Version="1.0.5" />
         <PackageReference Include="Blazor-ApexCharts-MAUI" Version="7.0.0" />
-    </ItemGroup>
-
-    <!-- Excluir duplicatas "(2)" que foram copiadas para dentro do próprio projeto.
-         Mantemos as pastas no disco por enquanto, mas não deixamos o build compilar.
-         (remove duplicatas que geram CS0101/CS0111 no build) -->
-    <ItemGroup>
-        <Compile Remove="MauiProgram (2).cs" />
-        <Compile Remove="Services\InformEApiClient (2).cs" />
-        <Compile Remove="Components\State\AppSession (2).cs" />
-
-        <Compile Remove="App.xaml (2).cs" />
-        <Compile Remove="MainPage.xaml (2).cs" />
-        <Compile Remove="Platforms\Windows\App.xaml (2).cs" />
-
-        <MauiXaml Remove="App (2).xaml" />
-        <MauiXaml Remove="MainPage (2).xaml" />
-        <MauiXaml Remove="Platforms\Windows\App (2).xaml" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,19 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>informE.Desktop</title>
     <base href="/" />
-    <!-- Bootstrap REMOVIDO.
-         Nenhuma tela do informE usa classe do Bootstrap -- a interface tem o
-         proprio sistema de estilo. Mas ele colidia: Bootstrap define
-         `.modal { display: none }`, e o modal da tela de Contas usa essa classe.
-         O CSS isolado definia posicao e cor sem declarar `display`, entao o
-         `display:none` do Bootstrap vencia por ser a unica declaracao daquela
-         propriedade. Resultado: clicar em Editar escurecia o fundo e o dialogo
-         nao aparecia -- "nao ta funcionando".
-         Tirar a folha inteira mata essa familia de conflito de uma vez. -->
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="informE.Desktop.styles.css" />
     <link rel="icon" href="data:,">
@@ -47,26 +39,7 @@
         };
     </script>
 
-    <script src="_framework/blazor.webview.js" autostart="true"></script>
-
-    <script>
-        // F11 alterna tela cheia.
-        //
-        // A janela abre em FullScreen (ver App.xaml.cs), e nesse modo NAO ha
-        // barra de titulo -- logo, nao ha botao de fechar nem de restaurar.
-        // Sem uma saida, a unica opcao seria Alt+F4.
-        //
-        // O listener vive aqui porque, num BlazorWebView, a tecla chega no
-        // conteudo web; a janela nativa nunca a ve.
-        document.addEventListener('keydown', function (evento) {
-            if (evento.key !== 'F11') return;
-
-            evento.preventDefault();
-
-            // O nome do assembly precisa bater com o do projeto.
-            DotNet.invokeMethod('informE.Desktop', 'AlternarTelaCheia');
-        });
-    </script>
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
 
 </body>
 

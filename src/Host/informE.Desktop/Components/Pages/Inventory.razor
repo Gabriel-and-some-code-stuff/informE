@@ -239,7 +239,7 @@
             try
             {
                 var detail = await Api.GetDeviceAsync(device.Id);
-                hardwareByDevice[device.Id] = detail?.Hardware;
+                hardwareByDevice[device.Id] = detail.Hardware;
             }
             catch
             {

@@ -11,43 +11,23 @@ public sealed class InformEApiClient(HttpClient http)
     public async Task<LoginResponseDto> LoginAsync(string email, string password, CancellationToken ct = default)
     {
         using var response = await http.PostAsJsonAsync("auth/login", new LoginRequestDto(email, password), ct);
-        return await ReadAsync<LoginResponseDto>(response, ct, ContextoDaChamada.Login);
-    }
-
-    // ── Redefinicao de senha ─────────────────────────────────────────────────
-    // Anonimas: quem pede reset, por definicao, nao consegue autenticar.
-
-    public async Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email, CancellationToken ct = default)
-    {
-        using var response = await http.PostAsJsonAsync(
-            "auth/forgot-password", new ForgotPasswordRequestDto(email), ct);
-
-        return await ReadAsync<ForgotPasswordResponseDto>(response, ct);
-    }
-
-    public async Task ResetPasswordAsync(string token, string novaSenha, CancellationToken ct = default)
-    {
-        using var response = await http.PostAsJsonAsync(
-            "auth/reset-password", new ResetPasswordRequestDto(token, novaSenha), ct);
-
-        // Contexto Login: 400/401 aqui e "link invalido ou vencido", nao sessao
-        // expirada -- quem esta nesta tela nunca teve sessao.
-        await EnsureSuccessAsync(response, ct, ContextoDaChamada.Login);
+        return await ReadAsync<LoginResponseDto>(response, ct);
     }
 
     public async Task<IReadOnlyList<MachineActionDto>> GetActionsAsync(CancellationToken ct = default) =>
         await GetAsync<List<MachineActionDto>>("actions", ct) ?? [];
 
-    public async Task<DeviceListResponseDto> GetDevicesAsync(Guid? groupId = null, CancellationToken ct = default)
+    public async Task<DeviceListResponseDto> GetDevicesAsync(Guid? groupId = null, string? search = null, CancellationToken ct = default)
     {
-        var route = groupId is null ? "devices" : $"devices?grupoId={groupId}";
+        var query = new List<string>();
+        if (groupId is not null) query.Add($"grupoId={groupId}");
+        if (!string.IsNullOrWhiteSpace(search)) query.Add($"busca={Uri.EscapeDataString(search)}");
+        var route = query.Count == 0 ? "devices" : $"devices?{string.Join("&", query)}";
         return await GetAsync<DeviceListResponseDto>(route, ct)
             ?? new DeviceListResponseDto(new DeviceSummaryDto(0, 0, 0, 0), []);
     }
 
-    // Filtros vao para a query string do servidor, nao para um Where na tela: com
-    // 105 maquinas ja da diferenca, e o resumo (big numbers) e calculado pelo
-    // servidor sobre os itens FILTRADOS — filtrar no cliente desalinharia os dois.
+
     public async Task<DeviceListResponseDto> GetDevicesFiltradosAsync(
         Guid? groupId = null,
         string? status = null,
@@ -55,27 +35,23 @@ public sealed class InformEApiClient(HttpClient http)
         CancellationToken ct = default)
     {
         var query = new List<string>();
-
         if (groupId is not null) query.Add($"grupoId={groupId}");
         if (!string.IsNullOrWhiteSpace(status)) query.Add($"status={Uri.EscapeDataString(status)}");
         if (!string.IsNullOrWhiteSpace(busca)) query.Add($"busca={Uri.EscapeDataString(busca)}");
-
-        var route = query.Count == 0 ? "devices" : $"devices?{string.Join('&', query)}";
+        var route = query.Count == 0 ? "devices" : $"devices?{string.Join("&", query)}";
 
         return await GetAsync<DeviceListResponseDto>(route, ct)
             ?? new DeviceListResponseDto(new DeviceSummaryDto(0, 0, 0, 0), []);
     }
 
-    public async Task<DeviceDetailDto?> GetDeviceAsync(Guid id, CancellationToken ct = default) =>
-        await GetAsync<DeviceDetailDto>($"devices/{id}", ct);
+    public async Task<DeviceDetailDto> GetDeviceAsync(Guid deviceId, CancellationToken ct = default) =>
+        await GetAsync<DeviceDetailDto>($"devices/{deviceId}", ct)
+            ?? throw new InformEApiException("O equipamento não foi encontrado.");
 
-    // Uma chamada serve o Dashboard inteiro: total, contagem por categoria,
-    // historico diario (grafico de barras) e os alertas recentes.
-    public async Task<AlertsResponseDto> GetAlertsAsync(
-        int dias = 7,
-        int recentes = 8,
-        Guid? groupId = null,
-        CancellationToken ct = default)
+    public async Task<IReadOnlyList<GroupListItemDto>> GetGroupsAsync(CancellationToken ct = default) =>
+        await GetAsync<List<GroupListItemDto>>("groups", ct) ?? [];
+
+    public async Task<AlertsResponseDto> GetAlertsAsync(int dias = 7, int recentes = 8, Guid? groupId = null, CancellationToken ct = default)
     {
         var query = new List<string>
         {
@@ -90,95 +66,86 @@ public sealed class InformEApiClient(HttpClient http)
             ?? new AlertsResponseDto(0, new Dictionary<string, int>(), [], []);
     }
 
-    // ── Administracao de Contas ──────────────────────────────────────────────
-    // Filtros vao para o servidor, mesmo desenho de /devices.
 
-    public async Task<IReadOnlyList<UserListItemDto>> GetUsersAsync(
-        string? papel = null,
-        bool? ativo = null,
-        string? busca = null,
-        CancellationToken ct = default)
+    public async Task<IReadOnlyList<UserListItemDto>> GetUsersAsync(string? role = null, bool? active = null, string? search = null, CancellationToken ct = default)
     {
         var query = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(papel)) query.Add($"papel={Uri.EscapeDataString(papel)}");
-        if (ativo is not null) query.Add($"ativo={ativo.Value.ToString().ToLowerInvariant()}");
-        if (!string.IsNullOrWhiteSpace(busca)) query.Add($"busca={Uri.EscapeDataString(busca)}");
-
-        var route = query.Count == 0 ? "users" : $"users?{string.Join('&', query)}";
-
+        if (!string.IsNullOrWhiteSpace(role)) query.Add($"papel={Uri.EscapeDataString(role)}");
+        if (active is not null) query.Add($"ativo={active.Value.ToString().ToLowerInvariant()}");
+        if (!string.IsNullOrWhiteSpace(search)) query.Add($"busca={Uri.EscapeDataString(search)}");
+        var route = query.Count == 0 ? "users" : $"users?{string.Join("&", query)}";
         return await GetAsync<List<UserListItemDto>>(route, ct) ?? [];
     }
 
-    public async Task<Guid> CreateUserAsync(CreateUserRequestDto request, CancellationToken ct = default)
-    {
-        using var response = await SendAuthorizedAsync(
-            HttpMethod.Post, "users", () => JsonContent.Create(request), ct);
-
-        var criado = await ReadAsync<CreateUserResponseDto>(response, ct);
-        return criado.UserId;
-    }
-
-    public async Task UpdateUserAsync(Guid id, UpdateUserRequestDto request, CancellationToken ct = default)
-    {
-        using var response = await SendAuthorizedAsync(
-            HttpMethod.Patch, $"users/{id}", () => JsonContent.Create(request), ct);
-        await EnsureSuccessAsync(response, ct);
-    }
-
-    public async Task ChangeUserRoleAsync(Guid id, string papel, CancellationToken ct = default)
-    {
-        using var response = await SendAuthorizedAsync(
-            HttpMethod.Patch, $"users/{id}/role", () => JsonContent.Create(new ChangeRoleRequestDto(papel)), ct);
-        await EnsureSuccessAsync(response, ct);
-    }
-
-    public async Task SetUserActiveAsync(Guid id, bool ativo, CancellationToken ct = default)
-    {
-        using var response = await SendAuthorizedAsync(
-            HttpMethod.Patch, $"users/{id}/active", () => JsonContent.Create(new SetActiveRequestDto(ativo)), ct);
-        await EnsureSuccessAsync(response, ct);
-    }
-
-    // ── Perfil e sessoes do proprio usuario ──────────────────────────────────
-    // Portados da geracao (2): caem no mesmo maquinario de renovacao automatica
-    // de SendAuthorizedAsync, por isso vivem aqui e nao num clone sem refresh.
-    //
-    // NOTA: ChangeMyPasswordAsync (endpoint /users/me/password) NAO foi portado
-    // porque o servidor atual nao expõe essa rota e o DTO ChangeOwnPasswordRequestDto
-    // nao existe em informE.Contracts. A tela de Perfil (Profile.razor) nao oferece
-    // alteracao de senha; o metodo sera portado junto com o backend.
-
-    public async Task<UserListItemDto?> GetMeAsync(CancellationToken ct = default) =>
-        await GetAsync<UserListItemDto>("users/me", ct);
+    public async Task<UserListItemDto> GetMeAsync(CancellationToken ct = default) =>
+        await GetAsync<UserListItemDto>("users/me", ct)
+            ?? throw new InformEApiException("Não foi possível carregar o perfil.");
 
     public async Task<IReadOnlyList<SessionListItemDto>> GetMySessionsAsync(CancellationToken ct = default) =>
         await GetAsync<List<SessionListItemDto>>("users/me/sessions", ct) ?? [];
 
-    public async Task RevokeMySessionAsync(Guid sessionId, CancellationToken ct = default)
+    public async Task<CreateUserResponseDto> CreateUserAsync(CreateUserRequestDto request, CancellationToken ct = default)
     {
-        using var response = await SendAuthorizedAsync(
-            HttpMethod.Delete, $"users/me/sessions/{sessionId}", content: null, ct);
+        using var message = CreateAuthorizedRequest(HttpMethod.Post, "users");
+        message.Content = JsonContent.Create(request);
+        using var response = await http.SendAsync(message, ct);
+        return await ReadAsync<CreateUserResponseDto>(response, ct);
+    }
+
+    public async Task UpdateUserAsync(Guid id, UpdateUserRequestDto request, CancellationToken ct = default)
+    {
+        using var message = CreateAuthorizedRequest(HttpMethod.Patch, $"users/{id}");
+        message.Content = JsonContent.Create(request);
+        using var response = await http.SendAsync(message, ct);
         await EnsureSuccessAsync(response, ct);
     }
 
-    public async Task<IReadOnlyList<GroupListItemDto>> GetGroupsAsync(CancellationToken ct = default) =>
-        await GetAsync<List<GroupListItemDto>>("groups", ct) ?? [];
+    public async Task ChangeMyPasswordAsync(string currentPassword, string newPassword, CancellationToken ct = default)
+    {
+        using var message = CreateAuthorizedRequest(HttpMethod.Patch, "users/me/password");
+        message.Content = JsonContent.Create(new ChangeOwnPasswordRequestDto(currentPassword, newPassword));
+        using var response = await http.SendAsync(message, ct);
+        await EnsureSuccessAsync(response, ct);
+    }
+
+    public async Task ChangeUserRoleAsync(Guid id, string role, CancellationToken ct = default)
+    {
+        using var message = CreateAuthorizedRequest(HttpMethod.Patch, $"users/{id}/role");
+        message.Content = JsonContent.Create(new ChangeRoleRequestDto(role));
+        using var response = await http.SendAsync(message, ct);
+        await EnsureSuccessAsync(response, ct);
+    }
+
+    public async Task SetUserActiveAsync(Guid id, bool active, CancellationToken ct = default)
+    {
+        using var message = CreateAuthorizedRequest(HttpMethod.Patch, $"users/{id}/active");
+        message.Content = JsonContent.Create(new SetActiveRequestDto(active));
+        using var response = await http.SendAsync(message, ct);
+        await EnsureSuccessAsync(response, ct);
+    }
+
+    public async Task RevokeMySessionAsync(Guid sessionId, CancellationToken ct = default)
+    {
+        using var message = CreateAuthorizedRequest(HttpMethod.Delete, $"users/me/sessions/{sessionId}");
+        using var response = await http.SendAsync(message, ct);
+        await EnsureSuccessAsync(response, ct);
+    }
 
     public async Task<IReadOnlyList<ExecutionListItemDto>> GetExecutionsAsync(int limite = 50, CancellationToken ct = default) =>
         await GetAsync<List<ExecutionListItemDto>?>($"tasks?limite={limite}", ct) ?? [];
 
     public async Task<DispatchTaskResponseDto> DispatchAsync(DispatchTaskRequestDto request, CancellationToken ct = default)
     {
-        using var response = await SendAuthorizedAsync(
-            HttpMethod.Post, "tasks", () => JsonContent.Create(request), ct);
+        using var message = CreateAuthorizedRequest(HttpMethod.Post, "tasks");
+        message.Content = JsonContent.Create(request);
+        using var response = await http.SendAsync(message, ct);
         return await ReadAsync<DispatchTaskResponseDto>(response, ct);
     }
 
     public async Task CancelTaskAsync(Guid taskId, CancellationToken ct = default)
     {
-        using var response = await SendAuthorizedAsync(
-            HttpMethod.Post, $"tasks/{taskId}/cancel", content: null, ct);
+        using var message = CreateAuthorizedRequest(HttpMethod.Post, $"tasks/{taskId}/cancel");
+        using var response = await http.SendAsync(message, ct);
         await EnsureSuccessAsync(response, ct);
     }
 
@@ -196,109 +163,9 @@ public sealed class InformEApiClient(HttpClient http)
 
     private async Task<T?> GetAsync<T>(string route, CancellationToken ct)
     {
-        using var response = await SendAuthorizedAsync(HttpMethod.Get, route, content: null, ct);
+        using var message = CreateAuthorizedRequest(HttpMethod.Get, route);
+        using var response = await http.SendAsync(message, ct);
         return await ReadAsync<T>(response, ct);
-    }
-
-    // TODA chamada autenticada passa por aqui.
-    //
-    // O access token vale 15 MINUTOS. Sem renovacao automatica o app quebrava no
-    // meio do uso: a tela de Execucoes abria, e 15 min depois qualquer acao
-    // devolvia 401 pedindo login de novo. Numa gravacao de demonstracao isso
-    // acontece no meio da tomada.
-    //
-    // Recebe uma FACTORY de conteudo, nao um HttpRequestMessage pronto, porque
-    // HttpRequestMessage nao pode ser reenviado — o corpo ja foi consumido. Para
-    // repetir a chamada e preciso montar a mensagem outra vez.
-    private async Task<HttpResponseMessage> SendAuthorizedAsync(
-        HttpMethod method,
-        string route,
-        Func<HttpContent>? content,
-        CancellationToken ct)
-    {
-        var response = await EnviarUmaVezAsync(method, route, content, ct);
-
-        if (response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
-            return response;
-
-        // 401 pode ser token vencido OU sessao revogada de verdade. A unica forma
-        // de saber e tentar renovar: se a renovacao falhar, o 401 era real.
-        response.Dispose();
-
-        if (!await TentarRenovarAsync(ct))
-        {
-            // Limpa o estado ANTES de avisar: sem isto o AppSession continuaria
-            // com um token morto, o IsAuthenticated seguiria true, e a proxima
-            // tela tentaria carregar dado com credencial que nao vale mais --
-            // gerando um segundo erro em vez de mandar a pessoa para o login.
-            AppSession.Clear();
-
-            throw new InformEApiException("Sua sessão expirou. Entre novamente.", 401);
-        }
-
-        return await EnviarUmaVezAsync(method, route, content, ct);
-    }
-
-    private async Task<HttpResponseMessage> EnviarUmaVezAsync(
-        HttpMethod method,
-        string route,
-        Func<HttpContent>? content,
-        CancellationToken ct)
-    {
-        using var message = CreateAuthorizedRequest(method, route);
-
-        if (content is not null)
-            message.Content = content();
-
-        return await http.SendAsync(message, ct);
-    }
-
-    // Uma renovacao por vez: sem o lock, duas telas carregando juntas disparam
-    // dois refresh, e o servidor ROTACIONA o token a cada chamada — o segundo
-    // chegaria com um token que o primeiro acabou de invalidar, derrubando a
-    // sessao justamente por tentar salva-la.
-    private static readonly SemaphoreSlim RenovacaoEmCurso = new(1, 1);
-
-    private async Task<bool> TentarRenovarAsync(CancellationToken ct)
-    {
-        var tokenQueFalhou = AppSession.AccessToken;
-
-        await RenovacaoEmCurso.WaitAsync(ct);
-        try
-        {
-            // Outra chamada renovou enquanto esperavamos o lock: aproveita.
-            if (AppSession.AccessToken != tokenQueFalhou)
-                return AppSession.IsAuthenticated;
-
-            if (string.IsNullOrWhiteSpace(AppSession.RefreshToken))
-                return false;
-
-            using var response = await http.PostAsJsonAsync(
-                "auth/refresh", new RefreshRequestDto(AppSession.RefreshToken), ct);
-
-            if (!response.IsSuccessStatusCode)
-                return false;
-
-            var renovado = await response.Content.ReadFromJsonAsync<LoginResponseDto>(cancellationToken: ct);
-
-            if (renovado is null)
-                return false;
-
-            AppSession.UpdateTokens(
-                renovado.AccessToken, renovado.RefreshToken, renovado.RefreshTokenExpiresAt);
-
-            return true;
-        }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
-        {
-            // Renovacao e melhor-esforco: se o servidor caiu, quem chamou recebe
-            // a mensagem de sessao expirada, que e o que o usuario pode resolver.
-            return false;
-        }
-        finally
-        {
-            RenovacaoEmCurso.Release();
-        }
     }
 
     private static HttpRequestMessage CreateAuthorizedRequest(HttpMethod method, string route)
@@ -311,30 +178,14 @@ public sealed class InformEApiClient(HttpClient http)
         return message;
     }
 
-    private static async Task<T> ReadAsync<T>(
-        HttpResponseMessage response,
-        CancellationToken ct,
-        ContextoDaChamada contexto = ContextoDaChamada.Autenticada)
+    private static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken ct)
     {
-        await EnsureSuccessAsync(response, ct, contexto);
+        await EnsureSuccessAsync(response, ct);
         var value = await response.Content.ReadFromJsonAsync<T>(cancellationToken: ct);
         return value ?? throw new InformEApiException("O servidor respondeu sem os dados esperados.");
     }
 
-    // O MESMO status HTTP quer dizer coisas diferentes dependendo de onde
-    // aconteceu, e a mensagem tem que dizer o que a pessoa pode fazer.
-    //
-    // 401 na tela de login  = credencial errada -> tentar de novo
-    // 401 em qualquer outra = sessao caiu       -> entrar de novo
-    //
-    // Antes as duas caiam num texto so ("E-mail ou senha inválidos, ou a sessão
-    // expirou"), que nao ajuda em nenhum dos dois casos: quem errou a senha fica
-    // em duvida se o problema e a sessao, e quem foi deslogado fica conferindo a
-    // senha. O contexto vem de QUEM chama, nao de adivinhacao pelo status.
-    private static async Task EnsureSuccessAsync(
-        HttpResponseMessage response,
-        CancellationToken ct,
-        ContextoDaChamada contexto = ContextoDaChamada.Autenticada)
+    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode)
             return;
@@ -342,41 +193,11 @@ public sealed class InformEApiClient(HttpClient http)
         var body = await response.Content.ReadAsStringAsync(ct);
         var detail = TryReadProblemDetail(body);
 
-        var message = (contexto, response.StatusCode) switch
+        var message = response.StatusCode switch
         {
-            // ── Tela de login ────────────────────────────────────────────────
-            (ContextoDaChamada.Login, System.Net.HttpStatusCode.Unauthorized) =>
-                "E-mail ou senha incorretos.",
-
-            // O servidor devolve 403 no login quando a conta foi desativada. O
-            // detail explica; a mensagem de reserva diz o que fazer.
-            (ContextoDaChamada.Login, System.Net.HttpStatusCode.Forbidden) =>
-                detail ?? "Esta conta está desativada. Procure o administrador.",
-
-            // 409 no login = limite de 3 dispositivos atingido. O detail traz o
-            // numero e a orientacao, entao ele vale mais que qualquer texto fixo.
-            (ContextoDaChamada.Login, System.Net.HttpStatusCode.Conflict) =>
-                detail ?? "Você já tem 3 dispositivos conectados. Encerre a sessão em um deles para entrar aqui.",
-
-            // ── Chamadas autenticadas ────────────────────────────────────────
-            // So chega aqui depois de a renovacao automatica ter falhado (ver
-            // SendAuthorizedAsync), entao a sessao morreu de verdade.
-            (_, System.Net.HttpStatusCode.Unauthorized) =>
-                "Sua sessão expirou. Entre novamente.",
-
-            (_, System.Net.HttpStatusCode.Forbidden) =>
-                detail ?? "Sua conta não tem permissão para realizar esta ação.",
-
-            (_, System.Net.HttpStatusCode.Conflict) =>
-                detail ?? "A operação não pode ser concluída no estado atual.",
-
-            (_, System.Net.HttpStatusCode.NotFound) =>
-                detail ?? "O item não foi encontrado. Ele pode ter sido removido.",
-
-            // 5xx nao e problema de quem esta usando: nao mande conferir dado.
-            _ when (int)response.StatusCode >= 500 =>
-                "O servidor encontrou um erro. Tente novamente em instantes.",
-
+            System.Net.HttpStatusCode.Unauthorized => "E-mail ou senha inválidos, ou a sessão expirou.",
+            System.Net.HttpStatusCode.Forbidden => "Sua conta não tem permissão para realizar esta ação.",
+            System.Net.HttpStatusCode.Conflict => detail ?? "A operação não pode ser concluída no estado atual.",
             _ => detail ?? $"O servidor retornou o erro {(int)response.StatusCode}."
         };
 
@@ -408,16 +229,6 @@ public sealed class InformEApiClient(HttpClient http)
 
         return null;
     }
-}
-
-// De onde a chamada partiu. Muda a mensagem, nao o comportamento.
-public enum ContextoDaChamada
-{
-    /// <summary>Tela de login: 401 e credencial errada.</summary>
-    Login,
-
-    /// <summary>Qualquer chamada com token: 401 e sessao expirada.</summary>
-    Autenticada
 }
 
 public sealed class InformEApiException(string message, int? statusCode = null, Exception? innerException = null)

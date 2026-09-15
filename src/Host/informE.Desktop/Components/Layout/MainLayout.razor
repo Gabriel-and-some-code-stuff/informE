@@ -1,15 +1,17 @@
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 
-@*
-    Layout de reserva: e o DefaultLayout do Routes.razor e so envolve o
-    NotFound — toda pagina real declara @layout AppLayout ou AuthLayout.
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
 
-    Antes carregava o NavMenu do template do MAUI, com links para /counter e
-    /weather e um "About" apontando para a documentacao da Microsoft. Nenhuma
-    das tres coisas existe no informE, e um clique nelas durante uma
-    demonstracao mostraria o template em vez do produto.
-*@
+    <main>
+        <div class="top-row px-4">
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        </div>
 
-<main class="fallback-shell">
-    @Body
-</main>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>

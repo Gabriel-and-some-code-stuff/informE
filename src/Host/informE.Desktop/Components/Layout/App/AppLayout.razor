@@ -145,21 +145,10 @@
     private string syncText = "há 2 min";
     private readonly List<AlertListItemDto> recentAlerts = [];
 
-    // O menu decide pelo PAPEL de quem está logado, não pela URL.
-    //
-    // BUG CORRIGIDO: era `Navigation.Uri.Contains("/viewer")`. Um Usuario Comum
-    // que navegasse para /equipamentos deixava de ter "/viewer" no endereço,
-    // IsViewer virava false, e o menu de ADMINISTRADOR aparecia inteiro --
-    // Grupos, Inventario, Administracao de Contas. O servidor recusa as
-    // chamadas, mas oferecer o que vai ser recusado é defeito por si: parece
-    // falha de segurança e não há como a pessoa saber que não devia clicar.
-    //
-    // O papel vem do token, gravado no AppSession no login.
-    private static bool IsViewer =>
-        string.Equals(
-            informE.Desktop.Components.State.AppSession.Role,
-            "Viewer",
-            StringComparison.OrdinalIgnoreCase);
+    private bool IsViewer => string.Equals(
+        informE.Desktop.Components.State.AppSession.Role,
+        "Viewer",
+        StringComparison.OrdinalIgnoreCase);
 
     private string UserEmail
     {

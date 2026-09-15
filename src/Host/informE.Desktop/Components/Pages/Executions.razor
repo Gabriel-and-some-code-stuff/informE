@@ -78,11 +78,7 @@
                                 </td>
                                 <td>
                                     <span class="status-wrap @StatusClass(item.Status)">
-                                        <span class="status-icon">
-                                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                @((MarkupString)StatusIconPath(item.Status))
-                                            </svg>
-                                        </span>
+                                        <span class="status-icon">@StatusIcon(item.Status)</span>
                                         <span class="status-pill-execution">@StatusLabel(item.Status)</span>
                                     </span>
                                 </td>
@@ -127,26 +123,22 @@
             <div class="modal-body">
                 <div class="form-field">
                     <label for="execution-group">Laboratório</label>
-                    <select id="execution-group" value="@selectedGroupId" @onchange="OnGroupChangedAsync" disabled="@modalDataLoading">
+                    <select id="execution-group" value="@selectedGroupId" @onchange="OnGroupChangedAsync" disabled="@(modalDataLoading || presetDeviceLocked)">
                         <option value="">Selecione o laboratório</option>
                         @foreach (var group in groups)
                         {
                             <option value="@group.Id">@group.Name (@group.TotalDeDispositivos máquinas)</option>
                         }
-                        <option value="todos">Todas as máquinas (inclusive sem laboratório)</option>
                     </select>
                 </div>
 
                 <div class="form-field">
                     <label for="execution-device">Dispositivo</label>
-                    <select id="execution-device" @bind="selectedDeviceId" disabled="@(modalDataLoading || devicesLoading || !AlvoEscolhido)">
+                    <select id="execution-device" @bind="selectedDeviceId" disabled="@(modalDataLoading || devicesLoading || string.IsNullOrWhiteSpace(selectedGroupId) || presetDeviceLocked)">
                         <option value="">@(devicesLoading ? "Carregando máquinas..." : "Selecione o dispositivo")</option>
-                        @if (AlvoEscolhido && !devicesLoading)
+                        @if (!string.IsNullOrWhiteSpace(selectedGroupId) && !devicesLoading)
                         {
-                            @if (!TodasAsMaquinas)
-                            {
-                                <option value="all">Todas as máquinas do laboratório</option>
-                            }
+                            <option value="all">Todas as máquinas do laboratório</option>
                             @foreach (var device in devices.OrderBy(x => x.Hostname))
                             {
                                 <option value="@device.Id">@device.Hostname</option>
@@ -265,31 +257,24 @@
     private bool loading = true;
     private bool modalDataLoading;
     private bool devicesLoading;
-
-    private const string TodosOsLabs = "todos";
-
-    private bool TodasAsMaquinas => selectedGroupId == TodosOsLabs;
-
-    private bool AlvoEscolhido => TodasAsMaquinas || Guid.TryParse(selectedGroupId, out _);
-
     private bool newExecutionOpen;
     private bool scheduleEnabled;
     private bool submitting;
     private string? pageError;
     private string? modalError;
-
     private string selectedGroupId = string.Empty;
     private string selectedDeviceId = string.Empty;
     private string selectedAction = string.Empty;
-
     private DateTime scheduledDate = DateTime.Today;
     private TimeOnly scheduledTime = TimeOnly.FromDateTime(DateTime.Now.AddMinutes(30));
-
     private Guid? cancelingTaskId;
     private ExecutionListItemDto? selectedLog;
+    private bool presetDeviceLocked;
 
     private string TodayForInput => DateTime.Today.ToString("yyyy-MM-dd");
     private MachineActionDto? SelectedActionDefinition => actions.FirstOrDefault(x => x.Kind == selectedAction);
+
+    private string? processedPresetQuery;
 
     protected override async Task OnInitializedAsync()
     {
@@ -300,6 +285,26 @@
         }
 
         await LoadPageAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+            return;
+
+        var currentQuery = new Uri(Navigation.Uri).Query;
+        if (string.Equals(processedPresetQuery, currentQuery, StringComparison.Ordinal))
+            return;
+
+        processedPresetQuery = currentQuery;
+        var query = ParseQuery();
+        if (query.TryGetValue("new", out var open) && open == "1")
+        {
+            query.TryGetValue("deviceId", out var deviceId);
+            query.TryGetValue("groupId", out var groupId);
+            query.TryGetValue("group", out var groupName);
+            await OpenNewExecutionWithPreset(deviceId, groupId, groupName);
+        }
     }
 
     private async Task LoadPageAsync()
@@ -319,8 +324,7 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            if (!SessaoMorreu(ex))
-                pageError = ex.Message;
+            pageError = ex.Message;
         }
         finally
         {
@@ -330,25 +334,76 @@
 
     private async Task OpenNewExecution()
     {
+        presetDeviceLocked = false;
+        await OpenNewExecutionWithPreset(null, null, null);
+    }
+
+    private async Task OpenNewExecutionWithPreset(string? presetDeviceId, string? presetGroupId, string? presetGroupName)
+    {
         newExecutionOpen = true;
         modalError = null;
-
-        if (actions.Count > 0 && groups.Count > 0)
-            return;
 
         modalDataLoading = true;
         try
         {
-            var actionsTask = Api.GetActionsAsync();
-            var groupsTask = Api.GetGroupsAsync();
+            if (actions.Count == 0)
+            {
+                var actionResult = await Api.GetActionsAsync();
+                actions.Clear();
+                actions.AddRange(actionResult);
+            }
 
-            await Task.WhenAll(actionsTask, groupsTask);
+            if (groups.Count == 0)
+            {
+                var groupResult = await Api.GetGroupsAsync();
+                groups.Clear();
+                groups.AddRange(groupResult);
+            }
 
-            actions.Clear();
-            actions.AddRange(await actionsTask);
+            GroupListItemDto? presetGroup = null;
 
-            groups.Clear();
-            groups.AddRange(await groupsTask);
+            if (Guid.TryParse(presetGroupId, out var parsedGroupId))
+                presetGroup = groups.FirstOrDefault(x => x.Id == parsedGroupId);
+
+            if (presetGroup is null && !string.IsNullOrWhiteSpace(presetGroupName))
+                presetGroup = groups.FirstOrDefault(x => string.Equals(x.Name, presetGroupName, StringComparison.OrdinalIgnoreCase));
+
+            if (presetGroup is not null)
+            {
+                selectedGroupId = presetGroup.Id.ToString();
+                devices.Clear();
+
+                var deviceResult = await Api.GetDevicesAsync(presetGroup.Id);
+                devices.AddRange(deviceResult.Itens);
+
+                if (Guid.TryParse(presetDeviceId, out var deviceId) && devices.Any(x => x.Id == deviceId))
+                    selectedDeviceId = deviceId.ToString();
+                presetDeviceLocked = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(selectedDeviceId) && Guid.TryParse(presetDeviceId, out var fallbackDeviceId))
+            {
+                var allDevices = await Api.GetDevicesAsync();
+                var match = allDevices.Itens.FirstOrDefault(x => x.Id == fallbackDeviceId);
+
+                if (match is not null)
+                {
+                    var group = groups.FirstOrDefault(x => string.Equals(x.Name, match.GroupName, StringComparison.OrdinalIgnoreCase));
+                    if (group is not null)
+                    {
+                        selectedGroupId = group.Id.ToString();
+                        var deviceResult = await Api.GetDevicesAsync(group.Id);
+                        devices.Clear();
+                        devices.AddRange(deviceResult.Itens);
+                        selectedDeviceId = match.Id.ToString();
+                        presetDeviceLocked = true;
+                    }
+                }
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            modalError = "A busca dos dados demorou mais que o esperado. Tente novamente.";
         }
         catch (HttpRequestException)
         {
@@ -356,8 +411,7 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            if (!SessaoMorreu(ex))
-                modalError = ex.Message;
+            modalError = ex.Message;
         }
         finally
         {
@@ -372,25 +426,16 @@
 
         newExecutionOpen = false;
         modalError = null;
+        presetDeviceLocked = false;
     }
 
     private async Task SubmitExecutionAsync()
     {
         modalError = null;
 
-        if (!AlvoEscolhido)
+        if (!Guid.TryParse(selectedGroupId, out var groupId))
         {
-            modalError = "Selecione o laboratório ou \"Todas as máquinas\".";
-            return;
-        }
-
-        // Com "Todas as máquinas" nao existe grupo para despachar em bloco:
-        // obrigatorio escolher a maquina.
-        var groupId = TodasAsMaquinas ? Guid.Empty : Guid.Parse(selectedGroupId);
-
-        if (TodasAsMaquinas && selectedDeviceId == "all")
-        {
-            modalError = "Escolha uma máquina específica ou selecione um laboratório.";
+            modalError = "Selecione um laboratório.";
             return;
         }
 
@@ -414,6 +459,7 @@
                 modalError = error;
                 return;
             }
+
         }
 
         var deviceIds = new List<Guid>();
@@ -443,6 +489,7 @@
             devices.Clear();
             selectedAction = string.Empty;
             scheduleEnabled = false;
+            presetDeviceLocked = false;
             await LoadPageAsync();
         }
         catch (HttpRequestException)
@@ -451,8 +498,7 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            if (!SessaoMorreu(ex))
-                modalError = ex.Message;
+            modalError = ex.Message;
         }
         finally
         {
@@ -472,8 +518,7 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            if (!SessaoMorreu(ex))
-                pageError = ex.Message;
+            pageError = ex.Message;
         }
         catch (HttpRequestException)
         {
@@ -520,17 +565,18 @@
         devices.Clear();
         modalError = null;
 
-        if (!AlvoEscolhido)
+        if (!Guid.TryParse(selectedGroupId, out var groupId))
             return;
 
         devicesLoading = true;
         try
         {
-            var result = TodasAsMaquinas
-                ? await Api.GetDevicesFiltradosAsync()
-                : await Api.GetDevicesFiltradosAsync(Guid.Parse(selectedGroupId));
-
+            var result = await Api.GetDevicesAsync(groupId);
             devices.AddRange(result.Itens);
+        }
+        catch (TaskCanceledException)
+        {
+            modalError = "A busca das máquinas demorou mais que o esperado. Tente novamente.";
         }
         catch (HttpRequestException)
         {
@@ -538,13 +584,29 @@
         }
         catch (informE.Desktop.Services.InformEApiException ex)
         {
-            if (!SessaoMorreu(ex))
-                modalError = ex.Message;
+            modalError = ex.Message;
         }
         finally
         {
             devicesLoading = false;
         }
+    }
+
+    private Dictionary<string, string> ParseQuery()
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var query = new Uri(Navigation.Uri).Query.TrimStart('?');
+        if (string.IsNullOrWhiteSpace(query)) return result;
+
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pieces = part.Split('=', 2);
+            var key = Uri.UnescapeDataString(pieces[0]);
+            var value = pieces.Length > 1 ? Uri.UnescapeDataString(pieces[1].Replace('+', ' ')) : string.Empty;
+            result[key] = value;
+        }
+
+        return result;
     }
 
     private static bool CanCancel(string status) =>
@@ -563,13 +625,15 @@
 
     private static string StatusClass(string status) => status.ToLowerInvariant();
 
-    private static string StatusIconPath(string status) => status switch
+    private static string StatusIcon(string status) => status switch
     {
-        "Succeeded" => """<path d="m4 12.5 5 5L20 6.5"/>""",
-        "Failed" or "Canceled" => """<path d="M6 6l12 12M18 6 6 18"/>""",
-        "Running" => """<path d="M12 3a9 9 0 1 0 9 9"/>""",
-        "Queued" or "Pending" => """<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5l3.5 2"/>""",
-        _ => """<circle cx="12" cy="12" r="4"/>"""
+        "Succeeded" => "✓",
+        "Failed" => "×",
+        "Canceled" => "×",
+        "Running" => "◔",
+        "Queued" => "◷",
+        "Pending" => "◷",
+        _ => "•"
     };
 
     private static string FormatTime(DateTimeOffset value) => value.ToLocalTime().ToString("HH:mm:ss");
@@ -583,14 +647,5 @@
         return duration.TotalMinutes >= 1
             ? $"{(int)duration.TotalMinutes}m {duration.Seconds:D2}s"
             : $"{duration.Seconds}s";
-    }
-
-    private bool SessaoMorreu(informE.Desktop.Services.InformEApiException ex)
-    {
-        if (ex.StatusCode != 401)
-            return false;
-
-        Navigation.NavigateTo("/login", replace: true);
-        return true;
     }
 }
