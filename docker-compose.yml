@@ -1,13 +1,25 @@
-# Ambiente de desenvolvimento do informE.
-# Sobe com: docker compose up
+# docker-compose2.yml — variante Alpine (imagens mais leves)
+# Compare com docker-compose.yml:
 #
-# Serviços:
-#   postgres — banco de dados (volume nomeado, sobrevive a `down`; some com `down -v`)
-#   server  — ASP.NET Core com dotnet watch (hot reload); depende do postgres saudável
+#   postgres:16                       ~450 MB  →  postgres:16-alpine            ~115 MB
+#   mcr.microsoft.com/dotnet/sdk:10.0 ~900 MB  →  dotnet/sdk:10.0-alpine        ~350 MB
+#
+# Alpine usa musl libc (nao glibc). .NET 8+ tem suporte solido a Alpine;
+# problemas com libs nativas sao raros mas possiveis (ex.: ICU/globalization).
+# Se o Server lancar "Couldn't find a valid ICU package", adicione:
+#   environment:
+#     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+#
+# dns explicito: o resolver musl do Alpine nao usa o DNS interno do Docker
+# Desktop por padrao, causando NU1301 (Network unreachable) no dotnet restore.
+#
+# Para testar: docker compose -f docker-compose2.yml up
+
 services:
   postgres:
-    image: postgres:16
-    container_name: informe-postgres
+    image: postgres:16-alpine
+    container_name: informe-postgres-alpine
+    dns: ["8.8.8.8", "1.1.1.1"]
     environment:
       POSTGRES_USER: informe
       POSTGRES_PASSWORD: informe_dev
@@ -15,9 +27,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # Volume NOMEADO, gerenciado pelo Docker (vive no WSL2, nao no repositorio).
-      # Sobrevive a `docker compose down` e a reboot; so `down -v` apaga.
-      - informe_pgdata:/var/lib/postgresql/data
+      - informe_pgdata_alpine:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U informe -d informe"]
       interval: 5s
@@ -25,18 +35,19 @@ services:
       retries: 10
 
   server:
-    image: mcr.microsoft.com/dotnet/sdk:10.0
-    container_name: informe-server
+    image: mcr.microsoft.com/dotnet/sdk:10.0-alpine
+    container_name: informe-server-alpine
+    dns: ["8.8.8.8", "1.1.1.1"]
     working_dir: /repo
     volumes:
-      - .:/repo                        # monta o repo inteiro (watch detecta mudanças)
-      - nuget-cache:/root/.nuget       # cache de pacotes entre rebuilds
+      - .:/repo
+      - nuget-cache-alpine:/root/.nuget
     ports:
-      - "5020:5020"                    # HTTP — HTTPS exigiria montar o dev cert
+      - "5020:5020"
+      - "5021:5021"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: "http://+:5020;http://+:5021"
-      # Sobrescreve o Host=localhost do appsettings.json pelo nome do serviço no compose
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=informe;Username=informe;Password=informe_dev"
     command: dotnet watch run --project src/Host/informE.Server --launch-profile docker
     depends_on:
@@ -44,5 +55,6 @@ services:
         condition: service_healthy
 
 volumes:
-  informe_pgdata:
-  nuget-cache:      # evita baixar os pacotes do zero a cada `docker compose up`
+  informe_pgdata_alpine:
+  nuget-cache-alpine:
+
