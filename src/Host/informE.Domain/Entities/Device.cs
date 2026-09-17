@@ -40,6 +40,19 @@ public class Device
     // máquina nunca reportou; a tela mostra "—" nessas linhas.
     public int? UptimeSeconds { get; set; }
 
+    // Percentuais do ÚLTIMO snapshot, para a tela de detalhe do equipamento.
+    //
+    // Antes só o Health derivado era guardado: EvaluateHealth reduzia os três
+    // números a um enum e os percentuais eram descartados. A tela não tinha como
+    // mostrar "CPU 35,9%" porque o dado não existia em lugar nenhum do sistema.
+    //
+    // Isto NÃO é histórico (RF02 continua valendo — histórico é DeviceDailyMetrics):
+    // é o valor corrente, sobrescrito a cada snapshot, igual ao UptimeSeconds.
+    // Null enquanto a máquina nunca reportou; a tela mostra "—".
+    public float? CpuPercent { get; set; }
+    public float? RamPercent { get; set; }
+    public float? DiskPercent { get; set; }
+
     // Máquina do professor vs. do aluno na tela de Grupos. Designado pelo admin
     // depois do enroll, não reportado pelo agente.
     public DeviceRole Role { get; set; } = DeviceRole.Aluno;
@@ -63,14 +76,19 @@ public class Device
     // Construtor para registro padrão
     public Device (string hostname, string lastIp, string macAddress, string os, string osUser, string agentKeyHash, Guid? groupId, DeviceInfo? deviceInfo)
     {
-        if (ValidateHostname (hostname))
-            Hostname = hostname;
+        // Os validadores LANCAM quando o valor e invalido — por isso a atribuicao
+        // e direta. Antes era `if (Validate(x)) Prop = x;`, que descartava o dado
+        // ruim em silencio e deixava a propriedade em string.Empty. Como
+        // `devices.hostname` e `devices.mac_address` sao UNIQUE, o primeiro enroll
+        // ruim criava uma maquina sem nome e o segundo estourava 23505 -> 500.
+        ValidateHostname(hostname);
+        Hostname = hostname;
 
-        if (ValidateIpAddress (lastIp))
-            LastIp = lastIp;
+        ValidateIpAddress(lastIp);
+        LastIp = lastIp;
 
-        if (ValidateMacAddress(macAddress))
-            MacAddress = macAddress;
+        ValidateMacAddress(macAddress);
+        MacAddress = macAddress;
 
         Status = EndpointStatus.Unknown;
         Os = os;
@@ -78,60 +96,58 @@ public class Device
         AgentKeyHash = agentKeyHash;
         GroupId = groupId;
         DeviceInfo = deviceInfo;
-        RegisteredAt = DateTimeOffset.Now;
-        KeyRotatedAt = DateTimeOffset.Now;
+        RegisteredAt = DateTimeOffset.UtcNow;
+        KeyRotatedAt = DateTimeOffset.UtcNow;
     }
 
     // Métodos de validação
-    private bool ValidateHostname(string hostname)
+    private static void ValidateHostname(string hostname)
     {
         if (string.IsNullOrWhiteSpace(hostname) || hostname.Length > 15)
-            return false;
+            throw new ArgumentException($"Hostname inválido: '{hostname}'. Precisa ter de 1 a 15 caracteres.");
 
-        if (hostname.StartsWith("-") || hostname.EndsWith("-"))
-            return false;
+        if (hostname.StartsWith('-') || hostname.EndsWith('-'))
+            throw new ArgumentException($"Hostname inválido: '{hostname}'. Não pode começar nem terminar com hífen.");
 
         if (Regex.IsMatch(hostname, @"^\d+$")) // Não pode conter apenas números
-            return false;
+            throw new ArgumentException($"Hostname inválido: '{hostname}'. Não pode ser só números.");
 
-        return HostnameRegex.IsMatch(hostname);
+        if (!HostnameRegex.IsMatch(hostname))
+            throw new ArgumentException($"Hostname inválido: '{hostname}'. Use apenas letras, números e hífen.");
     }
 
-    private static bool ValidateIpAddress(string ipAddress)
+    private static void ValidateIpAddress(string ipAddress)
     {
-        if (string.IsNullOrWhiteSpace(ipAddress))
-            return false;
-
         // Aceita tanto IPv4 quanto IPv6 sem depender da System.Net
-        return IPv4Regex.IsMatch(ipAddress) || IPv6Regex.IsMatch(ipAddress);
+        if (string.IsNullOrWhiteSpace(ipAddress)
+            || !(IPv4Regex.IsMatch(ipAddress) || IPv6Regex.IsMatch(ipAddress)))
+            throw new ArgumentException($"Endereço IP inválido: '{ipAddress}'.");
     }
 
-    private static bool ValidateMacAddress(string macAddress)
+    private static void ValidateMacAddress(string macAddress)
     {
-        if (string.IsNullOrWhiteSpace(macAddress))
-            return false;
-
-        return MacAddressRegex.IsMatch(macAddress);
+        if (string.IsNullOrWhiteSpace(macAddress) || !MacAddressRegex.IsMatch(macAddress))
+            throw new ArgumentException(
+                $"Endereço MAC inválido: '{macAddress}'. Use AA:BB:CC:DD:EE:FF ou 12 dígitos hexadecimais.");
     }
 
-    private static bool ValidateOsUser(string osUser)
+    private static void ValidateOsUser(string osUser)
     {
         if (string.IsNullOrWhiteSpace(osUser) || osUser.Length > 104)
-            return false;
+            throw new ArgumentException($"Usuário do SO inválido: '{osUser}'. Limite de 104 caracteres.");
 
         // Bloqueia caracteres proibidos no Windows/Linux para nomes de usuário
         // Permite formato "DOMINIO\usuario", letras, números, acentos, hífen, ponto e underline
         string pattern = @"^[a-zA-Z0-9á-úÁ-Úà-ùÀ-Ùã-õÃ-Õâ-ûÂ-ÛçÇ._\-\\]+$";
 
-        return Regex.IsMatch(osUser, pattern);
+        if (!Regex.IsMatch(osUser, pattern))
+            throw new ArgumentException($"Usuário do SO inválido: '{osUser}'. Caracteres não permitidos.");
     }
 
-    private static bool ValidateHashKey(string hashKey)
+    private static void ValidateHashKey(string hashKey)
     {
-        if (string.IsNullOrEmpty(hashKey))
-            return false;
-
-        return Argon2HashRegex.IsMatch(hashKey);
+        if (string.IsNullOrEmpty(hashKey) || !Argon2HashRegex.IsMatch(hashKey))
+            throw new ArgumentException("Chave de agente inválida: não é um hash Argon2.");
     }
 
     private static bool ValidateStatus(EndpointStatus status)
@@ -142,20 +158,20 @@ public class Device
 
     public void UpdateHostname(string hostname)
     {
-        if (ValidateHostname(hostname))
-            Hostname = hostname;
+        ValidateHostname(hostname);
+        Hostname = hostname;
     }
 
     public void UpdateLastIp(string ipAddress)
     {
-        if (ValidateIpAddress(ipAddress))
-            LastIp = ipAddress;
+        ValidateIpAddress(ipAddress);
+        LastIp = ipAddress;
     }
 
     public void UpdateMacAddr(string macAddress)
     {
-        if (ValidateMacAddress(macAddress))
-            MacAddress = macAddress;
+        ValidateMacAddress(macAddress);
+        MacAddress = macAddress;
     }
 
     public void UpdateOs(string os)
@@ -165,8 +181,8 @@ public class Device
     }
     public void UpdateOsUser(string osUser)
     {
-       if (ValidateOsUser(osUser))
-            OsUser = osUser;
+        ValidateOsUser(osUser);
+        OsUser = osUser;
     }
 
     public void UpdateStatus(EndpointStatus status)
@@ -177,11 +193,9 @@ public class Device
 
     public void UpdateAgentHashKey(string hashKey)
     {
-       if (ValidateHashKey(hashKey))
-       {
-           AgentKeyHash = hashKey;
-           KeyRotatedAt = DateTimeOffset.Now;
-       }
+        ValidateHashKey(hashKey);
+        AgentKeyHash = hashKey;
+        KeyRotatedAt = DateTimeOffset.UtcNow;
     }
 
     public void AssignRole(DeviceRole role)
@@ -193,7 +207,17 @@ public class Device
     // Métodos de domínio — conexão e saúde
     // uptimeSeconds é opcional porque a conexão do agente (OnConnectedAsync) marca
     // Online antes de existir snapshot; o valor chega na primeira telemetria.
-    public void MarkSeen(DateTimeOffset now, HealthStatus health, int? uptimeSeconds = null)
+    // Os percentuais são opcionais pelo mesmo motivo do uptime: AgentHub chama
+    // MarkSeen(now, device.Health) no OnConnectedAsync, quando ainda não existe
+    // snapshot. Passar os três quando existirem mantém percentual e Health sempre
+    // vindos da MESMA leitura — não dá pra gravar "CPU 12%" com Saúde=Crítico.
+    public void MarkSeen(
+        DateTimeOffset now,
+        HealthStatus health,
+        int? uptimeSeconds = null,
+        float? cpuPercent = null,
+        float? ramPercent = null,
+        float? diskPercent = null)
     {
         LastSeenAt = now;
         Status = EndpointStatus.Online;
@@ -201,6 +225,12 @@ public class Device
 
         if (uptimeSeconds is >= 0)
             UptimeSeconds = uptimeSeconds;
+
+        // Só sobrescreve quando veio leitura nova: preserva o último valor
+        // conhecido no evento de conexão, em vez de zerar a tela.
+        if (cpuPercent is not null) CpuPercent = cpuPercent;
+        if (ramPercent is not null) RamPercent = ramPercent;
+        if (diskPercent is not null) DiskPercent = diskPercent;
     }
 
     // Sem telemetria não há como avaliar saúde nem uptime — a tela mostra "—" em
@@ -210,6 +240,12 @@ public class Device
         Status = EndpointStatus.Offline;
         Health = HealthStatus.Erro;
         UptimeSeconds = null;
+
+        // Mesma razão do uptime: percentual de máquina offline é dado velho
+        // apresentado como atual. A tela mostra "—".
+        CpuPercent = null;
+        RamPercent = null;
+        DiskPercent = null;
     }
 
     // Limiares calibrados pelos dados da tela de Equipamentos: PC-05 com disco

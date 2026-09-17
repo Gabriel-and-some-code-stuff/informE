@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
         <!-- informE é Windows-only: apara os targets mobile. Se um dia quiser cross-platform, restaure os TFMs. -->
@@ -69,6 +69,8 @@
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+        <PackageReference Include="LucideBlazor" Version="1.0.5" />
+        <PackageReference Include="Blazor-ApexCharts-MAUI" Version="7.0.0" />
     </ItemGroup>
 
     <ItemGroup>

@@ -11,7 +11,11 @@ public class MachineTask
     // Código legível pro humano ("EX-2847" na coluna ID da tela de Execuções).
     // Gerado pelo banco via sequence — o Guid continua sendo a chave de verdade
     // (anti-enumeração); este é só o rótulo que o técnico fala no telefone.
-    public string Code { get; set; } = string.Empty;
+    // `null!` e nao `string.Empty`: o valor vem do banco (sequence). O EF so
+    // OMITE a coluna do INSERT quando ve o sentinel de nao-preenchido, que
+    // para string e `null`. Com string.Empty ele mandava '' em toda linha e o
+    // indice unico rejeitava a segunda.
+    public string Code { get; set; } = null!;
 
     public string Name { get; set; } = string.Empty;
 

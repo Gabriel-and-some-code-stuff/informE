@@ -13,7 +13,10 @@ public class AlertConfiguration : IEntityTypeConfiguration<Alert>
         builder.Property(alert => alert.Id).HasDefaultValueSql("gen_random_uuid()");
 
         builder.Property(alert => alert.Type).HasConversion<string>().HasMaxLength(30);
-        builder.Property(alert => alert.Message).HasMaxLength(255).IsRequired();
+        // SEM IsRequired: a entidade declara `string? Message` e o construtor só
+        // preenche se vier texto válido. Com NOT NULL no banco, `new Alert(id,
+        // tipo, null)` compilava e estourava no INSERT.
+        builder.Property(alert => alert.Message).HasMaxLength(255);
         builder.Property(alert => alert.OccurredAt).HasDefaultValueSql("now()");
 
         // Sustenta o GROUP BY DATE(occurred_at), type do gráfico "Histórico de Alertas".

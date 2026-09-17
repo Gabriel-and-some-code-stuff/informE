@@ -23,7 +23,7 @@ public class Group
             Description = description;
 
         IsActive = true;
-        CreatedAt = DateTimeOffset.Now;
+        CreatedAt = DateTimeOffset.UtcNow;
         OwnerId = ownerId;
     }
 
