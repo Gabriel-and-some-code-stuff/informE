@@ -44,10 +44,10 @@ services:
       - nuget-cache-alpine:/root/.nuget
     ports:
       - "5020:5020"
-      - "5021:5021"
+    #  - "5021:5021"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: "http://+:5020;http://+:5021"
+      ASPNETCORE_URLS: "http://+:5020"
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=informe;Username=informe;Password=informe_dev"
     command: dotnet watch run --project src/Host/informE.Server --launch-profile docker
     depends_on:

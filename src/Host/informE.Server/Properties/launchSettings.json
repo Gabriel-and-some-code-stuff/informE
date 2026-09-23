@@ -6,16 +6,26 @@
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "launchUrl": "scalar/v1",
-      "applicationUrl": "https://0.0.0.0:5021;http://0.0.0.0:5020",
+      "applicationUrl": "https://0.0.0.0:5020",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "scalar/v1",
+      "applicationUrl": "http://0.0.0.0:5020",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENTD": "Development"
       }
     },
     "docker": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": false,
-      "applicationUrl": "http://0.0.0.0:5020;http://0.0.0.0:5021",
+      "applicationUrl": "http://0.0.0.0:5020;",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

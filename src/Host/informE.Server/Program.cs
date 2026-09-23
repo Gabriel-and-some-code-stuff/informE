@@ -30,11 +30,22 @@ builder.Services.AddOpenApi(options =>
 // que não existe mais — e 5173, que é a porta do Vite e nunca foi usada por
 // projeto nenhum daqui (o front é MAUI Blazor Hybrid).
 const string PoliticaCorsDev = "dev";
-builder.Services.AddCors(options => options.AddPolicy(PoliticaCorsDev, policy => policy
-    .WithOrigins("https://localhost:5021")
-    .AllowAnyHeader()
-    .AllowAnyMethod()
-    .AllowCredentials()));
+builder.Services.AddCors(options =>
+    options.AddPolicy(
+        PoliticaCorsDev,
+        policy =>
+            policy
+                .WithOrigins(
+                    "https://localhost:5020",
+                    "http://localcalhost:5020" /*,
+                    "https://localhost:5021",
+                    "http://localcalhost:5021"*/
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials()
+    )
+);
 
 var app = builder.Build();
 
