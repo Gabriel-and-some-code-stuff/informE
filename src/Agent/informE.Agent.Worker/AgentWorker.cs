@@ -71,10 +71,27 @@ public class AgentWorker(
             .WithUrl(url, opcoesHttp =>
             {
                 // Mesmo handler do enroll — ver CertificadoDeDesenvolvimento.
-                // Só tem efeito quando Agent:AceitarCertificadoNaoConfiavel = true.
-                if (_options.AceitarCertificadoNaoConfiavel)
-                    opcoesHttp.HttpMessageHandlerFactory = _ =>
-                        CertificadoDeDesenvolvimento.CriarHandler(_options);
+                //
+                // Aplicado SEMPRE, não só quando AceitarCertificadoNaoConfiavel.
+                // Antes ficava dentro desse if, e o handler carrega duas decisões:
+                // o certificado (que de fato é condicional) e o desvio do proxy
+                // (que não é). Com o if, o agente de produção — o que valida
+                // certificado, justamente — era o único a herdar o proxy do
+                // sistema no handshake, e tomava 503 do proxy da instituição
+                // depois de ter feito o enroll sem erro nenhum.
+                opcoesHttp.HttpMessageHandlerFactory = _ =>
+                    CertificadoDeDesenvolvimento.CriarHandler(_options);
+
+                // O handler acima cobre só o /negotiate. O upgrade para WebSocket
+                // não passa por HttpMessageHandler nenhum: quem o faz é o
+                // ClientWebSocket, que tem a própria configuração de proxy e cai
+                // no proxy do sistema por padrão.
+                //
+                // Sem esta linha o sintoma é traiçoeiro: o negotiate responde 200,
+                // o agente parece conectar e só o transporte falha — o log mostra
+                // queda de WebSocket e reconexão infinita, sem falar em proxy.
+                // Proxy = null significa conexão direta.
+                opcoesHttp.WebSocketConfiguration = ws => ws.Proxy = null;
             })
             // RF06: retry nativo do SignalR, com backoff. Sem argumento ele
             // desiste depois de ~1 min; a lista explícita mantém tentando de

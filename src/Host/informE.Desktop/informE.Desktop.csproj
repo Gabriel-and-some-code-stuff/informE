@@ -19,6 +19,29 @@
         <EnableDefaultCssItems>false</EnableDefaultCssItems>
         <Nullable>enable</Nullable>
 
+        <!--
+            Desliga a pré-compressão (Gzip/Brotli) dos static web assets.
+
+            O nome da propriedade é `CompressionEnabled` — é a que o SDK realmente
+            lê, em Sdk.StaticWebAssets.CurrentVersion.targets, para decidir se
+            importa Microsoft.NET.Sdk.StaticWebAssets.Compression.targets.
+            (`DisableStaticWebAssetsCompress` não existe em SDK nenhum: é ignorada
+            em silêncio, que é o motivo de "não deu erro e não resolveu nada".)
+
+            Por que desligar aqui: comprimir serve para economizar banda de rede.
+            Este é um app MAUI Blazor Hybrid — o WebView2 lê os assets do disco
+            local, do próprio pacote do app. Não existe rede no caminho, então os
+            .gz/.br são só tempo de build e arquivos a mais no bin/.
+
+            O ganho concreto: a target de compressão invoca o host do .NET num
+            processo separado e depende de DOTNET_HOST_PATH estar resolvido. Quando
+            não está — caso de vários setups com o SDK fora do PATH do processo —
+            o build quebra na compressão, que é exatamente o erro que obrigava a
+            exportar DOTNET_HOST_PATH na mão antes de cada sessão. Sem a target,
+            não há o que resolver.
+        -->
+        <CompressionEnabled>false</CompressionEnabled>
+
         <!-- Enable XAML source generation for faster build times and improved performance.
              This generates C# code from XAML at compile time instead of runtime inflation.
              To disable, remove this line.

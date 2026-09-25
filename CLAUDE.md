@@ -72,6 +72,7 @@ O CI (`.github/workflows/ai-review.yml`) revisa PRs buscando exatamente isso.
 | **Datas = DateTimeOffset.UtcNow** | Npgsql recusa DateTimeOffset com offset ≠ 0 em `timestamptz` |
 | **Sem broker externo** | SignalR resolve pub/sub e reconexão; EF resolve persistência |
 | **UI nunca manda script** | A UI escolhe uma ação do catálogo (`MachineActionKind`); o Server resolve o script (RF14) |
+| **Todo HTTP do informE ignora o proxy do sistema** (`UseProxy = false`) | On-premise: o Server está sempre na mesma rede. Herdando o proxy da escola, até `localhost` era interceptado e o login voltava **503 do squid** — ver `docs/proxy-e-build-local.md` |
 
 ---
 
@@ -79,8 +80,7 @@ O CI (`.github/workflows/ai-review.yml`) revisa PRs buscando exatamente isso.
 
 ```
 informE/
-├── docker-compose.yml          # Postgres + Server (imagens Debian)
-├── docker-compose2.yml         # Postgres + Server (imagens Alpine, ~465 MB)
+├── docker-compose.yml          # Postgres + Server (imagens Alpine, ~465 MB)
 ├── Directory.Build.props       # Nullable, TreatWarningsAsErrors, isolamento obj/bin no container
 ├── global.json                 # Trava SDK .NET 10.0.100
 ├── informE.Host.slnx
@@ -90,6 +90,7 @@ informE/
 │   ├── COMO-RODAR.md           # Guia de usuário (não-técnico + técnico)
 │   ├── ARCHITECTURE.md         # Arquitetura completa + Sprint 1
 │   ├── situacao-atual.md       # Status honesto do projeto
+│   ├── proxy-e-build-local.md  # 503 do proxy, compressão de assets, dotnet watch no Docker
 │   └── ...
 ├── ps1/                        # Scripts PowerShell
 │   ├── informe.ps1             # ← script principal: sobe tudo
@@ -132,12 +133,15 @@ powershell -ExecutionPolicy Bypass -File ps1\run-agents.ps1 -Count 3
 ### Via Docker Compose
 
 ```bash
-# Sobe Postgres + Server com hot reload (dotnet watch)
+# Sobe Postgres + Server (imagens Alpine, ~465 MB total)
 docker compose up
-
-# Variante Alpine (~465 MB total vs ~1,35 GB)
-docker compose -f docker-compose2.yml up  # (opção principal / padrão)
 ```
+
+**Sem hot reload dentro do container, de propósito.** O `dotnet watch` não recebe
+inotify pelo bind mount Windows→WSL2, cai no watcher de polling e aborta o
+processo (exit 134) minutos depois de o Server já estar atendendo. Quem precisa
+de hot reload roda o Server no host: `dotnet watch run --project src/Host/informE.Server`.
+Ver `docs/proxy-e-build-local.md`.
 
 API: `http://localhost:5020` | Scalar: `http://localhost:5020/scalar/v1`
 
@@ -211,8 +215,9 @@ $raiz = Split-Path $PSScriptRoot -Parent  # aponta para a raiz do repo
   (injetado pela imagem oficial), redireciona `obj/` e `bin/` para `/tmp`
   e exclui `obj/**;bin/**` dos globs — evita CS0579 (atributo duplicado)
   causado pelos artefatos do Visual Studio no bind mount.
-- **Alpine + DNS**: `docker-compose2.yml` usa `dns: ["8.8.8.8", "1.1.1.1"]`
+- **Alpine + DNS**: o compose usa `dns: ["8.8.8.8", "1.1.1.1"]`
   para contornar o resolver musl que não alcança `api.nuget.org` no Docker Desktop.
+- **`dotnet run`, nunca `dotnet watch run`**: ver acima e `docs/proxy-e-build-local.md`.
 
 ---
 

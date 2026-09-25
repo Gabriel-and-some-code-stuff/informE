@@ -1,5 +1,5 @@
-# docker-compose2.yml — variante Alpine (imagens mais leves)
-# Compare com docker-compose.yml:
+# docker-compose.yml — variante Alpine (imagens mais leves)
+# Era o antigo docker-compose2.yml; virou o padrao. Comparado a variante Debian:
 #
 #   postgres:16                       ~450 MB  →  postgres:16-alpine            ~115 MB
 #   mcr.microsoft.com/dotnet/sdk:10.0 ~900 MB  →  dotnet/sdk:10.0-alpine        ~350 MB
@@ -13,7 +13,7 @@
 # dns explicito: o resolver musl do Alpine nao usa o DNS interno do Docker
 # Desktop por padrao, causando NU1301 (Network unreachable) no dotnet restore.
 #
-# Para testar: docker compose -f docker-compose2.yml up
+# Para subir: docker compose up
 
 services:
   postgres:
@@ -49,7 +49,35 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: "http://+:5020"
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=informe;Username=informe;Password=informe_dev"
-    command: dotnet watch run --project src/Host/informE.Server --launch-profile docker
+
+    # `dotnet run`, NAO `dotnet watch run`.
+    #
+    # O watcher do dotnet nao recebe eventos inotify atraves do bind mount
+    # Windows -> WSL2 -> container, entao cai no PollingDirectoryWatcher, que
+    # varre o /repo inteiro em loop. Esse fallback monta um dicionario indexado
+    # por caminho de arquivo, e a enumeracao do mount as vezes devolve a MESMA
+    # entrada duas vezes. Quando devolve, o watcher estoura:
+    #
+    #   Unhandled exception. System.ArgumentException: An item with the same
+    #   key has already been added. Key: /repo/src/.../PoliticaDeSenha.cs
+    #      at Microsoft.DotNet.Watch.PollingDirectoryWatcher.PollingLoop()
+    #
+    # A excecao sobe numa thread de background, ninguem captura, e o processo
+    # aborta: o container morre com exit 134 (SIGABRT) DEPOIS de ja ter logado
+    # "Now listening on: http://0.0.0.0:5020". Ou seja: o Server sobe, atende
+    # por alguns minutos e cai sozinho, sem nenhum erro de aplicacao no log.
+    # Dai o cliente parar de ser atendido no meio do uso.
+    #
+    # Hot reload dentro do container nunca funcionou aqui de qualquer forma
+    # (sem inotify sobra o polling, que e justamente o que quebra). Quem precisa
+    # de hot reload roda o Server no host, onde o watcher usa a API do Windows:
+    #   dotnet watch run --project src/Host/informE.Server
+    command: dotnet run --project src/Host/informE.Server --launch-profile docker
+
+    # O container so e util enquanto esta atendendo. Se o processo morrer por
+    # qualquer motivo, subir de novo e melhor que deixar a porta 5020 muda.
+    restart: unless-stopped
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,4 +85,3 @@ services:
 volumes:
   informe_pgdata_alpine:
   nuget-cache-alpine:
-

@@ -37,7 +37,7 @@ builder.Services.AddCors(options =>
             policy
                 .WithOrigins(
                     "https://localhost:5020",
-                    "http://localcalhost:5020" /*,
+                    "http://localhost:5020" /*,
                     "https://localhost:5021",
                     "http://localcalhost:5021"*/
                 )
