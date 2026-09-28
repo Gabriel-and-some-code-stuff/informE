@@ -31,16 +31,37 @@ política abaixo diferencia por papel — ver Seção 4 para o detalhamento da m
 
 | Quem | Pode gerenciar (CRUD) | Pode ver senha? |
 |---|---|---|
-| Super Admin | Cria e gerencia **Administrador** e **Usuário Comum** | Nunca |
+| Super Admin | Cria **qualquer papel**, inclusive outro Super Admin. Único que **muda papel** de quem já existe (promove/rebaixa) | Nunca |
 | Administrador | Cria e gerencia **apenas Usuário Comum** | Nunca |
 | Usuário Comum | Ninguém | Nunca |
 
-> **Administrador não promove ninguém ao próprio nível.** Só o Super Admin cria
-> Administrador. Implementado em `CreateUserUseCase.PodeCriar` e coberto por
-> teste (a matriz inteira, permitido e recusado).
+> **Administrador não promove ninguém ao próprio nível** nem mexe em papel de
+> quem já existe. Se pudesse mudar papel, poderia se promover a Super Admin e a
+> hierarquia deixaria de existir.
 >
-> Em aberto: Super Admin pode criar outro Super Admin? Hoje **não** — a regra
-> ditada foi "Admin e Viewer". É uma linha se mudar.
+> Implementado em `CreateUserUseCase.PodeCriar` (criação) e
+> `ChangeUserRoleUseCase` (promoção/rebaixamento), com a matriz inteira coberta
+> por teste — o que permite e o que recusa.
+>
+> **Nem o Super Admin muda o próprio papel.** Trava contra auto-rebaixamento
+> acidental: sem ela, o único Super Admin poderia se rebaixar e deixar a
+> instância sem ninguém capaz de promover, sem caminho de volta pela UI.
+>
+> Mudar papel **revoga as sessões** do alvo. O papel viaja como claim no access
+> token, que é stateless — sem revogar, um rebaixamento só valeria quando o
+> token de 15 min vencesse.
+
+### Redefinição de senha ("Esqueci a senha")
+
+Decidido em 22/08: **existe SMTP** e o link vai para o e-mail institucional do
+cadastro. Só professor e admin usam.
+
+| Etapa | Comportamento |
+|---|---|
+| Pedir o link | Resposta **sempre igual**, exista a conta ou não — diferenciar permitiria descobrir quais e-mails têm conta (mesmo raciocínio do login). Conta desativada também não recebe: reset não é caminho de volta para conta bloqueada. |
+| Formato do token | O link carrega `{Id}.{segredo}`. O `Id` acha a linha; o segredo é verificado contra o hash Argon2id. Necessário porque o Argon2 tem salt aleatório — não dá para consultar `WHERE token_hash = ?`. |
+| Validade | 1 hora, uso único. Pedir um link novo invalida o anterior. |
+| Ao redefinir | Troca a senha, gasta o token e **revoga todas as sessões** — se alguém entrou com a senha antiga, perde o acesso. ⚠️ Só mata os refresh tokens; o access token stateless sobrevive até 15 min. |
 
 Todo reset de senha feito por terceiros (Super Admin sobre Admin, ou Admin sobre
 Usuário Comum) gera uma **senha temporária ou link de definição** — a senha atual do

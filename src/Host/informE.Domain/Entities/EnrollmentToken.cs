@@ -17,14 +17,14 @@ public class EnrollmentToken
     public EnrollmentToken(string token, Guid createdByUserId)
     {
         Token = token;
-        ExpiresAt = DateTimeOffset.Now.AddHours(2);
+        ExpiresAt = DateTimeOffset.UtcNow.AddHours(2);
         IsUsed = false;
         CreatedByUserId = createdByUserId;
     }
 
     // Métodos de validação
     // Token é válido quando ainda não foi usado e não expirou.
-    public bool IsValid() => !IsUsed && ExpiresAt > DateTimeOffset.Now;
+    public bool IsValid() => !IsUsed && ExpiresAt > DateTimeOffset.UtcNow;
 
     // Métodos de domínio
     public void Redeem(Guid deviceId)

@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<DeviceInfo> DeviceInfos => Set<DeviceInfo>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<EnrollmentToken> EnrollmentTokens => Set<EnrollmentToken>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<MachineTask> MachineTasks => Set<MachineTask>();
     public DbSet<TaskExecutionLog> TaskExecutionLogs => Set<TaskExecutionLog>();
     public DbSet<Software> Softwares => Set<Software>();

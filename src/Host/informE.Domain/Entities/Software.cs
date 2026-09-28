@@ -21,7 +21,7 @@ public class Software
         if (ValidateVersion(version))
             Version = version;
 
-        DetectedAt = DateTimeOffset.Now;
+        DetectedAt = DateTimeOffset.UtcNow;
     }
 
     // Métodos de validação

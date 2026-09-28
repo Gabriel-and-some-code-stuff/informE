@@ -14,7 +14,7 @@ public class NetworkGrowthSnapshot
     // Construtor padrão
     public NetworkGrowthSnapshot (int totalDevices, int totalGroups)
     {
-        Date = DateOnly.FromDateTime(DateTime.Now);
+        Date = DateOnly.FromDateTime(DateTime.UtcNow.Date);
         TotalDevices = totalDevices;
         TotalGroups = totalGroups;
     }

@@ -1,0 +1,259 @@
+@page "/groups/{GroupId:guid}"
+@page "/grupos/{GroupId:guid}"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>@(group?.Name ?? "Grupo") | informE</PageTitle>
+
+<div class="group-details-page">
+    <header class="group-heading">
+        <button class="back-button" type="button" @onclick="GoBack"><LucideIcon Name="arrow-left" Size="15" /> <span>Voltar</span></button>
+        <div class="heading-row">
+            <div>
+                <h1>@(group?.Name ?? "Grupo")</h1>
+                @if (!string.IsNullOrWhiteSpace(group?.Description))
+                {
+                    <p>@group.Description</p>
+                }
+            </div>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="detail-message error" role="alert">
+            <div>
+                <strong>Não foi possível carregar o grupo</strong>
+                <small>@errorMessage</small>
+            </div>
+            <button type="button" @onclick="LoadAsync">Tentar novamente</button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="loading-state"><span class="loader"></span><span>Carregando máquinas...</span></div>
+    }
+    else if (group is not null)
+    {
+        <section class="group-summary">
+            <article><span>Total de Máquinas</span><strong class="cyan">@devices.Count</strong></article>
+            <article><span>Online</span><strong class="green">@devices.Count(x => x.Status == "Online")</strong></article>
+            <article><span>Offline</span><strong>@devices.Count(x => x.Status == "Offline")</strong></article>
+            <article><span>Com Problema</span><strong class="yellow">@devices.Count(x => x.Status == "Online" && (x.Health is "Aviso" or "Critico" or "Erro"))</strong></article>
+        </section>
+
+        <section class="machine-tools">
+            <div class="machine-search">
+                <LucideIcon Name="search" Size="16" />
+                <input value="@searchText" @oninput="OnSearch" placeholder="Buscar por nome, IP ou sistema operacional..." />
+            </div>
+            <select value="@statusFilter" @onchange="OnStatusFilterChanged">
+                <option value="all">Todos os status</option>
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+                <option value="problem">Com problema</option>
+            </select>
+        </section>
+
+        @if (professor is not null)
+        {
+            <section class="machine-section">
+                <div class="section-title professor-title">COMPUTADOR DO PROFESSOR</div>
+                <button class="professor-card" type="button" @onclick="() => OpenDevice(professor.Id)">
+                    <span class="device-icon"><LucideIcon Name="monitor" Size="18" /></span>
+                    <span class="device-main">
+                        <strong>@professor.Hostname <small>Professor</small></strong>
+                        <em>@professor.Os</em>
+                    </span>
+                    <span class="device-ip">@professor.LastIp</span>
+                    <span class="last-seen">Último sinal: @FormatLastSeen(professor.LastSeenAt)</span>
+                    <span class="status-pill @professor.Status.ToLowerInvariant()">@ConnectionLabel(professor.Status)</span>
+                </button>
+            </section>
+        }
+
+        <section class="machine-section students-section">
+            <div class="students-header">
+                <div class="section-title">COMPUTADORES DOS ALUNOS <span>(@filteredStudents.Count máquinas)</span></div>
+                <div class="pagination-info">Exibindo @PageStart-@PageEnd de @filteredStudents.Count</div>
+            </div>
+
+            @if (pagedStudents.Count == 0)
+            {
+                <div class="empty-state">Nenhuma máquina encontrada com esse filtro.</div>
+            }
+            else
+            {
+                <div class="student-list">
+                    @foreach (var machine in pagedStudents)
+                    {
+                        <button class="student-row @HealthClass(machine.Health)" type="button" @onclick="() => OpenDevice(machine.Id)">
+                            <span class="health-dot"></span>
+                            <strong>@machine.Hostname</strong>
+                            <span class="student-ip">@machine.LastIp</span>
+                            <span>@machine.Os</span>
+                            <span>Último sinal: @FormatLastSeen(machine.LastSeenAt)</span>
+                            <span class="status-pill @machine.Status.ToLowerInvariant()">@ConnectionLabel(machine.Status)</span>
+                        </button>
+                    }
+                </div>
+            }
+
+            @if (TotalPages > 1)
+            {
+                <div class="pagination">
+                    <button type="button" @onclick="PreviousPage" disabled="@(page == 1)">‹</button>
+                    @for (var i = 1; i <= TotalPages; i++)
+                    {
+                        var pageNumber = i;
+                        <button type="button" class="@(page == pageNumber ? "active" : null)" @onclick="() => SetPage(pageNumber)">@pageNumber</button>
+                    }
+                    <button type="button" @onclick="NextPage" disabled="@(page == TotalPages)">›</button>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid GroupId { get; set; }
+
+    private GroupListItemDto? group;
+    private readonly List<DeviceListItemDto> devices = [];
+    private DeviceListItemDto? professor;
+    private readonly List<DeviceListItemDto> filteredStudents = [];
+    private readonly List<DeviceListItemDto> pagedStudents = [];
+    private string searchText = string.Empty;
+    private string statusFilter = "all";
+    private string? errorMessage;
+    private bool loading = true;
+    private int page = 1;
+    private const int PageSize = 10;
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(filteredStudents.Count / (double)PageSize));
+    private int PageStart => filteredStudents.Count == 0 ? 0 : ((page - 1) * PageSize) + 1;
+    private int PageEnd => Math.Min(page * PageSize, filteredStudents.Count);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login/admin");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        errorMessage = null;
+        devices.Clear();
+
+        try
+        {
+            var groups = await Api.GetGroupsAsync();
+            group = groups.FirstOrDefault(x => x.Id == GroupId);
+            if (group is null)
+            {
+                errorMessage = "O grupo selecionado não foi encontrado.";
+                return;
+            }
+
+            var result = await Api.GetDevicesAsync(GroupId);
+            devices.AddRange(result.Itens.OrderBy(x => x.Hostname));
+            professor = devices.FirstOrDefault(x => x.Role == "Professor");
+            ApplyFilter();
+        }
+        catch (TaskCanceledException)
+        {
+            errorMessage = "A busca das máquinas demorou mais que o esperado. Tente novamente.";
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"O informE.Server não respondeu em http://localhost:5020. Erro: {ex.Message}";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void OnSearch(ChangeEventArgs args)
+    {
+        searchText = args.Value?.ToString() ?? string.Empty;
+        page = 1;
+        ApplyFilter();
+    }
+
+    private void OnStatusFilterChanged(ChangeEventArgs args)
+    {
+        statusFilter = args.Value?.ToString() ?? "all";
+        page = 1;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        filteredStudents.Clear();
+
+        var query = devices.Where(x => x.Role != "Professor");
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            query = query.Where(x =>
+                x.Hostname.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                x.LastIp.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                x.Os.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+        }
+
+        query = statusFilter switch
+        {
+            "online" => query.Where(x => x.Status == "Online"),
+            "offline" => query.Where(x => x.Status == "Offline"),
+            "problem" => query.Where(x => x.Status == "Online" && (x.Health is "Aviso" or "Critico" or "Erro")),
+            _ => query
+        };
+
+        filteredStudents.AddRange(query.OrderBy(x => x.Hostname));
+        if (page > TotalPages) page = TotalPages;
+        RefreshPage();
+    }
+
+    private void RefreshPage()
+    {
+        pagedStudents.Clear();
+        pagedStudents.AddRange(filteredStudents.Skip((page - 1) * PageSize).Take(PageSize));
+    }
+
+    private void SetPage(int value)
+    {
+        page = Math.Clamp(value, 1, TotalPages);
+        RefreshPage();
+    }
+
+    private void PreviousPage() => SetPage(page - 1);
+    private void NextPage() => SetPage(page + 1);
+    private void GoBack() => Navigation.NavigateTo("/groups");
+    private void OpenDevice(Guid id) => Navigation.NavigateTo($"/equipments/{id}");
+
+    private static string ConnectionLabel(string status) => status == "Online" ? "Online" : status == "Offline" ? "Offline" : "Desconhecido";
+    private static string HealthClass(string health) => health switch { "Critico" => "critical", "Aviso" => "warning", "Erro" => "error", _ => "healthy" };
+
+    private static string FormatLastSeen(DateTimeOffset? value)
+    {
+        if (value is null) return "—";
+        var diff = DateTimeOffset.Now - value.Value;
+        if (diff.TotalMinutes < 1) return "agora";
+        if (diff.TotalMinutes < 60) return $"{Math.Max(1, (int)diff.TotalMinutes)} min atrás";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h atrás";
+        return $"{(int)diff.TotalDays}d atrás";
+    }
+}

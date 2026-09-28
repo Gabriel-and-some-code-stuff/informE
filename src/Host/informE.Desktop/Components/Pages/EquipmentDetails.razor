@@ -1,0 +1,249 @@
+@page "/equipments/{DeviceId:guid}"
+@page "/equipamentos/{DeviceId:guid}"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Detalhes do Equipamento | informE</PageTitle>
+
+<div class="details-page">
+    <button class="back-link" type="button" @onclick="GoBack"><LucideIcon Name="arrow-left" Size="15" /> <span>Voltar para Equipamentos</span></button>
+
+    @if (loading)
+    {
+        <div class="loading-state"><span class="loader"></span><p>Carregando equipamento...</p></div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="details-message error" role="alert">
+            <strong>Não foi possível carregar o equipamento</strong>
+            <span>@errorMessage</span>
+            <button type="button" @onclick="LoadAsync">Tentar novamente</button>
+        </div>
+    }
+    else if (detail is not null)
+    {
+        var device = detail.Equipamento;
+        var hardware = detail.Hardware;
+        var mock = GetAdminMock(device);
+
+        <header class="device-header">
+            <div>
+                <h1>@device.Hostname - @(device.GroupName ?? "Sem grupo")</h1>
+                <div class="device-meta">
+                    <span>@Fallback(device.LastIp)</span>
+                    <i></i>
+                    <span>@Fallback(device.Os)</span>
+                    <i></i>
+                    <span class="connection-pill @ConnectionClass(device.Status)"><b></b>@ConnectionLabel(device.Status)</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="refresh-button" type="button" @onclick="LoadAsync" disabled="@refreshing"><LucideIcon Name="refresh-cw" Size="15" /> <span>@(refreshing ? "Atualizando..." : "Atualizar")</span></button>
+                <button class="execute-button" type="button" @onclick="OpenExecution"><LucideIcon Name="terminal" Size="15" /> <span>Executar Comando</span></button>
+            </div>
+        </header>
+
+        <section class="metric-grid admin-metrics">
+            <article class="metric-card">
+                <div class="metric-title"><span class="metric-icon cpu"><LucideIcon Name="cpu" Size="18" /></span><span>CPU</span></div>
+                <div class="meter cpu-meter"><span style="width:@MetricWidth(device.CpuPercent)"></span></div>
+                <strong>@FormatPercent(device.CpuPercent)</strong>
+            </article>
+            <article class="metric-card">
+                <div class="metric-title"><span class="metric-icon ram"><LucideIcon Name="memory-stick" Size="18" /></span><span>RAM</span></div>
+                <div class="meter"><span style="width:@MetricWidth(device.RamPercent)"></span></div>
+                <strong>@FormatPercent(device.RamPercent)</strong>
+            </article>
+            <article class="metric-card">
+                <div class="metric-title"><span class="metric-icon disk"><LucideIcon Name="hard-drive" Size="18" /></span><span>Disco</span></div>
+                <div class="meter disk"><span style="width:@MetricWidth(device.DiskPercent)"></span></div>
+                <strong>@FormatPercent(device.DiskPercent)</strong>
+            </article>
+            <article class="metric-card uptime-card">
+                <div class="metric-title"><span class="metric-icon uptime"><LucideIcon Name="clock-3" Size="18" /></span><span>Uptime</span></div>
+                <strong>@FormatUptimeDetailed(device.UptimeSeconds)</strong>
+                <small>Último sinal: @FormatLastSeen(device.LastSeenAt)</small>
+            </article>
+        </section>
+
+        <div class="tabs" role="tablist" aria-label="Detalhes administrativos do equipamento">
+            <button class="@(activeTab == DetailTab.General ? "active" : null)" type="button" @onclick="() => activeTab = DetailTab.General">Visão Geral</button>
+            <button class="@(activeTab == DetailTab.Processes ? "active" : null)" type="button" @onclick="() => activeTab = DetailTab.Processes">Processos</button>
+            <button class="@(activeTab == DetailTab.Services ? "active" : null)" type="button" @onclick="() => activeTab = DetailTab.Services">Serviços</button>
+        </div>
+
+        @if (activeTab == DetailTab.General)
+        {
+            <section class="content-card overview-card">
+                <h2>Informações do Sistema</h2>
+                <div class="info-grid">
+                    <div class="info-item"><span>Nome do Computador</span><strong>@device.Hostname</strong></div>
+                    <div class="info-item"><span>Grupo</span><strong>@(device.GroupName ?? "Sem grupo")</strong></div>
+                    <div class="info-item"><span>Endereço IP</span><strong>@Fallback(device.LastIp)</strong></div>
+                    <div class="info-item"><span>Sistema Operacional</span><strong>@Fallback(device.Os)</strong></div>
+                    <div class="info-item"><span>Processador</span><strong>@HardwareValue(hardware?.Cpu)</strong></div>
+                    <div class="info-item"><span>GPU</span><strong>@HardwareValue(hardware?.Gpu)</strong></div>
+                    <div class="info-item"><span>Memória Total</span><strong>@HardwareRam(hardware)</strong></div>
+                    <div class="info-item"><span>Armazenamento</span><strong>@HardwareStorage(hardware)</strong></div>
+                    <div class="info-item"><span>Placa-mãe</span><strong>@HardwareValue(hardware?.MotherBoard)</strong></div>
+                    <div class="info-item"><span>BIOS</span><strong>@HardwareValue(hardware?.Bios)</strong></div>
+                </div>
+            </section>
+        }
+        else if (activeTab == DetailTab.Processes)
+        {
+            <section class="content-card table-card">
+                <div class="card-heading"><h2>Processos em Execução</h2><span class="mock-note">Demonstração</span></div>
+                <div class="detail-table-scroll">
+                    <table class="detail-table">
+                        <thead><tr><th>Processo</th><th>CPU</th><th>RAM</th><th>Status</th></tr></thead>
+                        <tbody>
+                            @foreach (var process in mock.Processes)
+                            {
+                                <tr><td class="mono">@process.Name</td><td>@process.Cpu</td><td class="mono">@process.Ram</td><td><span class="running-pill">● Em execução</span></td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+        else
+        {
+            <section class="content-card table-card">
+                <div class="card-heading"><h2>Serviços do Sistema</h2><span class="mock-note">Demonstração</span></div>
+                <div class="detail-table-scroll">
+                    <table class="detail-table services-table">
+                        <thead><tr><th>Nome do Serviço</th><th>Identificador</th><th>Status</th><th>Inicialização</th></tr></thead>
+                        <tbody>
+                            @foreach (var service in mock.Services)
+                            {
+                                <tr><td>@service.DisplayName</td><td class="mono">@service.Name</td><td><span class="service-pill @(service.Running ? "running" : "stopped")">● @(service.Running ? "Em execução" : "Parado")</span></td><td>@service.Startup</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public Guid DeviceId { get; set; }
+
+    private DeviceDetailDto? detail;
+    private bool loading = true;
+    private bool refreshing;
+    private string? errorMessage;
+    private DetailTab activeTab = DetailTab.General;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login/admin");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (!loading) refreshing = true;
+        errorMessage = null;
+
+        try
+        {
+            detail = await Api.GetDeviceAsync(DeviceId);
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "O informE.Server não respondeu em http://localhost:5020.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+            refreshing = false;
+        }
+    }
+
+    private void GoBack() => Navigation.NavigateTo("/equipments");
+
+    private async Task OpenExecution()
+    {
+        if (detail is null) return;
+        var device = detail.Equipamento;
+
+        Guid? groupId = null;
+        try
+        {
+            var groups = await Api.GetGroupsAsync();
+            groupId = groups.FirstOrDefault(x => string.Equals(x.Name, device.GroupName, StringComparison.OrdinalIgnoreCase))?.Id;
+        }
+        catch
+        {
+        }
+
+        var group = Uri.EscapeDataString(device.GroupName ?? string.Empty);
+        var groupIdPart = groupId is null ? string.Empty : $"&groupId={groupId}";
+        Navigation.NavigateTo($"/executions?new=1&deviceId={device.Id}{groupIdPart}&group={group}");
+    }
+
+    private static string Fallback(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private static string FormatPercent(float? value) => value is null ? "—" : $"{Math.Round(value.Value)}%";
+    private static string MetricWidth(float? value) => $"{Math.Clamp(value ?? 0, 0, 100):0}%";
+    private static string ConnectionLabel(string status) => status == "Online" ? "Online" : status == "Offline" ? "Offline" : "Desconhecido";
+    private static string ConnectionClass(string status) => status.ToLowerInvariant();
+    private static string HardwareValue(string? value) => string.IsNullOrWhiteSpace(value) ? "Não disponível" : value;
+    private static string HardwareRam(HardwareDto? hardware) => hardware?.RamGb is null ? "Não disponível" : $"{hardware.RamGb} GB{TypeSuffix(hardware.RamType)}";
+    private static string HardwareStorage(HardwareDto? hardware) => hardware?.StorageGb is null ? "Não disponível" : $"{hardware.StorageGb} GB{TypeSuffix(hardware.StorageType)}";
+    private static string TypeSuffix(string? value) => string.IsNullOrWhiteSpace(value) ? string.Empty : $" · {value}";
+
+    private static string FormatUptimeDetailed(int? seconds)
+    {
+        if (seconds is null) return "—";
+        var span = TimeSpan.FromSeconds(seconds.Value);
+        return span.Days > 0 ? $"{span.Days}d {span.Hours}h {span.Minutes}m" : $"{span.Hours}h {span.Minutes}m";
+    }
+
+    private static string FormatLastSeen(DateTimeOffset? value)
+    {
+        if (value is null) return "—";
+        var diff = DateTimeOffset.Now - value.Value;
+        if (diff.TotalMinutes < 1) return "agora";
+        if (diff.TotalMinutes < 60) return $"{Math.Max(1, (int)diff.TotalMinutes)} min atrás";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h atrás";
+        return $"{(int)diff.TotalDays}d atrás";
+    }
+
+    private static AdminDetailsMock GetAdminMock(DeviceListItemDto device)
+    {
+        var seed = Math.Abs(device.Id.GetHashCode());
+        return new AdminDetailsMock(
+            [
+                new("chrome.exe", $"{8 + seed % 7}.2%", "1.2 GB"),
+                new("Code.exe", $"{4 + seed % 5}.1%", "856 MB"),
+                new("explorer.exe", "2.1%", "245 MB"),
+                new("System", "1.8%", "128 MB"),
+                new("svchost.exe", "1.2%", "95 MB")
+            ],
+            [
+                new("Windows Update", "wuauserv", true, "Automático"),
+                new("Windows Defender", "WinDefend", true, "Automático"),
+                new("Cliente DHCP", "Dhcp", true, "Automático"),
+                new("Cliente DNS", "Dnscache", true, "Automático"),
+                new("Spooler de Impressão", "Spooler", false, "Manual")
+            ]);
+    }
+
+    private enum DetailTab { General, Processes, Services }
+    private sealed record ProcessMock(string Name, string Cpu, string Ram);
+    private sealed record ServiceMock(string DisplayName, string Name, bool Running, string Startup);
+    private sealed record AdminDetailsMock(IReadOnlyList<ProcessMock> Processes, IReadOnlyList<ServiceMock> Services);
+}

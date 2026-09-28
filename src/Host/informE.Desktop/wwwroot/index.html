@@ -23,6 +23,22 @@
         <span class="dismiss">🗙</span>
     </div>
 
+    <script>
+        window.informEPickers = {
+            show: function (id) {
+                const element = document.getElementById(id);
+                if (!element) return;
+
+                if (typeof element.showPicker === 'function') {
+                    element.showPicker();
+                } else {
+                    element.focus();
+                    element.click();
+                }
+            }
+        };
+    </script>
+
     <script src="_framework/blazor.webview.js" autostart="false"></script>
 
 </body>

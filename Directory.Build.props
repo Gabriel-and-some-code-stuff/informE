@@ -5,4 +5,30 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+
+  <!--
+    Quando o servidor roda via `dotnet watch` no Docker Compose, a imagem oficial
+    do .NET injeta DOTNET_RUNNING_IN_CONTAINER=true automaticamente.
+
+    Sem isso, o container (Linux) escreve obj/ e bin/ compilados para Linux
+    diretamente nas pastas do repo montado — e o Visual Studio no host (Windows)
+    abre esses arquivos e nao consegue resolver as dependencias (triangulo amarelo).
+
+    A solucao: redirecionar obj/ e bin/ para /tmp dentro do container, deixando
+    as pastas do repo intocadas para o Visual Studio usar normalmente.
+  -->
+  <PropertyGroup Condition="'$(DOTNET_RUNNING_IN_CONTAINER)' == 'true'">
+    <BaseIntermediateOutputPath>/tmp/dotnet-obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>/tmp/dotnet-bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <!--
+      O bind mount expoe as pastas obj/ e bin/ que o Visual Studio gerou no host.
+      O MSBuild nao sabe excluir esses diretorios do host (sao caminhos diferentes
+      do novo BaseIntermediateOutputPath em /tmp), entao o glob **/*.cs captura
+      os AssemblyInfo.cs antigos E os novos — resultando em CS0579 (atributo duplicado).
+
+      DefaultItemExcludes instrui o SDK a ignorar obj/** e bin/** nos globs de item,
+      independente de onde o output real vai ser escrito.
+    -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/**;bin/**</DefaultItemExcludes>
+  </PropertyGroup>
 </Project>

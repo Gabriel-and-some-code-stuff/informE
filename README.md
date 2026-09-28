@@ -5,6 +5,8 @@ Roda 100% na rede do cliente, sem nuvem. TCC.
 
 > Arquitetura completa, modelo de domínio e o plano da Sprint 1: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 > Análise do banco de dados e decisões de port: **[docs/ANALISE-BD.md](docs/ANALISE-BD.md)**.
+> Revisão do servidor, diagrama de endpoints e plano em execução: **[docs/plano-revisao-servidor.md](docs/plano-revisao-servidor.md)**.
+> **Situação atual, riscos e o que falta:** **[docs/situacao-atual.md](docs/situacao-atual.md)** — comece por aqui.
 
 ## Estrutura
 

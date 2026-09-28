@@ -1,0 +1,133 @@
+@page "/accounts"
+@layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+
+<PageTitle>Administração de Contas | informE</PageTitle>
+
+<div class="accounts-page">
+    <header class="page-header">
+        <div>
+            <span class="eyebrow"><LucideIcon Name="shield-check" Size="18" /> Administração</span>
+            <h1>Administração de Contas</h1>
+            <p>Gerencie usuários e permissões da plataforma.</p>
+        </div>
+        <button class="primary-button" type="button" @onclick="OpenCreate"><LucideIcon Name="user-plus" Size="18" /> Novo Usuário</button>
+    </header>
+
+    @if (loading)
+    {
+        <div class="state-card">Carregando usuários...</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div class="state-card error">@error <button type="button" @onclick="LoadAsync">Tentar novamente</button></div>
+    }
+    else
+    {
+        <section class="summary-grid">
+            <article><span>Total de usuários</span><strong>@users.Count</strong><small>cadastrados</small></article>
+            <article><span>Administradores</span><strong>@users.Count(x => x.Role is "Admin" or "SuperAdmin")</strong><small>com acesso administrativo</small></article>
+            <article><span>Usuários ativos</span><strong>@users.Count(x => x.IsActive)</strong><small>contas habilitadas</small></article>
+            <article><span>Sessões abertas</span><strong>—</strong><small>dado ainda não disponível</small></article>
+        </section>
+
+        <section class="table-panel">
+            <div class="table-toolbar">
+                <div><strong>Usuários</strong><span>@FilteredUsers.Count</span></div>
+                <div class="search"><LucideIcon Name="search" Size="17" /><input value="@search" @oninput="OnSearch" placeholder="Buscar usuário..." /></div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Usuário</th><th>Função</th><th>Status</th><th>Último acesso</th><th>Sessões</th><th>Ações</th></tr></thead>
+                    <tbody>
+                        @foreach (var user in FilteredUsers)
+                        {
+                            <tr>
+                                <td><div class="user-cell"><span class="initials">@Initials(user.Username)</span><div><strong>@user.Username</strong><small>@user.Email</small></div></div></td>
+                                <td><span class="role role-@user.Role.ToLowerInvariant()">@RoleLabel(user.Role)</span></td>
+                                <td><span class="status @(user.IsActive ? "active" : "inactive")">@(user.IsActive ? "Ativo" : "Inativo")</span></td>
+                                <td>—</td><td>—</td>
+                                <td class="actions"><div class="action-buttons">
+                                    <button type="button" title="Editar" @onclick="() => OpenEdit(user)"><LucideIcon Name="pencil" Size="16" /></button>
+                                    <button class="@(user.IsActive ? "danger" : "success")" type="button" title="@(user.IsActive ? "Desativar" : "Ativar")" @onclick="() => AskToggle(user)">
+                                        <LucideIcon Name="@(user.IsActive ? "ban" : "lock-open")" Size="16" />
+                                    </button>
+                                </div></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+</div>
+
+@if (showForm)
+{
+    <div class="modal-backdrop" @onclick="CloseForm">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-head"><div><LucideIcon Name="@(editing is null ? "user-plus" : "user-cog")" Size="20" /><strong>@(editing is null ? "Criar Novo Usuário" : "Editar Usuário")</strong></div><button @onclick="CloseForm">×</button></div>
+            <div class="modal-body">
+                <label>Nome completo<input @bind="formName" placeholder="Ex: João Silva" /></label>
+                <label>Email<input @bind="formEmail" type="email" placeholder="joao@etec.sp.gov.br" /></label>
+                @if (editing is null)
+                {
+                    <label>Senha temporária<input @bind="formPassword" type="password" placeholder="••••••••" /></label>
+                }
+                <label>Função
+                    <select @bind="formRole">
+                        @foreach (var role in AvailableRoles) { <option value="@role">@RoleLabel(role)</option> }
+                    </select>
+                </label>
+                @if (!string.IsNullOrWhiteSpace(formError)) { <div class="form-error">@formError</div> }
+            </div>
+            <div class="modal-actions"><button class="secondary-button" @onclick="CloseForm">Cancelar</button><button class="primary-button" disabled="@saving" @onclick="SaveAsync">@(saving ? "Salvando..." : editing is null ? "Criar Usuário" : "Salvar Alterações")</button></div>
+        </div>
+    </div>
+}
+
+@if (toggleTarget is not null)
+{
+    <div class="modal-backdrop" @onclick="CancelToggle">
+        <div class="confirm-card" @onclick:stopPropagation="true">
+            <LucideIcon Name="@(toggleTarget.IsActive ? "circle-alert" : "circle-check")" Size="28" />
+            <h2>@(toggleTarget.IsActive ? "Desativar conta?" : "Ativar conta?")</h2>
+            <p>@(toggleTarget.IsActive ? $"{toggleTarget.Username} perderá o acesso e terá as sessões encerradas." : $"{toggleTarget.Username} poderá acessar a plataforma novamente.")</p>
+            <div><button class="secondary-button" @onclick="CancelToggle">Cancelar</button><button class="@(toggleTarget.IsActive ? "danger-button" : "primary-button")" @onclick="ToggleActiveAsync">Confirmar</button></div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<UserListItemDto> users = [];
+    private bool loading = true, showForm, saving;
+    private string? error, formError;
+    private string search = "", formName = "", formEmail = "", formPassword = "", formRole = "Viewer";
+    private UserListItemDto? editing, toggleTarget;
+    private bool IsSuperAdmin => informE.Desktop.Components.State.AppSession.Role == "SuperAdmin";
+    private IEnumerable<string> AvailableRoles => IsSuperAdmin ? ["Viewer", "Admin", "SuperAdmin"] : ["Viewer"];
+    private List<UserListItemDto> FilteredUsers => users.Where(x => string.IsNullOrWhiteSpace(search) || x.Username.Contains(search, StringComparison.OrdinalIgnoreCase) || x.Email.Contains(search, StringComparison.OrdinalIgnoreCase) || x.Code.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync(){ loading=true; error=null; try { users.Clear(); users.AddRange(await Api.GetUsersAsync()); } catch(Exception ex){ error=Friendly(ex); } finally{ loading=false; } }
+    private void OnSearch(ChangeEventArgs e)=>search=e.Value?.ToString() ?? "";
+    private void OpenCreate(){ editing=null; formName=""; formEmail=""; formPassword=""; formRole="Viewer"; formError=null; showForm=true; }
+    private void OpenEdit(UserListItemDto u){ editing=u; formName=u.Username; formEmail=u.Email; formRole=u.Role; formError=null; showForm=true; }
+    private void CloseForm(){ showForm=false; editing=null; }
+    private async Task SaveAsync(){
+        if(string.IsNullOrWhiteSpace(formName)||string.IsNullOrWhiteSpace(formEmail)||(editing is null && string.IsNullOrWhiteSpace(formPassword))){ formError="Preencha os campos obrigatórios."; return; }
+        saving=true; formError=null;
+        try{
+            if(editing is null) await Api.CreateUserAsync(new(formName.Trim(),formEmail.Trim(),formPassword,formRole));
+            else { await Api.UpdateUserAsync(editing.Id,new(formName.Trim(),formEmail.Trim())); if(IsSuperAdmin && editing.Role != formRole) await Api.ChangeUserRoleAsync(editing.Id,formRole); }
+            CloseForm(); await LoadAsync();
+        }catch(Exception ex){ formError=Friendly(ex); }finally{ saving=false; }
+    }
+    private void AskToggle(UserListItemDto u)=>toggleTarget=u;
+    private void CancelToggle()=>toggleTarget=null;
+    private async Task ToggleActiveAsync(){ if(toggleTarget is null)return; try{ await Api.SetUserActiveAsync(toggleTarget.Id,!toggleTarget.IsActive); toggleTarget=null; await LoadAsync(); }catch(Exception ex){ error=Friendly(ex); toggleTarget=null; } }
+    private static string Initials(string value){ var parts=value.Split(' ',StringSplitOptions.RemoveEmptyEntries); return parts.Length>1?$"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant():value[..Math.Min(2,value.Length)].ToUpperInvariant(); }
+    private static string RoleLabel(string r)=>r switch{"SuperAdmin"=>"Super Admin","Admin"=>"Administrador",_=>"Visualizador"};
+    private static string Friendly(Exception ex)=>ex is TaskCanceledException?"A consulta demorou mais que o esperado.":ex is HttpRequestException?"Não foi possível conectar ao servidor.":ex.Message;
+}

@@ -78,7 +78,6 @@ namespace informE.Infrastructure.Persistence.Migrations
                         .HasColumnName("device_id");
 
                     b.Property<string>("Message")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("message");
@@ -157,6 +156,14 @@ namespace informE.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("agent_key_hash");
 
+                    b.Property<float?>("CpuPercent")
+                        .HasColumnType("real")
+                        .HasColumnName("cpu_percent");
+
+                    b.Property<float?>("DiskPercent")
+                        .HasColumnType("real")
+                        .HasColumnName("disk_percent");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid")
                         .HasColumnName("group_id");
@@ -204,6 +211,10 @@ namespace informE.Infrastructure.Persistence.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("os_user");
+
+                    b.Property<float?>("RamPercent")
+                        .HasColumnType("real")
+                        .HasColumnName("ram_percent");
 
                     b.Property<DateTimeOffset>("RegisteredAt")
                         .ValueGeneratedOnAdd()
@@ -299,7 +310,6 @@ namespace informE.Infrastructure.Persistence.Migrations
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Bios")
-                        .IsRequired()
                         .HasMaxLength(45)
                         .HasColumnType("character varying(45)")
                         .HasColumnName("bios");
@@ -537,6 +547,48 @@ namespace informE.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_network_growth_snapshots_date");
 
                     b.ToTable("network_growth_snapshots", (string)null);
+                });
+
+            modelBuilder.Entity("informE.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_used");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_password_reset_tokens");
+
+                    b.HasIndex("UserId", "IsUsed")
+                        .HasDatabaseName("ix_password_reset_tokens_user_id_is_used");
+
+                    b.ToTable("password_reset_tokens", (string)null);
                 });
 
             modelBuilder.Entity("informE.Domain.Entities.Session", b =>
@@ -844,6 +896,18 @@ namespace informE.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_info_devices_devices_device_id");
 
                     b.Navigation("Device");
+                });
+
+            modelBuilder.Entity("informE.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.HasOne("informE.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_password_reset_tokens_users_user_id");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("informE.Domain.Entities.Session", b =>

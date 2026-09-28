@@ -23,12 +23,24 @@ public class RecordCommandResultUseCase(
 
         await machineTaskRepository.UpdateLogStatusAsync(result.LogId, logStatus, result.Output, result.ExecutedAt, result.DurationMs, ct);
 
+        // Empurra ANTES de checar se a tarefa acabou: é este evento que faz a
+        // linha daquela máquina mudar na hora na tela de Execuções. Sem ele, o
+        // operador que disparou em 20 máquinas via a tela inteira congelada até
+        // a última responder.
+        await dashboardNotifier.ExecutionLogUpdatedAsync(
+            result.LogId, result.TaskId, logStatus, result.DurationMs, result.Output, ct);
+
+        // Caminho quente: este método roda uma vez POR MÁQUINA. A pergunta
+        // "ainda falta alguém?" é um EXISTS indexado, não um carregamento da
+        // tarefa inteira com logs e devices — que, numa execução em 21 máquinas,
+        // significaria 21 carregamentos completos para ler alguns status.
+        if (await machineTaskRepository.HasPendingLogsAsync(result.TaskId, ct))
+            return new RecordCommandResultResponse(TaskCompleted: false, TaskSucceeded: null);
+
+        // Só a ÚLTIMA máquina chega aqui: uma carga completa por tarefa, não por
+        // máquina.
         var task = await machineTaskRepository.GetByIdAsync(result.TaskId, ct)
             ?? throw new InvalidOperationException($"MachineTask {result.TaskId} não encontrado.");
-
-        var stillPending = task.ExecutionLogs.Any(l => l.Status is TaskStatus.Pending or TaskStatus.Running);
-        if (stillPending)
-            return new RecordCommandResultResponse(TaskCompleted: false, TaskSucceeded: null);
 
         var allSucceeded = task.ExecutionLogs.All(l => l.Status == TaskStatus.Succeeded);
         task.Finish(allSucceeded);

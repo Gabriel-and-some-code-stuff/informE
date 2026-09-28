@@ -48,7 +48,23 @@ public class LoginUseCase(
         // com kick automático da anterior.
         if (user.Role is UserRole.Admin or UserRole.SuperAdmin)
         {
-            if (vigentes.Count >= LimiteDeSessoesPrivilegiadas)
+            // Login do MESMO dispositivo é substituição, não dispositivo novo.
+            //
+            // Sem isto o limite conta SESSÕES, não dispositivos: fechar o navegador
+            // e entrar de novo três vezes trancava o usuário fora da própria conta
+            // sem ele nunca ter usado mais de uma máquina. A política fala em "3
+            // dispositivos" (docs/politica-login-sessao.md §2.1) — é o DeviceLabel
+            // que decide, não a contagem de linhas.
+            var doMesmoDispositivo = vigentes
+                .Where(s => s.DeviceLabel == request.DeviceLabel)
+                .ToList();
+
+            foreach (var anterior in doMesmoDispositivo)
+                anterior.Revoke();
+
+            var outrosDispositivos = vigentes.Count - doMesmoDispositivo.Count;
+
+            if (outrosDispositivos >= LimiteDeSessoesPrivilegiadas)
             {
                 await RegistrarAuditoria("login_blocked", request.IpAddress, user.Id, ct);
                 throw new DeviceLimitReachedException(LimiteDeSessoesPrivilegiadas);
@@ -67,21 +83,33 @@ public class LoginUseCase(
             }
         }
 
-        var accessToken = jwtTokenService.CreateAccessToken(user);
-        var (refreshToken, refreshExpiresAt) = jwtTokenService.CreateRefreshToken();
+        var (segredo, refreshExpiresAt) = jwtTokenService.CreateRefreshToken();
 
         // Só o HASH do refresh token vai pro banco — mesmo tratamento de senha.
         var session = new Session(
             request.IpAddress,
             refreshExpiresAt,
-            passwordHasher.Hash(refreshToken),
+            passwordHasher.Hash(segredo),
             user.Id,
-            request.DeviceLabel);
+            request.DeviceLabel)
+        {
+            // Id no cliente, não pelo gen_random_uuid(): ele entra no token que
+            // devolvemos abaixo, então precisa existir antes do SaveChanges.
+            Id = Guid.NewGuid()
+        };
+
+        var accessToken = jwtTokenService.CreateAccessToken(user, session.Id);
 
         await userRepository.AddSessionAsync(session, ct);
         await RegistrarAuditoria("login_ok", request.IpAddress, user.Id, ct);
 
         await unitOfWork.SaveChangesAsync(ct);
+
+        // "{sessionId}.{segredo}", mesmo formato do PasswordResetToken e pelo
+        // mesmo motivo: o hash é Argon2id com salt aleatório, então não existe
+        // `WHERE refresh_token_hash = ?`. O Id acha a linha, o segredo prova
+        // que quem apresenta o token é o dono dela.
+        var refreshToken = $"{session.Id}.{segredo}";
 
         return new LoginResponse(accessToken, refreshToken, refreshExpiresAt, user.Id, user.Username, user.Role);
     }

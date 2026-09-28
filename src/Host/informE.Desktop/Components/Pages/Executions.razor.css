@@ -1,0 +1,694 @@
+.executions-page {
+    min-height: calc(100vh - 72px);
+    padding: 0;
+    background: #080f1d;
+    color: #f2f5fa;
+    font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.executions-header {
+    min-height: 98px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.executions-header h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    line-height: 1.1;
+    font-weight: 650;
+    letter-spacing: -.4px;
+}
+
+.executions-header p {
+    margin: 0;
+    color: #7f899c;
+    font-size: 15px;
+}
+
+.new-execution-button {
+    height: 42px;
+    min-width: 150px;
+    border: 0;
+    border-radius: 22px;
+    background: #10c6f4;
+    color: #07131e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 18px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(16, 198, 244, .25);
+}
+
+.new-execution-button span {
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 400;
+}
+
+.executions-panel {
+    border: 1px solid #29354a;
+    border-radius: 19px;
+    background: #101827;
+    overflow: hidden;
+}
+
+.table-scroll {
+    overflow-x: auto;
+    padding: 18px 22px 22px;
+}
+
+.executions-table {
+    width: 100%;
+    min-width: 960px;
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
+.executions-table th {
+    height: 52px;
+    padding: 0 15px;
+    border-bottom: 1px solid #283449;
+    color: #768197;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.executions-table td {
+    height: 64px;
+    padding: 0 15px;
+    border-bottom: 1px solid #1c2738;
+    color: #c8d0dc;
+    font-size: 13px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.executions-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.executions-table tbody tr:hover {
+    background: rgba(255, 255, 255, .018);
+}
+
+.execution-code {
+    color: #10c6f4;
+    font-size: 12px;
+    letter-spacing: .35px;
+}
+
+.device-name {
+    color: #eef2f8;
+    font-weight: 600;
+}
+
+.action-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.terminal-icon {
+    color: #738099;
+    font-size: 14px;
+    font-family: Consolas, monospace;
+}
+
+.status-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-icon {
+    width: 18px;
+    height: 18px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.status-pill-execution {
+    min-width: 82px;
+    height: 25px;
+    border: 1px solid currentColor;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 11px;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.status-wrap.succeeded { color: #1fd274; }
+.status-wrap.running { color: #10c6f4; }
+.status-wrap.failed { color: #ff4d58; }
+.status-wrap.canceled { color: #ff6a72; }
+.status-wrap.queued,
+.status-wrap.pending { color: #ffad00; }
+
+.responsible {
+    color: #68748a;
+    cursor: help;
+}
+
+.actions-column {
+    width: 120px;
+}
+
+.row-actions {
+    text-align: right;
+}
+
+.log-button,
+.cancel-task-button {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.log-button {
+    color: #7e8ba0;
+    font-size: 11px;
+}
+
+.log-button:hover {
+    color: #10c6f4;
+}
+
+.cancel-task-button {
+    width: 28px;
+    height: 28px;
+    margin-left: 5px;
+    color: #ff4e58;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.cancel-task-button:disabled {
+    opacity: .55;
+    cursor: default;
+}
+
+.loading-state,
+.empty-state {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #7e899c;
+    text-align: center;
+}
+
+.empty-state strong {
+    color: #dce2ec;
+    font-size: 15px;
+}
+
+.empty-state span,
+.loading-state p {
+    margin: 0;
+    font-size: 12px;
+}
+
+.loader {
+    width: 28px;
+    height: 28px;
+    border: 3px solid #263348;
+    border-top-color: #10c6f4;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+
+.loader.small {
+    width: 15px;
+    height: 15px;
+    border-width: 2px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.page-message {
+    min-height: 58px;
+    margin: 0 0 18px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.page-message.error {
+    border: 1px solid rgba(255, 78, 88, .35);
+    background: rgba(255, 78, 88, .075);
+    color: #ff8b92;
+}
+
+.page-message > span {
+    width: 24px;
+    height: 24px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+}
+
+.page-message div {
+    min-width: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.page-message strong {
+    color: #f1f4f9;
+    font-size: 12px;
+}
+
+.page-message small {
+    font-size: 11px;
+}
+
+.page-message button {
+    border: 1px solid #435069;
+    border-radius: 10px;
+    background: transparent;
+    color: #d8dee8;
+    padding: 6px 10px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    background: rgba(2, 7, 16, .77);
+    backdrop-filter: blur(2px);
+}
+
+.execution-modal,
+.log-modal {
+    width: min(100%, 520px);
+    border: 1px solid #344057;
+    border-radius: 18px;
+    background: #111a2a;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
+    overflow: hidden;
+}
+
+.modal-header {
+    min-height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 19px 24px 10px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #f4f7fb;
+    font-size: 17px;
+    font-weight: 650;
+}
+
+.modal-header p {
+    margin: 4px 0 0;
+    color: #7e899e;
+    font-size: 11px;
+}
+
+.close-modal {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: #9aa5b7;
+    font-size: 23px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.modal-body {
+    padding: 10px 24px 8px;
+}
+
+.form-field {
+    margin-bottom: 18px;
+}
+
+.form-field label,
+.picker-field label {
+    display: block;
+    margin-bottom: 8px;
+    color: #d6dde8;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.form-field select {
+    width: 100%;
+    height: 44px;
+    border: 1px solid #3b4659;
+    border-radius: 14px;
+    outline: 0;
+    background: #1d2636;
+    color: #d8dee8;
+    padding: 0 13px;
+    font-size: 12px;
+}
+
+.form-field select:focus,
+.picker-input:focus-within {
+    border-color: #10c6f4;
+    box-shadow: 0 0 0 3px rgba(16, 198, 244, .1);
+}
+
+.form-field select:disabled {
+    opacity: .65;
+}
+
+.form-field select option,
+.form-field select optgroup {
+    background: #1d2636;
+    color: #e4e9f0;
+}
+
+.action-description {
+    display: block;
+    margin: 7px 3px 0;
+    color: #7f899d;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.schedule-box {
+    border: 1px solid #3a4558;
+    border-radius: 17px;
+    background: #1c2535;
+    padding: 16px;
+    transition: border-color .2s ease;
+}
+
+.schedule-box.enabled {
+    border-color: #455169;
+}
+
+.schedule-toggle-row {
+    min-height: 27px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.schedule-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: #eef2f7;
+    font-size: 12px;
+}
+
+.schedule-label svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: #853bf3;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.switch {
+    width: 38px;
+    height: 22px;
+    position: relative;
+    display: inline-block;
+    flex: 0 0 auto;
+}
+
+.switch input {
+    width: 0;
+    height: 0;
+    opacity: 0;
+}
+
+.switch span {
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: #10192a;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.switch span::before {
+    content: "";
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    border-radius: 50%;
+    background: #243146;
+    transition: .2s ease;
+}
+
+.switch input:checked + span {
+    background: #853bf3;
+}
+
+.switch input:checked + span::before {
+    transform: translateX(16px);
+    background: #111827;
+}
+
+.schedule-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.picker-input {
+    height: 41px;
+    border: 1px solid #465169;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background: #202a3b;
+}
+
+.picker-input input {
+    min-width: 0;
+    flex: 1;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #d8dee8;
+    padding: 0 11px;
+    font-size: 12px;
+    color-scheme: dark;
+}
+
+.picker-input input::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.picker-input button {
+    width: 40px;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: #9aa6b9;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.picker-input button:hover {
+    color: #10c6f4;
+}
+
+.picker-input svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+
+.modal-inline-state {
+    min-height: 38px;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #8490a4;
+    font-size: 10px;
+}
+
+.modal-error {
+    margin-top: 12px;
+    padding: 10px 11px;
+    border: 1px solid rgba(255, 78, 88, .3);
+    border-radius: 10px;
+    background: rgba(255, 78, 88, .07);
+    color: #ff8f96;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.modal-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 18px 24px 24px;
+}
+
+.execute-button,
+.secondary-button {
+    height: 39px;
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.execute-button {
+    border: 0;
+    background: #10c6f4;
+    color: #07131e;
+}
+
+.execute-button svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.execute-button:disabled,
+.secondary-button:disabled {
+    opacity: .58;
+    cursor: default;
+}
+
+.secondary-button {
+    min-width: 92px;
+    border: 1px solid #445067;
+    background: transparent;
+    color: #e2e7ef;
+}
+
+.log-modal {
+    width: min(100%, 650px);
+}
+
+.log-modal pre {
+    max-height: 55vh;
+    margin: 12px 24px 24px;
+    padding: 17px;
+    overflow: auto;
+    border: 1px solid #313d52;
+    border-radius: 12px;
+    background: #09111e;
+    color: #b8c4d6;
+    font: 11px/1.55 Consolas, "Courier New", monospace;
+    white-space: pre-wrap;
+}
+
+.sr-only {
+    width: 1px;
+    height: 1px;
+    position: absolute;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+    .executions-page {
+        padding: 30px 22px 42px;
+    }
+}
+
+@media (max-width: 720px) {
+    .executions-page {
+        padding: 24px 14px 34px;
+    }
+
+    .executions-header {
+        min-height: 125px;
+        flex-direction: column;
+        gap: 17px;
+    }
+
+    .new-execution-button {
+        align-self: flex-start;
+    }
+
+    .modal-backdrop {
+        place-items: start center;
+        padding: 14px;
+        overflow-y: auto;
+    }
+
+    .execution-modal,
+    .log-modal {
+        margin: 12px 0;
+    }
+
+    .schedule-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-footer {
+        grid-template-columns: 1fr;
+    }
+
+    .secondary-button {
+        width: 100%;
+    }
+}

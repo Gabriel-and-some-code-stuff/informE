@@ -9,7 +9,7 @@ public class UserTests
     public void UpdateUsername_ComNomeValido_AtualizaOUsername()
     {
         // Arrange
-        var user = new User("gabriel", "gabriel@etec.sp.gov.br", "hash-fake", UserRole.Admin);
+        var user = new User("gabriel", "gabriel@cps.sp.gov.br", "hash-fake", UserRole.Admin);
 
         // Act
         user.UpdateUsername("gabrielv2");
@@ -24,7 +24,7 @@ public class UserTests
     [InlineData("nome com espaço", false)]
     public void UpdateUsername_DeveAceitarOuRejeitarConformeRegra(string username, bool esperadoValido)
     {
-        var user = new User("gabriel", "gabriel@etec.sp.gov.br", "hash-fake", UserRole.Admin);
+        var user = new User("gabriel", "gabriel@cps.sp.gov.br", "hash-fake", UserRole.Admin);
 
         if (esperadoValido)
         {
@@ -46,7 +46,7 @@ public class UserTests
 
         var user = new User(
             "gabriel",
-            "gabriel.zemella@etec.sp.gov.br",
+            "gabriel.zemella@cps.sp.gov.br",
             "hash-fake",
             UserRole.Admin
         );

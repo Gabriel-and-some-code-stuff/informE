@@ -54,7 +54,7 @@ public class AgentHub(
 
         // Saúde só é conhecida quando a primeira telemetria chegar; até lá o
         // device fica Online com a saúde que já tinha.
-        device.MarkSeen(DateTimeOffset.Now, device.Health);
+        device.MarkSeen(DateTimeOffset.UtcNow, device.Health);
         await unitOfWork.SaveChangesAsync(Context.ConnectionAborted);
 
         await dashboardNotifier.DeviceStatusChangedAsync(device.Id, device.Status, device.Health, Context.ConnectionAborted);
