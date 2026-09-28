@@ -1,8 +1,5 @@
 name: AI PR Review
 
-# GitHub Models — custo $0, usa o GITHUB_TOKEN que já existe em todo workflow.
-# Docs: https://docs.github.com/en/github-models
-
 on:
   pull_request:
     types: [opened, synchronize]
@@ -13,42 +10,57 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get diff (.cs/.razor/.csproj, máx 8 KB)
-        id: diff
-        run: |
-          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD \
-            -- '*.cs' '*.csproj' '*.razor' | head -c 8000)
-          {
-            echo 'diff<<EOF'
-            echo "$DIFF"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
-
-      - name: GitHub Models review
+      - name: Generate review
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DIFF: ${{ steps.diff.outputs.diff }}
           PR_NUM: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          BODY=$(curl -sf https://models.inference.ai.azure.com/chat/completions \
+          # 1. Extração do diff diretamente para arquivo
+          git diff "origin/$BASE_REF...HEAD" -- '*.cs' '*.csproj' '*.razor' | head -c 8000 > diff.txt
+
+          if [ ! -s diff.txt ]; then
+            echo "Nenhuma alteração em arquivos relevantes (.cs, .csproj, .razor). Encerrando."
+            exit 0
+          fi
+
+          DIFF_CONTENT=$(cat diff.txt)
+
+          # 2. Chamada à API sem -f para não abortar sem inspecionar a resposta
+          RESPOSTA=$(curl -s --max-time 60 https://models.inference.ai.azure.com/chat/completions \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "$(jq -n --arg diff "$DIFF" '{
+            -d "$(jq -n --arg diff "$DIFF_CONTENT" '{
               model: "gpt-4o-mini",
               max_tokens: 1024,
               messages: [{
                 role: "user",
                 content: ("Você é revisor de código C#/.NET 10. Revise o diff abaixo de um projeto RMM (Arquitetura Onion).\n\nRegras do projeto:\n- Domain NUNCA referencia Infrastructure ou Application\n- Senhas: só Argon2id via IPasswordHasher\n- IDs: sempre Guid, nunca int auto-increment\n- Datas: sempre UTC (DateTimeOffset)\n- JWT: só via IJwtTokenService\n- Telemetria ao vivo NÃO é persistida (flui só pelo hub)\n\nAponte no máximo 5 problemas reais (bugs, violações de Onion, falhas de segurança). Ignore style. Se estiver ok, diga. Seja direto e em português.\n\nDiff:\n" + $diff)
               }]
-            }')" | jq -r '.choices[0].message.content')
+            }')" || true)
 
-          gh pr comment "$PR_NUM" --body "## Revisão automática (GitHub Models)
+          # 3. Extração segura do conteúdo
+          BODY=$(printf '\%s' "$RESPOSTA" | jq -r '.choices[0].message.content // empty' 2>/dev/null || true)
 
-$BODY
+          if [ -z "$BODY" ] \vert{}\vert{} [ "$BODY" = "null" ]; then
+            echo "API não retornou JSON válido ou resposta vazia:"
+            printf '%s\n' "$RESPOSTA" | head -c 2000
+            echo "Encerrando sem comentar."
+            exit 0
+          fi
 
----
-*\`${{ github.sha }}\` · [run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+          # 4. Geração e envio do comentário via arquivo
+          {
+            printf '## Revisão automática (GitHub Models)\n\n'
+            printf '%s\n\n' "$BODY"
+            printf -- '---\n'
+            printf '`%s` · [run](%s)\n' "$SHA" "$RUN_URL"
+          } > comentario.md
+
+          gh pr comment "$PR_NUM" --body-file comentario.md
