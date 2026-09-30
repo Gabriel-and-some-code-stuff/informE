@@ -1,124 +1,61 @@
 name: AI PR Review
 
-# GitHub Models — custo $0, usa o GITHUB_TOKEN que já existe em todo workflow.
-# Docs: https://docs.github.com/en/github-models
-#
-# ⚠️ CUIDADO COM INDENTAÇÃO NESTE ARQUIVO.
-#
-# A versão anterior falhava em 0s em TODA execução, sem log e sem job nenhum —
-# o GitHub nem chegava a compilar o workflow. A causa: o corpo do comentário era
-# escrito com linhas na COLUNA 0 dentro de um bloco `run: |`, e uma dessas
-# linhas era `---`. Na coluna 0, `---` é o SEPARADOR DE DOCUMENTO do YAML, então
-# o arquivo inteiro deixava de ser válido.
-#
-# Nada em `run:` pode começar na coluna 0. O corpo agora é montado com
-# `printf` e enviado por `--body-file`, que não depende de texto multilinha
-# dentro do YAML.
-
 on:
   pull_request:
     types: [opened, synchronize]
 
-# Uma revisão por PR: um push novo cancela a revisão da versão anterior, que já
-# não interessa a ninguém.
-concurrency:
-  group: ai-review-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   review:
     runs-on: ubuntu-latest
-
-    # Revisao automatica e CORTESIA, nao porteiro.
-    #
-    # Este workflow nunca funcionou: falhava em 0s por YAML invalido e, depois
-    # disso corrigido, o curl saiu com codigo 6 -- nao resolveu
-    # models.inference.ai.azure.com, endpoint que o GitHub Models desativou.
-    #
-    # O efeito pratico de um check permanentemente vermelho e pior que a falta
-    # dele: as pessoas aprendem a ignorar o vermelho, e um dia ignoram o que
-    # importa. Com continue-on-error a revisao e um bonus quando funciona e
-    # silencio quando nao -- quem barra merge e o job CI.
-    continue-on-error: true
     permissions:
       pull-requests: write
-      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Montar o diff (.cs/.razor/.csproj, máx 8 KB)
-        id: diff
-        env:
-          BASE: ${{ github.base_ref }}
-        run: |
-          git diff "origin/$BASE...HEAD" -- '*.cs' '*.csproj' '*.razor' \
-            | head -c 8000 > diff.txt
-
-          # PR só de documentação ou de script não tem o que revisar aqui.
-          if [ ! -s diff.txt ]; then
-            echo "vazio=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "vazio=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Revisar com GitHub Models
-        if: steps.diff.outputs.vazio == 'false'
+      - name: Generate review
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUM: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
           SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          INSTRUCOES=$(cat <<'FIM'
-          Você é revisor de código C#/.NET 10. Revise o diff abaixo de um projeto RMM (Arquitetura Onion).
+          # 1. Extração do diff diretamente para arquivo
+          git diff "origin/$BASE_REF...HEAD" -- '*.cs' '*.csproj' '*.razor' | head -c 8000 > diff.txt
 
-          Regras do projeto:
-          - Domain NUNCA referencia Infrastructure ou Application
-          - Senhas: só Argon2id via IPasswordHasher
-          - IDs: sempre Guid, nunca int auto-increment
-          - Datas: sempre UTC (DateTimeOffset) — o Npgsql RECUSA offset != 0
-          - JWT: só via IJwtTokenService
-          - Telemetria ao vivo NÃO é persistida (flui só pelo hub)
-          - Escopo de dados é decidido no servidor, nunca por filtro que a tela manda
-
-          Aponte no máximo 5 problemas reais (bugs, violações de Onion, falhas de
-          segurança). Ignore estilo. Se estiver ok, diga. Seja direto e em português.
-
-          Diff:
-          FIM
-          )
-
-          PROMPT=$(printf '%s\n%s' "$INSTRUCOES" "$(cat diff.txt)")
-
-          # -s sem -f: com -f o curl fica MUDO em erro HTTP, e o passo seguia
-          # publicando um comentário vazio como se a revisão tivesse rodado.
-          # Sem -f, o corpo do erro chega e dá para decidir.
-          # `|| true`: o shell do Actions e `bash -e`, e um curl com falha DENTRO
-          # de uma atribuicao aborta o passo antes de chegar na checagem de
-          # conteudo logo abaixo -- foi assim que o exit 6 (host nao resolvido)
-          # virou passo vermelho em vez de mensagem explicativa.
-          RESPOSTA=$(curl -s --max-time 60 https://models.github.ai/inference/chat/completions \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n --arg p "$PROMPT" '{
-                  model: "gpt-4o-mini",
-                  max_tokens: 1024,
-                  messages: [{ role: "user", content: $p }]
-                }')" || true)
-
-          BODY=$(printf '%s' "$RESPOSTA" | jq -r '.choices[0].message.content // empty')
-
-          if [ -z "$BODY" ]; then
-            echo "A API não devolveu conteúdo. Resposta crua:"
-            printf '%s\n' "$RESPOSTA" | head -c 2000
-            echo ""
-            echo "Revisão automática indisponível — seguindo sem comentar."
-            echo "Isto NÃO reprova o PR: quem barra merge é o job CI."
+          if [ ! -s diff.txt ]; then
+            echo "Nenhuma alteração em arquivos relevantes (.cs, .csproj, .razor). Encerrando."
             exit 0
           fi
 
+          DIFF_CONTENT=$(cat diff.txt)
+
+          # 2. Chamada à API sem -f para não abortar sem inspecionar a resposta
+          RESPOSTA=$(curl -s --max-time 60 https://models.inference.ai.azure.com/chat/completions \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg diff "$DIFF_CONTENT" '{
+              model: "gpt-4o-mini",
+              max_tokens: 1024,
+              messages: [{
+                role: "user",
+                content: ("Você é revisor de código C#/.NET 10. Revise o diff abaixo de um projeto RMM (Arquitetura Onion).\n\nRegras do projeto:\n- Domain NUNCA referencia Infrastructure ou Application\n- Senhas: só Argon2id via IPasswordHasher\n- IDs: sempre Guid, nunca int auto-increment\n- Datas: sempre UTC (DateTimeOffset)\n- JWT: só via IJwtTokenService\n- Telemetria ao vivo NÃO é persistida (flui só pelo hub)\n\nAponte no máximo 5 problemas reais (bugs, violações de Onion, falhas de segurança). Ignore style. Se estiver ok, diga. Seja direto e em português.\n\nDiff:\n" + $diff)
+              }]
+            }')" || true)
+
+          # 3. Extração segura do conteúdo
+          BODY=$(printf '\%s' "$RESPOSTA" | jq -r '.choices[0].message.content // empty' 2>/dev/null || true)
+
+          if [ -z "$BODY" ] \vert{}\vert{} [ "$BODY" = "null" ]; then
+            echo "API não retornou JSON válido ou resposta vazia:"
+            printf '%s\n' "$RESPOSTA" | head -c 2000
+            echo "Encerrando sem comentar."
+            exit 0
+          fi
+
+          # 4. Geração e envio do comentário via arquivo
           {
             printf '## Revisão automática (GitHub Models)\n\n'
             printf '%s\n\n' "$BODY"
