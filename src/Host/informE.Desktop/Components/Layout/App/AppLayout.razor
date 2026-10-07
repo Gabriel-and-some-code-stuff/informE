@@ -100,6 +100,7 @@
                     </button>
                     @if (notificationsOpen)
                     {
+						<div class="notification-click-outside" @onclick="CloseNotifications"></div>
                         <div class="notification-panel">
                             <div class="notification-head"><strong>Notificações</strong><small>@recentAlerts.Count recentes</small></div>
                             @if (alertsLoading)
@@ -138,6 +139,7 @@
 </div>
 
 @code {
+	private void CloseNotifications() => notificationsOpen = false;
     private bool menuOpen;
     private bool sidebarCollapsed;
     private bool notificationsOpen;

@@ -18,21 +18,29 @@
         {
             <div class="lab-filter-wrap">
                 <button class="lab-filter-button" type="button" @onclick="ToggleLabFilter">
-                    <LucideIcon Name="filter" Size="17" />
-                    <span>@GroupFilterLabel</span>
-                    <LucideIcon Name="chevron-down" Size="15" />
+					<LucideIcon Name="users" Size="18" />
+					<span>@GroupFilterLabel</span>
+					<LucideIcon Name="chevron-down" Size="18" />
                 </button>
                 @if (groupFilterOpen)
                 {
+					<div class="filter-click-outside" @onclick="CloseLabFilter"></div>
                     <div class="lab-filter-menu">
                         <div class="filter-title">Filtrar grupos</div>
-                        @foreach (var group in groups)
-                        {
-                            <label>
-                                <input type="checkbox" checked="@group.Selected" @onchange="e => ToggleGroup(group, e)" />
-                                <span>@group.Name</span>
-                            </label>
-                        }
+						@foreach (var group in groups)
+						{
+							<button type="button"
+									class="group-filter-option @(group.Selected ? "selected" : "")"
+									@onclick="() => ToggleGroup(group)">
+								<span class="group-filter-check">
+									@if (group.Selected)
+									{
+										<LucideIcon Name="check" Size="14" />
+									}
+								</span>
+								<span>@group.Name</span>
+							</button>
+						}
                     </div>
                 }
             </div>
@@ -96,12 +104,12 @@
         <section class="metrics-grid" aria-label="Indicadores principais">
             <article class="metric-card">
                 <span class="metric-icon cyan"><LucideIcon Name="layers-3" Size="20" /></span>
-                <strong>@SelectedGroupCount</strong>
+				<strong class="cyan-text">@SelectedGroupCount</strong>
                 <span>Grupos</span>
             </article>
             <article class="metric-card">
                 <span class="metric-icon cyan"><LucideIcon Name="monitor" Size="20" /></span>
-                <strong>@FilteredDevices.Count</strong>
+				<strong class="cyan-text">@FilteredDevices.Count</strong>
                 <span>Total de Máquinas</span>
             </article>
             <article class="metric-card">
@@ -440,10 +448,12 @@
 
     private void ToggleLabFilter() => groupFilterOpen = !groupFilterOpen;
 
-    private void ToggleGroup(GroupFilterItem group, ChangeEventArgs args)
-    {
-        group.Selected = bool.TryParse(args.Value?.ToString(), out var value) && value;
-    }
+	private void CloseLabFilter() => groupFilterOpen = false;
+
+	private void ToggleGroup(GroupFilterItem group)
+	{
+		group.Selected = !group.Selected;
+	}
 
     private void ConfigureChart() => chartOptions = new ApexChartOptions<GroupChartPoint>();
 
