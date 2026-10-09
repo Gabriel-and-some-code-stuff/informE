@@ -311,3 +311,9 @@
         height: 54px;
     }
 }
+
+
+.password-wrapper ::deep input[type="password"]::-ms-reveal,
+.password-wrapper ::deep input[type="password"]::-ms-clear {
+    display: none !important;
+}

@@ -4,6 +4,7 @@
 @using informE.Contracts.Dtos.Api
 @inject informE.Desktop.Services.InformEApiClient Api
 @inject NavigationManager Navigation
+@using informE.Desktop.Services
 
 <PageTitle>Grupos | informE</PageTitle>
 
@@ -87,19 +88,141 @@
                     </div>
                 </article>
             }
+			<button type="button"
+					class="group-card add-group-card"
+					@onclick="() => showCreateGroup = true">
+				<LucideIcon Name="plus" Size="32" />
+				<span>Adicionar Grupo</span>
+			</button>
         </section>
     }
 </div>
+@if (showCreateGroup)
+{
+	<div class="group-modal-overlay" @onclick="CloseCreateGroup">
+		<div class="group-modal" role="dialog"
+			 aria-modal="true"
+			 aria-labelledby="create-group-title"
+			 @onclick:stopPropagation="true">
 
+			<header class="group-modal-header">
+				<h2 id="create-group-title">Novo Grupo</h2>
+				<button type="button"
+						class="group-modal-close"
+						@onclick="CloseCreateGroup">
+					<LucideIcon Name="x" Size="20" />
+				</button>
+			</header>
+
+			<form @onsubmit="CreateGroupAsync" @onsubmit:preventDefault>
+				<label for="group-name">Nome do grupo</label>
+				<input id="group-name"
+					   type="text"
+					   maxlength="45"
+					   required
+					   @bind="newGroupName" />
+
+				<label for="group-description">Descrição (opcional)</label>
+				<textarea id="group-description"
+						  maxlength="100"
+						  rows="3"
+						  @bind="newGroupDescription"></textarea>
+
+				@if (!string.IsNullOrWhiteSpace(createGroupError))
+				{
+					<p class="group-modal-error" role="alert">@createGroupError</p>
+				}
+
+				<footer class="group-modal-actions">
+					<button type="button"
+							class="group-cancel-button"
+							disabled="@creatingGroup"
+							@onclick="CloseCreateGroup">
+						Cancelar
+					</button>
+
+					<button type="submit"
+							class="group-save-button"
+							disabled="@creatingGroup">
+						@(creatingGroup ? "Salvando..." : "Criar Grupo")
+					</button>
+				</footer>
+			</form>
+		</div>
+	</div>
+}
 @code {
-    private readonly List<GroupListItemDto> groups = [];
+	private bool showCreateGroup;
+	private readonly List<GroupListItemDto> groups = [];
     private readonly List<GroupCardViewModel> groupCards = [];
     private bool loading = true;
     private string? errorMessage;
     private int totalDevices;
     private int onlineDevices;
     private int problemDevices;
+	private string newGroupName = "";
+	private string newGroupDescription = "";
+	private string? createGroupError;
+	private bool creatingGroup;
 
+	private void CloseCreateGroup()
+	{
+		if (creatingGroup)
+			return;
+
+		showCreateGroup = false;
+		newGroupName = "";
+		newGroupDescription = "";
+		createGroupError = null;
+	}
+
+	private async Task CreateGroupAsync()
+	{
+		if (creatingGroup)
+			return;
+
+		createGroupError = null;
+
+		var name = newGroupName.Trim();
+		var description = newGroupDescription.Trim();
+
+		if (string.IsNullOrWhiteSpace(name))
+		{
+			createGroupError = "Informe o nome do grupo.";
+			return;
+		}
+
+		creatingGroup = true;
+
+		try
+		{
+			await Api.CreateGroupAsync(
+				new CreateGroupRequestDto(
+					name,
+					string.IsNullOrWhiteSpace(description) ? null : description));
+
+			CloseCreateGroupAfterSave();
+			await LoadAsync();
+		}
+		catch (InformEApiException ex)
+		{
+			createGroupError = ex.Message;
+		}
+		catch (HttpRequestException)
+		{
+			createGroupError = "Não foi possível conectar ao servidor.";
+		}
+		finally
+		{
+			creatingGroup = false;
+		}
+	}
+
+	private void CloseCreateGroupAfterSave()
+	{
+		creatingGroup = false;
+		CloseCreateGroup();
+	}
     protected override async Task OnInitializedAsync()
     {
         if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)

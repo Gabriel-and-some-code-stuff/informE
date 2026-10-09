@@ -311,13 +311,7 @@ button.status-pill {
     line-height: 1;
 }
 
-.online-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #2dd37c;
-    box-shadow: 0 0 7px rgba(45, 211, 124, .3);
-}
+
 
 .notification-button {
     width: 34px;
