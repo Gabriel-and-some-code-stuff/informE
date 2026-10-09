@@ -469,3 +469,27 @@
 .blue-text {
     color:#08c6f3  !important
 }
+
+.metric-icon.cyan {
+    color: #10c6f4;
+    background: #07384c;
+    border-radius: 3px;
+}
+
+.metric-icon.green {
+    color: #13d17a;
+    background: #0b3227;
+    border-radius: 3px;
+}
+
+.metric-icon.gray {
+    color: #929caf;
+    background: #202838;
+    border-radius: 3px;
+}
+
+.metric-icon.warning {
+    color: #efb000;
+    background: #392d0f;
+    border-radius: 3px;
+}

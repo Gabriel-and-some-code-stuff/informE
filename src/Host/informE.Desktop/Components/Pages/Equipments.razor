@@ -29,19 +29,23 @@
 
     <section class="summary-grid" aria-label="Resumo dos equipamentos">
         <article class="summary-card">
-			<span class="summary-label">Total</span>
+			<span class="summary-label">
+				<span class="metric-icon cyan"><LucideIcon Name="monitor" Size="20" /></span>Total</span>
             <div><strong class="blue-text">@summary.Total</strong></div>
         </article>
         <article class="summary-card online-card">
-            <span class="summary-label"><span class="mini-dot online"></span> Online</span>
+			<span class="summary-label">
+				<span class="metric-icon green"><LucideIcon Name="circle-check" Size="20" /></span>Online</span>
             <div><strong>@summary.Online</strong></div>
         </article>
         <article class="summary-card offline-card">
-            <span class="summary-label"><span class="mini-dot offline"></span> Offline</span>
+			<span class="summary-label">
+				<span class="metric-icon gray"><LucideIcon Name="circle-x" Size="20" /></span>Offline</span>
             <div><strong>@summary.Offline</strong></div>
         </article>
         <article class="summary-card health-card">
-            <span class="summary-label"><LucideIcon Name="triangle-alert" Size="15" /> Com problema</span>
+			<span class="summary-label">
+				<span class="metric-icon warning"><LucideIcon Name="triangle-alert" Size="20" /></span> Com problema</span>
             <div><strong>@summary.ComProblema</strong></div>
         </article>
     </section>
