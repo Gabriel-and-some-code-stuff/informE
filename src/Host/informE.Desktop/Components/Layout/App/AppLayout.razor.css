@@ -624,9 +624,20 @@ button.status-pill {
         z-index: 55;
     }
 .sidebar:not(.collapsed) .collapse-button {
-    border: 1px solid transparent;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border: 1px solid #2d394d;
+    border-radius: 10px;
+    background: #151f30;
+    color: #8f9bad;
 }
 
+    .sidebar:not(.collapsed) .collapse-button:hover {
+        background: #202d42;
+        color: #10c6f4;
+        border-color: #10c6f4;
+    }
 .sidebar .nav-link.active {
     color: var(--accent);
 }
@@ -637,4 +648,10 @@ button.status-pill {
 
 .sidebar.collapsed .nav-link.active {
     color: var(--accent);
+}
+
+.sidebar.collapsed .collapse-button:hover {
+    background: #202d42;
+    color: #10c6f4;
+    border-color: #10c6f4;
 }
