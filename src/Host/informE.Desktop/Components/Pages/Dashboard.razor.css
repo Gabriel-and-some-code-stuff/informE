@@ -968,3 +968,189 @@
         justify-content: center;
     }
 }
+
+/* Dashboard administrador: painéis em coluna, alinhados */
+.admin-dashboard .admin-panels {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+}
+
+    .admin-dashboard .admin-panels > .panel {
+        width: 100%;
+        min-width: 0;
+        min-height: auto;
+        padding: 20px 22px;
+    }
+
+    .admin-dashboard .admin-panels .health-list {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-dashboard .admin-panels .history-chart {
+        height: 230px;
+        gap: 14px;
+        padding: 14px 10px 0;
+    }
+
+    .admin-dashboard .admin-panels .history-bar-track {
+        height: 170px;
+    }
+
+    .admin-dashboard .admin-panels .recent-alert-content p {
+        font-size: 13px;
+    }
+
+    .admin-dashboard .admin-panels .recent-alert-topline strong,
+    .admin-dashboard .admin-panels .recent-alert-content small {
+        font-size: 13px;
+    }
+
+@media (max-width: 760px) {
+    .admin-dashboard .admin-panels .health-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Histórico de alertas com ApexCharts */
+.history-apex-chart {
+    width: 100%;
+    min-width: 0;
+}
+
+    .history-apex-chart ::deep .apexcharts-text {
+        fill: #a8b4c5 !important;
+    }
+
+    .history-apex-chart ::deep .apexcharts-gridline {
+        stroke: #283449 !important;
+    }
+
+    .history-apex-chart ::deep .apexcharts-legend-text {
+        color: #c2ccda !important;
+    }
+
+.history-day-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 14px;
+}
+
+    .history-day-actions button {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 10px;
+        border: 1px solid #2d394d;
+        border-radius: 8px;
+        background: #172132;
+        color: #b9c6d7;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+        .history-day-actions button:hover {
+            border-color: #10c6f4;
+            color: #10c6f4;
+        }
+
+/* Dashboard administrador: duas linhas, colunas proporcionais */
+.admin-dashboard .admin-panels {
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    align-items: stretch;
+    gap: 18px;
+}
+
+    .admin-dashboard .admin-panels > .panel {
+        min-width: 0;
+        min-height: 360px;
+        padding: 20px 22px;
+    }
+
+    .admin-dashboard .admin-panels .history-panel {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .admin-dashboard .admin-panels .alerts-panel {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .admin-dashboard .admin-panels .chart-panel {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .admin-dashboard .admin-panels .health-panel {
+        grid-column: 2;
+        grid-row: 2;
+    }
+
+    .admin-dashboard .admin-panels .health-list {
+        display: flex;
+        flex-direction: column;
+        margin-top: 20px;
+    }
+
+    .admin-dashboard .admin-panels .history-apex-chart,
+    .admin-dashboard .admin-panels .chart-panel {
+        min-width: 0;
+    }
+
+    .admin-dashboard .admin-panels .recent-alerts {
+        gap: 10px;
+    }
+
+    .admin-dashboard .admin-panels .recent-alert-item {
+        padding: 12px;
+    }
+
+@media (max-width: 1100px) {
+    .admin-dashboard .admin-panels {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+        .admin-dashboard .admin-panels > .panel {
+            grid-column: 1;
+            grid-row: auto;
+        }
+}
+/* Menu de exportação do ApexCharts */
+.dashboard-page ::deep .apexcharts-menu-icon svg {
+    fill: #cbd5e1 !important;
+}
+
+.dashboard-page ::deep .apexcharts-menu {
+    background: #172132 !important;
+    border: 1px solid #303c50 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35) !important;
+    padding: 6px !important;
+    min-width: 140px !important;
+}
+
+.dashboard-page ::deep .apexcharts-menu-item {
+    color: #edf2f8 !important;
+    font-size: 13px !important;
+    padding: 9px 12px !important;
+    border-radius: 6px !important;
+}
+
+    .dashboard-page ::deep .apexcharts-menu-item:hover {
+        background: #26364d !important;
+        color: #10c6f4 !important;
+    }
+
+/* Posiciona o menu de exportação no canto superior direito */
+.history-panel {
+    position: relative;
+}
+
+    .history-panel ::deep .apexcharts-toolbar {
+        top: -48px !important;
+        right: 0 !important;
+        z-index: 10;
+    }
