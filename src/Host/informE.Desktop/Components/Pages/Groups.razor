@@ -39,12 +39,12 @@
             <article class="summary-card">
                 <span class="summary-icon cyan"><LucideIcon Name="flask-conical" Size="20" /></span>
                 <span>Grupos</span>
-                <strong>@groups.Count</strong>
+                <strong class="blue-text">@groups.Count</strong>
             </article>
             <article class="summary-card">
                 <span class="summary-icon cyan"><LucideIcon Name="monitor" Size="20" /></span>
                 <span>Total de Máquinas</span>
-                <strong>@totalDevices</strong>
+                <strong class="blue-text">@totalDevices</strong>
             </article>
             <article class="summary-card">
                 <span class="summary-icon green"><LucideIcon Name="circle-check" Size="20" /></span>
@@ -75,7 +75,7 @@
                     </header>
 
                     <div class="group-stats">
-                        <div><span>Total de Máquinas</span><strong>@item.Total</strong></div>
+						<div><span>Total de Máquinas</span><strong>@item.Online</strong></div>
                         <div><span>Online</span><strong class="green-text">@item.Online</strong></div>
                         <div><span>Offline</span><strong>@item.Offline</strong></div>
                         <div><span>Com Problema</span><strong class="@(item.Problems > 0 ? "yellow-text" : "green-text")">@item.Problems</strong></div>

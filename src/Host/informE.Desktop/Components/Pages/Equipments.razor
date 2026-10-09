@@ -29,20 +29,20 @@
 
     <section class="summary-grid" aria-label="Resumo dos equipamentos">
         <article class="summary-card">
-            <span class="summary-label">Total</span>
-            <div><strong>@summary.Total</strong><small> máquinas</small></div>
+			<span class="summary-label">Total</span>
+            <div><strong class="blue-text">@summary.Total</strong></div>
         </article>
         <article class="summary-card online-card">
             <span class="summary-label"><span class="mini-dot online"></span> Online</span>
-            <div><strong>@summary.Online</strong><small>@Percent(summary.Online)%</small></div>
+            <div><strong>@summary.Online</strong></div>
         </article>
         <article class="summary-card offline-card">
             <span class="summary-label"><span class="mini-dot offline"></span> Offline</span>
-            <div><strong>@summary.Offline</strong><small>@Percent(summary.Offline)%</small></div>
+            <div><strong>@summary.Offline</strong></div>
         </article>
         <article class="summary-card health-card">
             <span class="summary-label"><LucideIcon Name="triangle-alert" Size="15" /> Com problema</span>
-            <div><strong>@summary.ComProblema</strong><small> aviso, crítico ou erro</small></div>
+            <div><strong>@summary.ComProblema</strong></div>
         </article>
     </section>
 
