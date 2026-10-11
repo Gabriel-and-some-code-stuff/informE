@@ -169,12 +169,15 @@
 .metric-card strong {
     font-size: 29px;
     font-weight: 600;
+    color: #f5f7fb;
 }
 
-.metric-card > span:last-child {
-    color: #8590a3;
-    font-size: 14px;
-}
+
+    .metric-card > span:last-child {
+        color: #b6c3d5;
+        font-size: 14px;
+    }
+
 
 .green-text {
     color: #13d17a;
@@ -189,7 +192,7 @@
 }
 
 .warning-text {
-    color: #efb000;
+    color: #f5f7fb;
 }
 
 /* ==========================================================================
@@ -1150,6 +1153,62 @@
 }
 
     .history-panel ::deep .apexcharts-toolbar {
+        top: -48px !important;
+        right: 0 !important;
+        z-index: 10;
+    }
+
+.metric-icon.purple {
+    color: #a78bfa;
+    background: #2b2145;
+}
+
+
+/* Cards do Dashboard no padrão da página Grupos */
+.metric-card {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 16px;
+}
+
+    .metric-card .metric-icon {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .metric-card > span:last-child {
+        grid-column: 2;
+        grid-row: 1;
+        color: #b6c3d5;
+        font-size: 14px;
+    }
+
+    .metric-card > strong {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        align-self: start;
+        color: #f5f7fb;
+    }
+
+    .metric-card > span:last-child {
+        color: #cbd5e1;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+.metric-card {
+    row-gap: 10px;
+}
+
+/* Posiciona o menu do gráfico Máquinas por Grupo */
+.chart-panel {
+    position: relative;
+}
+
+    .chart-panel ::deep .apexcharts-toolbar {
         top: -48px !important;
         right: 0 !important;
         z-index: 10;
