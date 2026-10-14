@@ -75,6 +75,7 @@
         </article>
     </section>
 
+   
     <section class="filter-panel">
         <label class="device-search">
             <LucideIcon Name="search" Size="17" />
@@ -83,24 +84,81 @@
                    placeholder="Buscar por nome, IP ou sistema operacional..." />
         </label>
 
-        <select value="@selectedGroupId"
-                @onchange="OnGroupChangedAsync"
-                aria-label="Filtrar por grupo">
-            <option value="">Todos os grupos</option>
-            @foreach (var group in groups.OrderBy(x => x.Name))
-            {
-                <option value="@group.Id">@group.Name</option>
-            }
-        </select>
+        <div class="equipment-filter-wrap">
+            <button class="equipment-filter-button"
+                    type="button"
+                    @onclick="ToggleGroupFilter">
+                <LucideIcon Name="flask-conical" Size="18" />
+                <span>@GroupFilterLabel</span>
+                <LucideIcon Name="chevron-down" Size="18" />
+            </button>
 
-        <select value="@selectedStatus"
-                @onchange="OnStatusChangedAsync"
-                aria-label="Filtrar por conexão">
-            <option value="">Todas as conexões</option>
-            <option value="Online">Online</option>
-            <option value="Offline">Offline</option>
-        </select>
+            @if (groupFilterOpen)
+            {
+                <div class="equipment-filter-overlay"
+                     @onclick="CloseFilters"></div>
+
+                <div class="equipment-filter-menu">
+                    <div class="equipment-filter-title">
+                        Filtrar grupos
+                    </div>
+
+                    @foreach (var group in groups.OrderBy(x => x.Name))
+                    {
+                        <button type="button"
+                                class="equipment-filter-option @(selectedGroupIds.Contains(group.Id) ? "selected" : "")"
+                                @onclick="() => ToggleGroupAsync(group.Id)">
+                            <span class="equipment-filter-check">
+                                @if (selectedGroupIds.Contains(group.Id))
+                                {
+                                    <LucideIcon Name="check" Size="14" />
+                                }
+                            </span>
+                            <span>@group.Name</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="equipment-filter-wrap">
+            <button class="equipment-filter-button"
+                    type="button"
+                    @onclick="ToggleConnectionFilter">
+                <LucideIcon Name="wifi" Size="18" />
+                <span>@ConnectionFilterLabel</span>
+                <LucideIcon Name="chevron-down" Size="18" />
+            </button>
+
+            @if (connectionFilterOpen)
+            {
+                <div class="equipment-filter-overlay"
+                     @onclick="CloseFilters"></div>
+
+                <div class="equipment-filter-menu">
+                    <div class="equipment-filter-title">
+                        Filtrar conexões
+                    </div>
+
+                    @foreach (var status in ConnectionOptions)
+                    {
+                        <button type="button"
+                                class="equipment-filter-option @(selectedConnections.Contains(status) ? "selected" : "")"
+                                @onclick="() => ToggleConnectionAsync(status)">
+                            <span class="equipment-filter-check">
+                                @if (selectedConnections.Contains(status))
+                                {
+                                    <LucideIcon Name="check" Size="14" />
+                                }
+                            </span>
+                            <span>@status</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
     </section>
+
 
     @if (loading)
     {
@@ -262,8 +320,72 @@
     private string? errorMessage;
 
     private string searchText = string.Empty;
-    private string selectedGroupId = string.Empty;
-    private string selectedStatus = string.Empty;
+
+    private readonly HashSet<Guid> selectedGroupIds = [];
+    private readonly HashSet<string> selectedConnections =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+        "Online",
+        "Offline"
+        };
+
+    private static readonly string[] ConnectionOptions =
+    [
+        "Online",
+    "Offline"
+    ];
+
+    private bool groupFilterOpen;
+    private bool connectionFilterOpen;
+
+    private string GroupFilterLabel =>
+        groups.Count == 0 || selectedGroupIds.Count == groups.Count
+            ? "Todos os Grupos"
+            : selectedGroupIds.Count == 0
+                ? "Nenhum grupo"
+                : $"{selectedGroupIds.Count} selecionado(s)";
+
+    private string ConnectionFilterLabel =>
+        selectedConnections.Count == ConnectionOptions.Length
+            ? "Todas as conexões"
+            : selectedConnections.Count == 0
+                ? "Nenhuma conexão"
+                : string.Join(", ", selectedConnections);
+
+    private void ToggleGroupFilter()
+    {
+        groupFilterOpen = !groupFilterOpen;
+        connectionFilterOpen = false;
+    }
+
+    private void ToggleConnectionFilter()
+    {
+        connectionFilterOpen = !connectionFilterOpen;
+        groupFilterOpen = false;
+    }
+
+    private void CloseFilters()
+    {
+        groupFilterOpen = false;
+        connectionFilterOpen = false;
+    }
+
+    private async Task ToggleGroupAsync(Guid id)
+    {
+        if (!selectedGroupIds.Add(id))
+            selectedGroupIds.Remove(id);
+
+        await LoadAsync();
+    }
+
+    private async Task ToggleConnectionAsync(string status)
+    {
+        if (!selectedConnections.Add(status))
+            selectedConnections.Remove(status);
+
+        await LoadAsync();
+    }
+
 
     private int currentPage = 1;
     private const int PageSize = 10;
@@ -309,6 +431,8 @@
         try
         {
             groups.AddRange(await Api.GetGroupsAsync());
+            foreach (var group in groups)
+                selectedGroupIds.Add(group.Id);
         }
         catch
         {
@@ -318,6 +442,7 @@
         await LoadAsync();
     }
 
+    
     private async Task LoadAsync()
     {
         loading = true;
@@ -325,24 +450,37 @@
 
         try
         {
-            Guid? groupId =
-                Guid.TryParse(selectedGroupId, out var id)
-                    ? id
-                    : null;
-
             var result = await Api.GetDevicesFiltradosAsync(
-                groupId,
-                string.IsNullOrWhiteSpace(selectedStatus)
-                    ? null
-                    : selectedStatus,
+                null,
+                null,
                 string.IsNullOrWhiteSpace(searchText)
                     ? null
                     : searchText.Trim());
 
             devices.Clear();
-            devices.AddRange(result.Itens);
 
-            summary = result.Resumo;
+            var selectedGroupNames = groups
+                .Where(g => selectedGroupIds.Contains(g.Id))
+                .Select(g => g.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var filtered = result.Itens
+                .Where(device =>
+                    device.GroupName is not null &&
+                    selectedGroupNames.Contains(device.GroupName))
+                .Where(device =>
+                    selectedConnections.Contains(device.Status))
+                .ToList();
+
+            devices.AddRange(filtered);
+
+            summary = new DeviceSummaryDto(
+                filtered.Count,
+                filtered.Count(x => x.Status == "Online"),
+                filtered.Count(x => x.Status == "Offline"),
+                filtered.Count(x =>
+                    x.Health is "Aviso" or "Critico" or "Erro"));
+
             currentPage = 1;
         }
         catch (HttpRequestException ex)
@@ -358,18 +496,6 @@
         {
             loading = false;
         }
-    }
-
-    private async Task OnGroupChangedAsync(ChangeEventArgs args)
-    {
-        selectedGroupId = args.Value?.ToString() ?? string.Empty;
-        await LoadAsync();
-    }
-
-    private async Task OnStatusChangedAsync(ChangeEventArgs args)
-    {
-        selectedStatus = args.Value?.ToString() ?? string.Empty;
-        await LoadAsync();
     }
 
     private async Task OnSearchInput(ChangeEventArgs args)

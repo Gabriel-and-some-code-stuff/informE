@@ -133,8 +133,12 @@
     border: 1px solid #273247;
     border-radius: 14px;
     background: #111a29;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 10px;
     justify-content: space-between;
 }
 
@@ -173,10 +177,25 @@
 }
 
 
-    .metric-card > span:last-child {
-        color: #b6c3d5;
-        font-size: 14px;
-    }
+.metric-card .metric-icon {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.metric-card > span:last-child {
+    grid-column: 2;
+    grid-row: 1;
+    color: #cbd5e1;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.metric-card > strong {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: start;
+    color: #f5f7fb;
+}
 
 
 .green-text {
@@ -193,6 +212,11 @@
 
 .warning-text {
     color: #f5f7fb;
+}
+
+.metric-icon.purple {
+    color: #a78bfa;
+    background: #2b2145;
 }
 
 /* ==========================================================================
@@ -1158,50 +1182,7 @@
         z-index: 10;
     }
 
-.metric-icon.purple {
-    color: #a78bfa;
-    background: #2b2145;
-}
 
-
-/* Cards do Dashboard no padrão da página Grupos */
-.metric-card {
-    display: grid;
-    grid-template-columns: 34px minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    align-items: center;
-    column-gap: 12px;
-    row-gap: 16px;
-}
-
-    .metric-card .metric-icon {
-        grid-column: 1;
-        grid-row: 1;
-    }
-
-    .metric-card > span:last-child {
-        grid-column: 2;
-        grid-row: 1;
-        color: #b6c3d5;
-        font-size: 14px;
-    }
-
-    .metric-card > strong {
-        grid-column: 1 / -1;
-        grid-row: 2;
-        align-self: start;
-        color: #f5f7fb;
-    }
-
-    .metric-card > span:last-child {
-        color: #cbd5e1;
-        font-size: 14px;
-        font-weight: 500;
-    }
-
-.metric-card {
-    row-gap: 10px;
-}
 
 /* Posiciona o menu do gráfico Máquinas por Grupo */
 .chart-panel {

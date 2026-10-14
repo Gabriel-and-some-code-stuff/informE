@@ -8,7 +8,7 @@
 <PageTitle>Detalhes do Equipamento | informE</PageTitle>
 
 <div class="details-page">
-    <button class="back-link" type="button" @onclick="GoBack"><LucideIcon Name="arrow-left" Size="15" /> <span>Voltar para Equipamentos</span></button>
+    <button class="back-link" type="button" @onclick="GoBack"><LucideIcon Name="arrow-left" Size="15" /> <span>@(FromGroups ? "Voltar para o Grupo" : "Voltar para Equipamentos")</span></button>
 
     @if (loading)
     {
@@ -132,6 +132,23 @@
 @code {
     [Parameter] public Guid DeviceId { get; set; }
 
+    // Origem da navegação: preserva o contexto do laboratório.
+    private bool FromGroups => QueryValue("from").Equals("groups", StringComparison.OrdinalIgnoreCase);
+
+    private Guid? OriginGroupId => Guid.TryParse(QueryValue("groupId"), out var id) ? id : null;
+
+    private string QueryValue(string key)
+    {
+        var query = new Uri(Navigation.Uri).Query.TrimStart('?');
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length == 2 && string.Equals(Uri.UnescapeDataString(pair[0]), key, StringComparison.OrdinalIgnoreCase))
+                return Uri.UnescapeDataString(pair[1].Replace('+', ' '));
+        }
+        return string.Empty;
+    }
+
     private DeviceDetailDto? detail;
     private bool loading = true;
     private bool refreshing;
@@ -173,7 +190,15 @@
         }
     }
 
-    private void GoBack() => Navigation.NavigateTo("/equipments");
+    private void GoBack()
+    {
+        if (FromGroups && OriginGroupId is Guid groupId)
+            Navigation.NavigateTo($"/groups/{groupId}");
+        else if (FromGroups)
+            Navigation.NavigateTo("/groups");
+        else
+            Navigation.NavigateTo("/equipments");
+    }
 
     private async Task OpenExecution()
     {

@@ -2,12 +2,13 @@
 @page "/grupos"
 @layout informE.Desktop.Components.Layout.App.AppLayout
 @using informE.Contracts.Dtos.Api
-@inject informE.Desktop.Services.InformEApiClient Api
-@inject NavigationManager Navigation
 @using informE.Desktop.Services
+@inject InformEApiClient Api
+@inject NavigationManager Navigation
 
 <PageTitle>Grupos | informE</PageTitle>
 
+@* ==================== CABEÇALHO ==================== *@
 <div class="groups-page">
     <header class="page-heading">
         <div>
@@ -16,6 +17,7 @@
         </div>
     </header>
 
+    @* ==================== ERROS E CARREGAMENTO ==================== *@
     @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
         <div class="groups-message error" role="alert">
@@ -36,6 +38,7 @@
     }
     else
     {
+        @* ==================== INDICADORES ==================== *@
         <section class="summary-grid" aria-label="Resumo dos grupos">
             <article class="summary-card">
                 <span class="summary-icon purple"><LucideIcon Name="flask-conical" Size="20" /></span>
@@ -59,6 +62,7 @@
             </article>
         </section>
 
+        @* ==================== CARDS DOS GRUPOS ==================== *@
         <section class="groups-grid">
             @foreach (var item in groupCards)
             {
@@ -74,155 +78,74 @@
                         </div>
                         <span class="chevron"><LucideIcon Name="chevron-right" Size="18" /></span>
                     </header>
-
                     <div class="group-stats">
-						<div><span>Total de Máquinas</span><strong>@item.Online</strong></div>
+                        <div><span>Total de Máquinas</span><strong>@item.Total</strong></div>
                         <div><span>Online</span><strong class="green-text">@item.Online</strong></div>
                         <div><span>Offline</span><strong>@item.Offline</strong></div>
                         <div><span>Com Problema</span><strong class="@(item.Problems > 0 ? "yellow-text" : "green-text")">@item.Problems</strong></div>
                     </div>
-
                     <div class="group-footer">
                         <span>@item.ProfessorCount professor@(item.ProfessorCount == 1 ? "" : "es")</span>
                         <span>@item.StudentCount aluno@(item.StudentCount == 1 ? "" : "s")</span>
                     </div>
                 </article>
             }
-			<button type="button"
-					class="group-card add-group-card"
-					@onclick="() => showCreateGroup = true">
-				<LucideIcon Name="plus" Size="32" />
-				<span>Adicionar Grupo</span>
-			</button>
+            <button type="button" class="group-card add-group-card" @onclick="() => showCreateGroup = true">
+                <LucideIcon Name="plus" Size="32" />
+                <span>Adicionar Grupo</span>
+            </button>
         </section>
     }
 </div>
+
+@* ==================== MODAL DE CRIAÇÃO ==================== *@
 @if (showCreateGroup)
 {
-	<div class="group-modal-overlay" @onclick="CloseCreateGroup">
-		<div class="group-modal" role="dialog"
-			 aria-modal="true"
-			 aria-labelledby="create-group-title"
-			 @onclick:stopPropagation="true">
-
-			<header class="group-modal-header">
-				<h2 id="create-group-title">Novo Grupo</h2>
-				<button type="button"
-						class="group-modal-close"
-						@onclick="CloseCreateGroup">
-					<LucideIcon Name="x" Size="20" />
-				</button>
-			</header>
-
-			<form @onsubmit="CreateGroupAsync" @onsubmit:preventDefault>
-				<label for="group-name">Nome do grupo</label>
-				<input id="group-name"
-					   type="text"
-					   maxlength="45"
-					   required
-					   @bind="newGroupName" />
-
-				<label for="group-description">Descrição (opcional)</label>
-				<textarea id="group-description"
-						  maxlength="100"
-						  rows="3"
-						  @bind="newGroupDescription"></textarea>
-
-				@if (!string.IsNullOrWhiteSpace(createGroupError))
-				{
-					<p class="group-modal-error" role="alert">@createGroupError</p>
-				}
-
-				<footer class="group-modal-actions">
-					<button type="button"
-							class="group-cancel-button"
-							disabled="@creatingGroup"
-							@onclick="CloseCreateGroup">
-						Cancelar
-					</button>
-
-					<button type="submit"
-							class="group-save-button"
-							disabled="@creatingGroup">
-						@(creatingGroup ? "Salvando..." : "Criar Grupo")
-					</button>
-				</footer>
-			</form>
-		</div>
-	</div>
+    <div class="group-modal-overlay" @onclick="CloseCreateGroup">
+        <div class="group-modal" role="dialog" aria-modal="true"
+             aria-labelledby="create-group-title" @onclick:stopPropagation="true">
+            <header class="group-modal-header">
+                <h2 id="create-group-title">Novo Grupo</h2>
+                <button type="button" class="group-modal-close" @onclick="CloseCreateGroup" aria-label="Fechar">
+                    <LucideIcon Name="x" Size="20" />
+                </button>
+            </header>
+            <form @onsubmit="CreateGroupAsync" @onsubmit:preventDefault>
+                <label for="group-name">Nome do grupo</label>
+                <input id="group-name" type="text" maxlength="45" required @bind="newGroupName" />
+                <label for="group-description">Descrição (opcional)</label>
+                <textarea id="group-description" maxlength="100" rows="3" @bind="newGroupDescription"></textarea>
+                @if (!string.IsNullOrWhiteSpace(createGroupError))
+                {
+                    <p class="group-modal-error" role="alert">@createGroupError</p>
+                }
+                <footer class="group-modal-actions">
+                    <button type="button" class="group-cancel-button" disabled="@creatingGroup" @onclick="CloseCreateGroup">Cancelar</button>
+                    <button type="submit" class="group-save-button" disabled="@creatingGroup">@(creatingGroup ? "Salvando..." : "Criar Grupo")</button>
+                </footer>
+            </form>
+        </div>
+    </div>
 }
+
 @code {
-	private bool showCreateGroup;
-	private readonly List<GroupListItemDto> groups = [];
+    // ==================== ESTADO ====================
+    private readonly List<GroupListItemDto> groups = [];
     private readonly List<GroupCardViewModel> groupCards = [];
     private bool loading = true;
     private string? errorMessage;
     private int totalDevices;
     private int onlineDevices;
     private int problemDevices;
-	private string newGroupName = "";
-	private string newGroupDescription = "";
-	private string? createGroupError;
-	private bool creatingGroup;
 
-	private void CloseCreateGroup()
-	{
-		if (creatingGroup)
-			return;
+    // ==================== FORMULÁRIO ====================
+    private bool showCreateGroup;
+    private string newGroupName = "";
+    private string newGroupDescription = "";
+    private string? createGroupError;
+    private bool creatingGroup;
 
-		showCreateGroup = false;
-		newGroupName = "";
-		newGroupDescription = "";
-		createGroupError = null;
-	}
-
-	private async Task CreateGroupAsync()
-	{
-		if (creatingGroup)
-			return;
-
-		createGroupError = null;
-
-		var name = newGroupName.Trim();
-		var description = newGroupDescription.Trim();
-
-		if (string.IsNullOrWhiteSpace(name))
-		{
-			createGroupError = "Informe o nome do grupo.";
-			return;
-		}
-
-		creatingGroup = true;
-
-		try
-		{
-			await Api.CreateGroupAsync(
-				new CreateGroupRequestDto(
-					name,
-					string.IsNullOrWhiteSpace(description) ? null : description));
-
-			CloseCreateGroupAfterSave();
-			await LoadAsync();
-		}
-		catch (InformEApiException ex)
-		{
-			createGroupError = ex.Message;
-		}
-		catch (HttpRequestException)
-		{
-			createGroupError = "Não foi possível conectar ao servidor.";
-		}
-		finally
-		{
-			creatingGroup = false;
-		}
-	}
-
-	private void CloseCreateGroupAfterSave()
-	{
-		creatingGroup = false;
-		CloseCreateGroup();
-	}
+    // ==================== INICIALIZAÇÃO E DADOS ====================
     protected override async Task OnInitializedAsync()
     {
         if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
@@ -230,7 +153,6 @@
             Navigation.NavigateTo("/login/admin");
             return;
         }
-
         await LoadAsync();
     }
 
@@ -240,7 +162,6 @@
         errorMessage = null;
         groups.Clear();
         groupCards.Clear();
-
         try
         {
             var groupResult = await Api.GetGroupsAsync();
@@ -249,20 +170,19 @@
             var allDevices = await Api.GetDevicesAsync();
             totalDevices = allDevices.Resumo.Total;
             onlineDevices = allDevices.Resumo.Online;
-            problemDevices = allDevices.Itens.Count(x => x.Status == "Online" && (x.Health is "Aviso" or "Critico" or "Erro"));
+            problemDevices = allDevices.Itens.Count(x => x.Status == "Online" && IsProblem(x.Health));
 
             foreach (var group in groups)
             {
                 var devices = allDevices.Itens
                     .Where(x => string.Equals(x.GroupName, group.Name, StringComparison.OrdinalIgnoreCase))
                     .ToList();
-
                 groupCards.Add(new GroupCardViewModel(
                     group,
                     group.TotalDeDispositivos,
                     devices.Count(x => x.Status == "Online"),
                     devices.Count(x => x.Status == "Offline"),
-                    devices.Count(x => x.Status == "Online" && (x.Health is "Aviso" or "Critico" or "Erro")),
+                    devices.Count(x => x.Status == "Online" && IsProblem(x.Health)),
                     devices.Count(x => x.Role == "Professor"),
                     devices.Count(x => x.Role != "Professor")));
             }
@@ -275,7 +195,7 @@
         {
             errorMessage = $"O informE.Server não respondeu em http://localhost:5020. Erro: {ex.Message}";
         }
-        catch (informE.Desktop.Services.InformEApiException ex)
+        catch (InformEApiException ex)
         {
             errorMessage = ex.Message;
         }
@@ -285,8 +205,57 @@
         }
     }
 
+    private static bool IsProblem(string health) => health is "Aviso" or "Critico" or "Erro";
+
+    // ==================== NAVEGAÇÃO ====================
     private void OpenGroup(Guid groupId) => Navigation.NavigateTo($"/groups/{groupId}");
 
+    // ==================== CRIAÇÃO DE GRUPOS ====================
+    private void CloseCreateGroup()
+    {
+        if (creatingGroup) return;
+        showCreateGroup = false;
+        newGroupName = "";
+        newGroupDescription = "";
+        createGroupError = null;
+    }
+
+    private async Task CreateGroupAsync()
+    {
+        if (creatingGroup) return;
+        createGroupError = null;
+        var name = newGroupName.Trim();
+        var description = newGroupDescription.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            createGroupError = "Informe o nome do grupo.";
+            return;
+        }
+
+        creatingGroup = true;
+        try
+        {
+            await Api.CreateGroupAsync(new CreateGroupRequestDto(
+                name, string.IsNullOrWhiteSpace(description) ? null : description));
+            creatingGroup = false;
+            CloseCreateGroup();
+            await LoadAsync();
+        }
+        catch (InformEApiException ex)
+        {
+            createGroupError = ex.Message;
+        }
+        catch (HttpRequestException)
+        {
+            createGroupError = "Não foi possível conectar ao servidor.";
+        }
+        finally
+        {
+            creatingGroup = false;
+        }
+    }
+
+    // ==================== MODELO DE EXIBIÇÃO ====================
     private sealed record GroupCardViewModel(
         GroupListItemDto Group,
         int Total,
