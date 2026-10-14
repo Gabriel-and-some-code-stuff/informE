@@ -8,7 +8,11 @@
 <PageTitle>Detalhes do Equipamento | informE</PageTitle>
 
 <div class="details-page">
-    <button class="back-link" type="button" @onclick="GoBack"><LucideIcon Name="arrow-left" Size="15" /> <span>@(FromGroups ? "Voltar para o Grupo" : "Voltar para Equipamentos")</span></button>
+
+	<button class="back-button" type="button" @onclick="GoBack">
+		<LucideIcon Name="arrow-left" Size="17" />
+		<span>Voltar para Equipamentos</span>
+	</button>
 
     @if (loading)
     {
@@ -40,7 +44,7 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button class="refresh-button" type="button" @onclick="LoadAsync" disabled="@refreshing"><LucideIcon Name="refresh-cw" Size="15" /> <span>@(refreshing ? "Atualizando..." : "Atualizar")</span></button>
+                @*<button class="refresh-button" type="button" @onclick="LoadAsync" disabled="@refreshing"><LucideIcon Name="refresh-cw" Size="15" /> <span>@(refreshing ? "Atualizando..." : "Atualizar")</span></button>*@
                 <button class="execute-button" type="button" @onclick="OpenExecution"><LucideIcon Name="terminal" Size="15" /> <span>Executar Comando</span></button>
             </div>
         </header>
@@ -95,7 +99,6 @@
         else if (activeTab == DetailTab.Processes)
         {
             <section class="content-card table-card">
-                <div class="card-heading"><h2>Processos em Execução</h2><span class="mock-note">Demonstração</span></div>
                 <div class="detail-table-scroll">
                     <table class="detail-table">
                         <thead><tr><th>Processo</th><th>CPU</th><th>RAM</th><th>Status</th></tr></thead>
@@ -112,7 +115,6 @@
         else
         {
             <section class="content-card table-card">
-                <div class="card-heading"><h2>Serviços do Sistema</h2><span class="mock-note">Demonstração</span></div>
                 <div class="detail-table-scroll">
                     <table class="detail-table services-table">
                         <thead><tr><th>Nome do Serviço</th><th>Identificador</th><th>Status</th><th>Inicialização</th></tr></thead>
@@ -151,7 +153,7 @@
 
     private DeviceDetailDto? detail;
     private bool loading = true;
-    private bool refreshing;
+    @*private bool refreshing;*@
     private string? errorMessage;
     private DetailTab activeTab = DetailTab.General;
 
@@ -168,7 +170,7 @@
 
     private async Task LoadAsync()
     {
-        if (!loading) refreshing = true;
+        //if (!loading) refreshing = true;
         errorMessage = null;
 
         try
@@ -186,7 +188,7 @@
         finally
         {
             loading = false;
-            refreshing = false;
+            //refreshing = false;
         }
     }
 

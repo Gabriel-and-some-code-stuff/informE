@@ -5,6 +5,29 @@
     color: #e8edf5;
 }
 
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    height: 38px;
+    padding: 0 14px;
+    margin-bottom: 20px;
+    border: 1px solid #303c50;
+    border-radius: 10px;
+    background: #172132;
+    color: #cbd5e1;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+     .back-button:hover {
+        background: #202d42;
+        border-color: #10c6f4;
+        color: #f5f7fb;
+    }
+
 .back-link {
     border: 0;
     background: transparent;
