@@ -57,13 +57,22 @@
                 <strong>@totalDevices</strong>
             </article>
 
-            <article class="summary-card">
-                <span class="summary-icon green">
-                    <LucideIcon Name="circle-check" Size="20" />
-                </span>
-                <span>Online</span>
-                <strong>@onlineDevices</strong>
-            </article>
+			<article class="summary-card">
+				<span class="summary-icon green">
+					<LucideIcon Name="circle-check" Size="20" />
+				</span>
+				<span>Máquinas Online</span>
+				<strong>@onlineDevices</strong>
+			</article>
+
+			<article class="summary-card">
+				<span class="summary-icon gray">
+					<LucideIcon Name="circle-check" Size="20" />
+				</span>
+				<span>Máquinas Offline</span>
+				<strong>@offlineDevices</strong>
+			</article>
+
 
             <article class="summary-card">
                 <span class="summary-icon yellow">
@@ -142,48 +151,50 @@
 }
 
 @code {
-    // ==================== ESTADO ====================
-    private readonly List<GroupListItemDto> groups = [];
-    private readonly List<GroupCardViewModel> groupCards = [];
-    private bool loading = true;
-    private string? errorMessage;
-    private int totalDevices;
-    private int onlineDevices;
-    private int problemDevices;
+	// ==================== ESTADO ====================
+	private readonly List<GroupListItemDto> groups = [];
+	private readonly List<GroupCardViewModel> groupCards = [];
+	private bool loading = true;
+	private string? errorMessage;
+	private int totalDevices;
+	private int onlineDevices;
+	private int offlineDevices;
+	private int problemDevices;
 
-    // ==================== FORMULÁRIO ====================
-    private bool showCreateGroup;
-    private string newGroupName = "";
-    private string newGroupDescription = "";
-    private string? createGroupError;
-    private bool creatingGroup;
+	// ==================== FORMULÁRIO ====================
+	private bool showCreateGroup;
+	private string newGroupName = "";
+	private string newGroupDescription = "";
+	private string? createGroupError;
+	private bool creatingGroup;
 
-    // ==================== INICIALIZAÇÃO E DADOS ====================
-    protected override async Task OnInitializedAsync()
-    {
-        if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
-        {
-            Navigation.NavigateTo("/login/admin");
-            return;
-        }
-        await LoadAsync();
-    }
+	// ==================== INICIALIZAÇÃO E DADOS ====================
+	protected override async Task OnInitializedAsync()
+	{
+		if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
+		{
+			Navigation.NavigateTo("/login/admin");
+			return;
+		}
+		await LoadAsync();
+	}
 
-    private async Task LoadAsync()
-    {
-        loading = true;
-        errorMessage = null;
-        groups.Clear();
-        groupCards.Clear();
-        try
-        {
-            var groupResult = await Api.GetGroupsAsync();
-            groups.AddRange(groupResult.OrderBy(x => x.Name));
+	private async Task LoadAsync()
+	{
+		loading = true;
+		errorMessage = null;
+		groups.Clear();
+		groupCards.Clear();
+		try
+		{
+			var groupResult = await Api.GetGroupsAsync();
+			groups.AddRange(groupResult.OrderBy(x => x.Name));
 
-            var allDevices = await Api.GetDevicesAsync();
-            totalDevices = allDevices.Resumo.Total;
-            onlineDevices = allDevices.Resumo.Online;
-            problemDevices = allDevices.Itens.Count(x => x.Status == "Online" && IsProblem(x.Health));
+			var allDevices = await Api.GetDevicesAsync();
+			totalDevices = allDevices.Resumo.Total;
+			onlineDevices = allDevices.Resumo.Online;
+			offlineDevices = allDevices.Resumo.Offline;
+			problemDevices = allDevices.Itens.Count(x => x.Status == "Online" && IsProblem(x.Health));
 
             foreach (var group in groups)
             {
