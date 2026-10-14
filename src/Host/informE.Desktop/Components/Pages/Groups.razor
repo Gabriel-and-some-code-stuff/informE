@@ -39,28 +39,41 @@
     else
     {
         @* ==================== INDICADORES ==================== *@
+
         <section class="summary-grid" aria-label="Resumo dos grupos">
             <article class="summary-card">
-                <span class="summary-icon purple"><LucideIcon Name="flask-conical" Size="20" /></span>
+                <span class="summary-icon purple">
+                    <LucideIcon Name="flask-conical" Size="20" />
+                </span>
                 <span>Grupos</span>
-                <strong class="purple-text">@groups.Count</strong>
+                <strong>@groups.Count</strong>
             </article>
+
             <article class="summary-card">
-                <span class="summary-icon cyan"><LucideIcon Name="monitor" Size="20" /></span>
-                <span>Total de Máquinas</span>
-                <strong class="blue-text">@totalDevices</strong>
+                <span class="summary-icon cyan">
+                    <LucideIcon Name="monitor" Size="20" />
+                </span>
+                <span>Dispositivos</span>
+                <strong>@totalDevices</strong>
             </article>
+
             <article class="summary-card">
-                <span class="summary-icon green"><LucideIcon Name="circle-check" Size="20" /></span>
+                <span class="summary-icon green">
+                    <LucideIcon Name="circle-check" Size="20" />
+                </span>
                 <span>Online</span>
-                <strong class="green-text">@onlineDevices</strong>
+                <strong>@onlineDevices</strong>
             </article>
+
             <article class="summary-card">
-                <span class="summary-icon yellow"><LucideIcon Name="triangle-alert" Size="20" /></span>
-                <span>Com Problema</span>
-                <strong class="yellow-text">@problemDevices</strong>
+                <span class="summary-icon yellow">
+                    <LucideIcon Name="triangle-alert" Size="20" />
+                </span>
+                <span>Com problema</span>
+                <strong>@problemDevices</strong>
             </article>
         </section>
+
 
         @* ==================== CARDS DOS GRUPOS ==================== *@
         <section class="groups-grid">

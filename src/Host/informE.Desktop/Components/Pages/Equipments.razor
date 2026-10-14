@@ -35,10 +35,9 @@
                 <span class="metric-icon cyan">
                     <LucideIcon Name="monitor" Size="20" />
                 </span>
-                Total
+                Dispositivos
             </span>
             <strong>@summary.Total</strong>
-            <small>dispositivos</small>
         </article>
 
         <article class="summary-card">
@@ -49,7 +48,6 @@
                 Online
             </span>
             <strong>@summary.Online</strong>
-            <small>conectados</small>
         </article>
 
         <article class="summary-card">
@@ -60,7 +58,6 @@
                 Offline
             </span>
             <strong>@summary.Offline</strong>
-            <small>sem conexão</small>
         </article>
 
         <article class="summary-card">
@@ -71,7 +68,6 @@
                 Com problema
             </span>
             <strong>@summary.ComProblema</strong>
-            <small>necessitam atenção</small>
         </article>
     </section>
 
@@ -206,7 +202,6 @@
                         </div>
 
                         <div class="professor-metric">
-                            <span>Saúde</span>
                             <span class="health-pill @HealthClass(device.Health)">
                                 @HealthLabel(device.Health)
                             </span>
@@ -281,7 +276,7 @@
 
                             <span class="details">
                                 Detalhes
-                                <LucideIcon Name="chevron-right" Size="16" />
+                                <LucideIcon Name="chevron-right" Size="18" />
                             </span>
                         </button>
                     }

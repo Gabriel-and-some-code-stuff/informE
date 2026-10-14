@@ -9,22 +9,36 @@
     margin-bottom: 22px;
 }
 
+
 .back-button {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: #8995a9;
-    font-size: 12px;
+    justify-content: center;
+    gap: 9px;
+    height: 38px;
+    padding: 0 14px;
+    margin-bottom: 20px;
+    border: 1px solid #303c50;
+    border-radius: 10px;
+    background: #172132;
+    color: #cbd5e1;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
 }
 
     .back-button:hover {
-        color: #d7dee9;
+        background: #202d42;
+        border-color: #10c6f4;
+        color: #f5f7fb;
     }
+
+    .back-button:focus-visible {
+        outline: 2px solid #10c6f4;
+        outline-offset: 2px;
+    }
+
 
 .heading-row {
     display: flex;
@@ -126,14 +140,106 @@
             color: #6f7b90;
         }
 
-.machine-tools select {
-    min-width: 180px;
-    border: 1px solid #2c384d;
-    border-radius: 20px;
-    background: #111a29;
-    color: #d8dee8;
-    padding: 0 16px;
+
+/* Filtro de status */
+
+.status-filter-wrap {
+    position: relative;
+    flex-shrink: 0;
 }
+
+.status-filter-button {
+    height: 42px;
+    min-width: 190px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 14px;
+    border: 1px solid #303c50;
+    border-radius: 10px;
+    background: #121b2a;
+    color: #cbd3df;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+    .status-filter-button:hover,
+    .status-filter-button:focus-visible {
+        border-color: #10c6f4;
+    }
+
+.status-filter-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 14;
+    background: transparent;
+}
+
+.status-filter-menu {
+    position: absolute;
+    right: 0;
+    top: 48px;
+    z-index: 15;
+    width: 230px;
+    padding: 8px;
+    border: 1px solid #2d394d;
+    border-radius: 12px;
+    background: #172132;
+    box-shadow: 0 16px 34px rgba(0,0,0,.3);
+}
+
+.status-filter-title {
+    padding: 5px 7px 10px;
+    color: #8d98aa;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.status-filter-option {
+    width: 100%;
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #cbd3df;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+}
+
+    .status-filter-option:hover {
+        background: #202b3d;
+    }
+
+    .status-filter-option.selected {
+        color: #edf2f8;
+        background: transparent;
+    }
+
+/* Caixa de seleção igual à do Dashboard */
+
+.status-filter-check {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #465268;
+    border-radius: 6px;
+    color: #10c6f4;
+}
+
+.status-filter-option.selected .status-filter-check {
+    border-color: #10c6f4;
+    background: rgba(16, 198, 244, .12);
+}
+
 
 /* Seções de máquinas */
 .machine-section {
@@ -294,14 +400,6 @@
         color: #8995a8;
     }
 
-    .student-row.warning {
-        border-color: #644b17;
-    }
-
-    .student-row.critical,
-    .student-row.error {
-        border-color: #613235;
-    }
 
 .health-dot {
     width: 7px;
@@ -322,34 +420,50 @@
     box-shadow: 0 0 0 2px #45201f;
 }
 
+
 /* Paginação */
+
 .pagination {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
-    gap: 6px;
-    margin-top: 12px;
+    gap: 14px;
+    margin-top: 18px;
 }
 
+    .pagination span {
+        color: #aab6c8;
+        font-size: 13px;
+    }
+
     .pagination button {
-        width: 29px;
-        height: 29px;
-        border: 1px solid #2c384c;
-        border-radius: 50%;
-        background: #111a29;
-        color: #8995a8;
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: #10c6f4;
         cursor: pointer;
     }
 
-        .pagination button.active {
-            border-color: #00bfe9;
-            background: #06384b;
-            color: #00c9f7;
+        .pagination button:hover:not(:disabled) {
+            background: #202d42;
         }
 
         .pagination button:disabled {
-            opacity: .4;
+            color: #526075;
+            opacity: .45;
             cursor: default;
         }
+
+        .pagination button:focus-visible {
+            outline: 2px solid #10c6f4;
+            outline-offset: 2px;
+        }
+
 
 /* Estados de carregamento e erro */
 .empty-state,
@@ -452,9 +566,22 @@
         flex-direction: column;
     }
 
-        .machine-tools select {
-            height: 42px;
-        }
+    .status-filter-wrap,
+    .status-filter-button {
+        height: 42px;
+        min-width: 190px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 0 14px;
+        border: 1px solid #303c50;
+        border-radius: 10px;
+        background: #121b2a;
+        color: #cbd3df;
+        font-size: 14px;
+        cursor: pointer;
+    }
 
     .students-header {
         align-items: flex-start;

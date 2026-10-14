@@ -31,59 +31,68 @@
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(4,minmax(0,1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
 }
 
 .summary-card {
-    min-height: 118px;
-    padding: 20px;
-    border: 1px solid #263147;
-    background: #111a29;
+    min-height: 128px;
+    padding: 18px;
+    border: 1px solid #273247;
     border-radius: 14px;
+    background: #111a29;
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 34px minmax(0, 1fr);
     grid-template-rows: auto 1fr;
-    column-gap: 10px;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 10px;
 }
 
-    .summary-card > span:not(.summary-icon) {
-        align-self: center;
-        color: #b6c3d5;
-        font-size: 13px;
+    .summary-card > .summary-icon {
+        grid-column: 1;
+        grid-row: 1;
     }
 
-    .summary-card strong, .summary-card strong.green-text, .summary-card strong.yellow-text, .summary-card strong.blue-text, .summary-card strong.purple-text {
-        grid-column: 1/3;
-        align-self: end;
-        font-size: 28px;
+    .summary-card > span:not(.summary-icon) {
+        grid-column: 2;
+        grid-row: 1;
+        color: #cbd5e1;
+        font-size: 14px;
         font-weight: 500;
-        color: #f5f7fb !important;
+    }
+
+    .summary-card > strong {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        align-self: start;
+        color: #f5f7fb;
+        font-size: 29px;
+        font-weight: 600;
     }
 
 .summary-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
     display: grid;
     place-items: center;
-    font-size: 16px;
 }
 
     .summary-icon.cyan {
-        color: #08c6f3;
-        background: #07384b;
+        color: #10c6f4;
+        background: #07384c;
     }
 
     .summary-icon.green {
-        color: #00d27a;
-        background: #092f25;
+        color: #13d17a;
+        background: #0b3227;
     }
 
     .summary-icon.yellow {
-        color: #e8ad00;
-        background: #332810;
+        color: #efb000;
+        background: #392d0f;
     }
 
     .summary-icon.purple {
@@ -91,31 +100,26 @@
         background: #2b2145;
     }
 
-    .summary-icon svg, .lab-icon svg, .chevron svg {
-        width: 18px;
-        height: 18px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.8px;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-    }
-
 .green-text {
-    color: #00d27a !important;
+    color: #13d17a !important;
 }
 
 .yellow-text {
-    color: #f0b100 !important;
+    color: #efb000 !important;
 }
 
-.purple-text {
-    color: #a78bfa !important;
+.summary-icon svg,
+.lab-icon svg,
+.chevron svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
-.blue-text {
-    color: #10c6f4 !important;
-}
 
 /* ==================== GRID E CARDS DE GRUPOS ==================== */
 
