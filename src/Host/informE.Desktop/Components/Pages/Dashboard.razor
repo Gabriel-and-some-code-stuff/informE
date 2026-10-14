@@ -204,7 +204,11 @@
                     <div class="recent-alerts">
                         @foreach (var alert in alerts.Recentes.OrderByDescending(x => x.OcorridoEm).Take(4))
                         {
-                            <div class="recent-alert-item">
+							<button class="recent-alert-item"
+								type="button"
+								@onclick="() => OpenAlert(alert)"
+								 
+								 tabindex="0">
                                 <span class="alert-category-dot @CategoryClass(alert.Categoria)"></span>
                                 <div class="recent-alert-content">
                                     <div class="recent-alert-topline">
@@ -214,7 +218,7 @@
                                     <p>@(string.IsNullOrWhiteSpace(alert.Mensagem) ? AlertLabel(alert) : alert.Mensagem)</p>
                                     <small>@(alert.GroupName ?? "Sem grupo") · @CategoryLabel(alert.Categoria)</small>
                                 </div>
-                            </div>
+                            </button>
                         }
                     </div>
                 }
@@ -291,6 +295,15 @@
 
 @* ===== LÓGICA C# DO COMPONENTE ===== *@
 @code {
+	private void OpenAlert(AlertListItemDto alert)
+	{
+		Navigation.NavigateTo($"/equipments/{alert.DeviceId}");
+	}
+
+	private void NavigateToAlert(dynamic alert)
+	{
+		Navigation.NavigateTo($"/alertas/{alert.Id}");
+	}
     [Parameter] public string? AccessType { get; set; }
 
     private readonly List<GroupFilterItem> groups = [];

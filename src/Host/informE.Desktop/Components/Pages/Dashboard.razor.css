@@ -1194,3 +1194,15 @@
         right: 0 !important;
         z-index: 10;
     }
+
+.recent-alert-item {
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid #303c50 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35) !important;
+}
+
+    .recent-alert-item:hover {
+        background: #172132;
+    }
