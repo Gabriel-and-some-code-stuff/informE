@@ -115,21 +115,6 @@
             color: var(--accent);
         }
 
-.account-area {
-    position: relative;
-    margin-top: auto;
-    padding: 10px 12px 16px;
-    border-top: 1px solid #273144;
-}
-
-.account-card {
-    min-height: 54px;
-    cursor: default;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 2px;
-}
 
 .avatar {
     width: 36px;
@@ -164,53 +149,145 @@
         font-size: 11px;
     }
 
-.account-chevron {
-    color: #79859b;
-    font-size: 13px;
+
+/* =========================================
+   MENU DA CONTA
+   ========================================= */
+
+.account-area {
+    position: relative;
+    margin-top: auto;
+    padding: 10px 12px 16px;
+    border-top: 1px solid #273144;
 }
 
-.account-menu {
-    display: none;
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 72px;
-    background: #202b3c;
-    border: 1px solid #3b4658;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
-}
-
-.account-area:hover .account-menu, .account-area:focus-within .account-menu {
-    display: block;
-}
-
-.account-menu button, .account-menu a {
-    width: 100%;
-    min-height: 40px;
+.account-card {
+    position: relative;
+    z-index: 3;
+    min-height: 54px;
     display: flex;
     align-items: center;
-    padding: 0 14px;
-    border: 0;
-    background: transparent;
-    color: #dce2ec;
-    text-decoration: none;
-    font-size: 13px;
-    cursor: pointer;
+    gap: 10px;
+    padding: 4px 2px;
 }
 
-    .account-menu button:hover, .account-menu a:hover {
-        background: rgba(255, 255, 255, .05);
+/* Botão da seta */
+
+.account-toggle {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: #8e98ac;
+    cursor: pointer;
+    transition: color 0.18s ease, background 0.18s ease;
+}
+
+    .account-toggle:hover {
+        color: #10c6f4;
+        background: #202d42;
     }
 
-.account-menu a {
-    color: #dce2ec;
+    .account-toggle[aria-expanded="true"] {
+        color: #10c6f4;
+        background: #1b293b;
+    }
+
+    .account-toggle:focus-visible {
+        outline: 2px solid #10c6f4;
+        outline-offset: 2px;
+    }
+
+/* Fechamento ao clicar fora */
+
+.account-click-outside {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background: transparent;
 }
 
-.account-menu .logout-button {
-    color: #ff6067;
+/* Menu suspenso */
+
+.account-menu {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: calc(100% + 4px);
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px;
+    background: #172132;
+    border: 1px solid #344258;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    animation: account-menu-enter 0.18s ease-out;
 }
+
+    .account-menu a,
+    .account-menu button {
+        width: 100%;
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 0 12px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: #dce3ee;
+        font-family: inherit;
+        font-size: 13px;
+        text-align: left;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+
+        .account-menu a:hover,
+        .account-menu button:hover {
+            background: #243146;
+        }
+
+        .account-menu a svg {
+            color: #10c6f4;
+        }
+
+    .account-menu .logout-button {
+        color: #ff6476;
+    }
+
+        .account-menu .logout-button svg {
+            color: #ff6476;
+        }
+
+/* Animação de entrada */
+
+@keyframes account-menu-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .account-menu {
+        animation: none;
+    }
+}
+
 
 .main-area {
     min-width: 0;
@@ -657,8 +734,10 @@ button.status-pill {
                 display: inline;
             }
 
-        .sidebar.collapsed .account-copy, .sidebar.collapsed .account-chevron {
-            display: flex;
+        .sidebar.collapsed .account-copy,
+        .sidebar.collapsed .account-toggle,
+        .sidebar.collapsed .account-menu {
+            display: none;
         }
 }
 /* Sidebar compacta: mesma linguagem visual do protótipo e tooltip acessível no hover. */

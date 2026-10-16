@@ -18,6 +18,7 @@
             </button>
         </div>
 
+
         <!-- Navegação lateral -->
         <nav class="sidebar-nav" aria-label="Navegação principal">
             <a class="nav-link @(IsActive("/dashboard") ? "active" : null)"
@@ -65,18 +66,48 @@
         </nav>
 
         <!-- Conta -->
+        <!-- Conta do usuário -->
         <div class="account-area">
-            <div class="account-menu">
-                <a href="/profile">Meu Perfil</a>
-                <button class="logout-button" type="button" @onclick="Logout">Sair da Conta</button>
-            </div>
+
+            @if (accountMenuOpen)
+            {
+                <div class="account-click-outside"
+                     @onclick="CloseAccountMenu">
+                </div>
+
+                <div class="account-menu">
+                    <a href="/profile" @onclick="CloseAccountMenu">
+                        <LucideIcon Name="user-round" Size="17" />
+                        <span>Meu Perfil</span>
+                    </a>
+
+                    <button class="logout-button"
+                            type="button"
+                            @onclick="Logout">
+                        <LucideIcon Name="log-out" Size="17" />
+                        <span>Sair da Conta</span>
+                    </button>
+                </div>
+            }
+
             <div class="account-card">
-                <span class="avatar">@(IsViewer ? "EU" : "AU")</span>
+                <span class="avatar">
+                    @(IsViewer ? "EU" : "AU")
+                </span>
+
                 <span class="account-copy">
                     <strong>@UserName</strong>
                     <small>@UserEmail</small>
                 </span>
-                <span class="account-chevron">⌃</span>
+
+                <button class="account-toggle"
+                        type="button"
+                        aria-label="@(accountMenuOpen ? "Fechar menu da conta" : "Abrir menu da conta")"
+                        aria-expanded="@accountMenuOpen"
+                        @onclick="ToggleAccountMenu">
+
+                    <LucideIcon Name="@(accountMenuOpen ? "chevron-down" : "chevron-up")" Size="18" />
+                </button>
             </div>
         </div>
     </aside>
@@ -157,6 +188,7 @@
     private bool alertsLoading;
     private string syncText = "há 2 min";
     private readonly List<AlertListItemDto> recentAlerts = [];
+    private bool accountMenuOpen;
 
     // Sessão e usuário
     private bool IsViewer => string.Equals(
@@ -269,4 +301,21 @@
         informE.Desktop.Components.State.AppSession.Clear();
         Navigation.NavigateTo(loginRoute);
     }
+
+    
+    private void ToggleAccountMenu()
+    {
+        accountMenuOpen = !accountMenuOpen;
+
+        if (accountMenuOpen)
+        {
+            notificationsOpen = false;
+        }
+    }
+
+    private void CloseAccountMenu()
+    {
+        accountMenuOpen = false;
+    }
+
 }

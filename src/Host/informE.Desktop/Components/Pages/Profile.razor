@@ -7,69 +7,379 @@
 <PageTitle>Meu Perfil | informE</PageTitle>
 
 <div class="profile-page">
-@if(loading){<div class="profile-state">Carregando perfil...</div>}
-else if(!string.IsNullOrWhiteSpace(error)){<div class="profile-state error">@error</div>}
-else if(me is not null){
-    <section class="profile-hero">
-        <div class="hero-main"><div class="profile-avatar">@Initials(me.Username)<span></span></div><div><div class="name-line"><h1>@me.Username</h1><span>@RoleLabel(me.Role)</span></div><p><LucideIcon Name="mail" Size="15" /> @me.Email</p><small><LucideIcon Name="calendar-days" Size="14" /> Membro desde @me.CreatedAt.ToLocalTime().ToString("MMM yyyy")</small></div></div>
-        <div class="hero-actions"><button @onclick="OpenEdit"><LucideIcon Name="pencil" Size="16" /> Editar Perfil</button><button class="logout" @onclick="Logout"><LucideIcon Name="log-out" Size="16" /> Sair</button></div>
-    </section>
-    <section class="quick-grid">
-        <article><LucideIcon Name="clock-3" Size="20"/><span>Último acesso</span><strong>—</strong><small>não informado pela API</small></article>
-        <article><LucideIcon Name="monitor-smartphone" Size="20"/><span>Sessões ativas</span><strong>@sessions.Count</strong><small>dispositivos conectados</small></article>
-        <article><LucideIcon Name="shield-check" Size="20"/><span>Status</span><strong>@(me.IsActive?"Verificada":"Inativa")</strong><small>@(me.IsActive?"Autenticação ativa":"Conta desativada")</small></article>
-    </section>
-    <section class="profile-grid">
-        <article class="info-card"><div class="card-title"><span><LucideIcon Name="user" Size="18"/> Informações pessoais</span><button @onclick="OpenEdit"><LucideIcon Name="pencil" Size="15"/> Editar</button></div><dl><div><dt>Nome completo</dt><dd>@me.Username</dd></div><div><dt>Email</dt><dd>@me.Email</dd></div><div><dt>Cargo</dt><dd>@RoleLabel(me.Role)</dd></div><div><dt>Organização</dt><dd>informE Platform</dd></div></dl></article>
-        <article class="sessions-card"><div class="card-title"><span><LucideIcon Name="monitor-smartphone" Size="18"/> Sessões ativas</span></div>@if(sessions.Count==0){<p class="empty">Nenhuma sessão ativa encontrada.</p>}else{@foreach(var s in sessions){<div class="session-row"><div><LucideIcon Name="monitor" Size="17"/><span><strong>@(string.IsNullOrWhiteSpace(s.DeviceLabel)?"Dispositivo":s.DeviceLabel)</strong><small>@s.IpAddress · @s.LastSeenAt.ToLocalTime().ToString("dd/MM HH:mm")</small></span></div>@if(!s.EhSessaoAtual){<button @onclick="()=>RevokeAsync(s.Id)">Encerrar</button>}else{<em>Atual</em>}</div>}}</article>
-    </section>
-}
+    @if (loading)
+    {
+        <div class="profile-state">Carregando perfil...</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div class="profile-state error">@error</div>
+    }
+    else if (me is not null)
+    {
+        <section class="profile-hero">
+            <div class="hero-main">
+                <div class="profile-avatar">
+                    @Initials(me.Username)
+                    <span></span>
+                </div>
+                <div>
+                    <div class="name-line">
+                        <h1>@me.Username</h1>
+                        <span>@RoleLabel(me.Role)</span>
+                    </div>
+                    <p><LucideIcon Name="mail" Size="15" /> @me.Email</p>
+                    <small><LucideIcon Name="calendar-days" Size="14" /> Membro desde @me.CreatedAt.ToLocalTime().ToString("MMM yyyy")</small>
+                </div>
+            </div>
+            <div class="hero-actions">
+                <button type="button" @onclick="OpenEdit"><LucideIcon Name="pencil" Size="16" /> Editar Perfil</button>
+                <button type="button" class="logout" @onclick="Logout"><LucideIcon Name="log-out" Size="16" /> Sair</button>
+            </div>
+        </section>
+
+        <section class="quick-grid" aria-label="Resumo do perfil">
+            <article class="quick-card">
+                <span class="quick-icon cyan"><LucideIcon Name="clock-3" Size="20" /></span>
+                <span class="quick-label">Último acesso</span>
+                <strong>—</strong>
+            </article>
+            <article class="quick-card">
+                <span class="quick-icon purple"><LucideIcon Name="monitor-smartphone" Size="20" /></span>
+                <span class="quick-label">Sessões ativas</span>
+                <strong>@sessions.Count</strong>
+            </article>
+            <article class="quick-card">
+                <span class="quick-icon green"><LucideIcon Name="shield-check" Size="20" /></span>
+                <span class="quick-label">Status</span>
+                <strong>@(me.IsActive ? "Verificada" : "Inativa")</strong>
+            </article>
+        </section>
+
+        <section class="profile-grid">
+            <article class="info-card">
+                <div class="card-title">
+                    <span><LucideIcon Name="user" Size="18" /> Informações pessoais</span>
+                    <button type="button" @onclick="OpenEdit"><LucideIcon Name="pencil" Size="15" /> Editar</button>
+                </div>
+                <dl>
+                    <div><dt>Nome completo</dt><dd>@me.Username</dd></div>
+                    <div><dt>Email</dt><dd>@me.Email</dd></div>
+                    <div><dt>Cargo</dt><dd>@RoleLabel(me.Role)</dd></div>
+                    <div><dt>Organização</dt><dd>informE Platform</dd></div>
+                </dl>
+            </article>
+            <article class="sessions-card">
+                <div class="card-title">
+                    <span><LucideIcon Name="monitor-smartphone" Size="18" /> Sessões ativas</span>
+                </div>
+                @if (sessions.Count == 0)
+                {
+                    <p class="empty">Nenhuma sessão ativa encontrada.</p>
+                }
+                else
+                {
+                    @foreach (var session in sessions)
+                    {
+                        <div class="session-row">
+                            <div>
+                                <LucideIcon Name="monitor" Size="17" />
+                                <span>
+                                    <strong>@(string.IsNullOrWhiteSpace(session.DeviceLabel) ? "Dispositivo" : session.DeviceLabel)</strong>
+                                    <small>@session.IpAddress · @session.LastSeenAt.ToLocalTime().ToString("dd/MM HH:mm")</small>
+                                </span>
+                            </div>
+                            @if (!session.EhSessaoAtual)
+                            {
+                                <button type="button" @onclick="() => RevokeAsync(session.Id)">Encerrar</button>
+                            }
+                            else
+                            {
+                                <em>Atual</em>
+                            }
+                        </div>
+                    }
+                }
+            </article>
+        </section>
+    }
 </div>
 
-@if(showEdit && me is not null)
+@if (showEdit && me is not null)
 {
     <div class="modal-backdrop" @onclick="CloseEdit">
-        <div class="edit-card" @onclick:stopPropagation="true">
-            <h2>Editar Perfil</h2>
-            <label>Nome<input @bind="editName" /></label>
-            <label>Email<input @bind="editEmail" type="email" /></label>
+        <div class="edit-card" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title" @onclick:stopPropagation="true">
+            <h2 id="edit-profile-title">Editar Perfil</h2>
+
+            <label for="edit-name">Nome</label>
+            <input id="edit-name" @bind="editName" />
+
+            <label for="edit-email">Email</label>
+            <input id="edit-email" @bind="editEmail" type="email" />
+
             <div class="password-section">
-                <div class="password-heading"><LucideIcon Name="lock-keyhole" Size="16" /><span>Alterar senha</span><small>opcional</small></div>
-                <label>Senha atual<input @bind="currentPassword" type="password" autocomplete="current-password" /></label>
-                <label>Nova senha<input @bind="newPassword" type="password" autocomplete="new-password" placeholder="Mínimo de 8 caracteres" /></label>
-                <label>Confirmar nova senha<input @bind="confirmPassword" type="password" autocomplete="new-password" /></label>
+                <div class="password-heading">
+                    <LucideIcon Name="lock-keyhole" Size="16" />
+                    <span>Alterar senha</span>
+                    <small>opcional</small>
+                </div>
+
+                <div class="password-field">
+                    <label for="current-password">Senha atual</label>
+                    <div class="password-input-wrap">
+                        <input id="current-password" @bind="currentPassword"
+                               type="@(showCurrentPassword ? "text" : "password")"
+                               autocomplete="current-password" />
+                        <button type="button" class="password-toggle"
+                                @onclick="() => showCurrentPassword = !showCurrentPassword"
+                                aria-label="@(showCurrentPassword ? "Ocultar senha atual" : "Mostrar senha atual")"
+                                aria-pressed="@showCurrentPassword">
+                            <LucideIcon Name="@(showCurrentPassword ? "eye-off" : "eye")" Size="18" />
+                        </button>
+                    </div>
+                </div>
+
+                <div class="password-field">
+                    <label for="new-password">Nova senha</label>
+                    <div class="password-input-wrap">
+                        <input id="new-password" @bind="newPassword"
+                               type="@(showNewPassword ? "text" : "password")"
+                               autocomplete="new-password" placeholder="Mínimo de 8 caracteres" />
+                        <button type="button" class="password-toggle"
+                                @onclick="() => showNewPassword = !showNewPassword"
+                                aria-label="@(showNewPassword ? "Ocultar nova senha" : "Mostrar nova senha")"
+                                aria-pressed="@showNewPassword">
+                            <LucideIcon Name="@(showNewPassword ? "eye-off" : "eye")" Size="18" />
+                        </button>
+                    </div>
+                </div>
+
+                <div class="password-field">
+                    <label for="confirm-password">Confirmar nova senha</label>
+                    <div class="password-input-wrap">
+                        <input id="confirm-password" @bind="confirmPassword"
+                               type="@(showConfirmPassword ? "text" : "password")"
+                               autocomplete="new-password" />
+                        <button type="button" class="password-toggle"
+                                @onclick="() => showConfirmPassword = !showConfirmPassword"
+                                aria-label="@(showConfirmPassword ? "Ocultar confirmação da senha" : "Mostrar confirmação da senha")"
+                                aria-pressed="@showConfirmPassword">
+                            <LucideIcon Name="@(showConfirmPassword ? "eye-off" : "eye")" Size="18" />
+                        </button>
+                    </div>
+                </div>
             </div>
-            @if(!string.IsNullOrWhiteSpace(formError)){<p class="form-error">@formError</p>}
-            <div class="modal-actions"><button @onclick="CloseEdit">Cancelar</button><button class="save" disabled="@saving" @onclick="SaveAsync">@(saving ? "Salvando..." : "Salvar")</button></div>
+
+            @if (!string.IsNullOrWhiteSpace(formError))
+            {
+                <p class="form-error" role="alert">@formError</p>
+            }
+            <div class="modal-actions">
+                <button type="button" @onclick="CloseEdit" disabled="@saving">Cancelar</button>
+                <button type="button" class="save" disabled="@saving" @onclick="SaveAsync">@(saving ? "Salvando..." : "Salvar")</button>
+            </div>
         </div>
     </div>
 }
 
-@code{
-    private UserListItemDto? me; private readonly List<SessionListItemDto> sessions=[]; private bool loading=true,showEdit,saving; private string? error,formError; private string editName="",editEmail="",currentPassword="",newPassword="",confirmPassword="";
-    protected override async Task OnInitializedAsync()=>await LoadAsync();
-    private async Task LoadAsync(){loading=true;error=null;try{me=await Api.GetMeAsync();sessions.Clear();sessions.AddRange(await Api.GetMySessionsAsync());}catch(Exception ex){error=Friendly(ex);}finally{loading=false;}}
-    private void OpenEdit(){if(me is null)return;editName=me.Username;editEmail=me.Email;currentPassword="";newPassword="";confirmPassword="";formError=null;showEdit=true;}
-    private void CloseEdit(){showEdit=false;currentPassword="";newPassword="";confirmPassword="";}
-    private async Task SaveAsync(){
-        if(me is null || saving)return;
-        if(string.IsNullOrWhiteSpace(editName)||string.IsNullOrWhiteSpace(editEmail)){formError="Nome e e-mail são obrigatórios.";return;}
-        var wantsPassword=!string.IsNullOrWhiteSpace(currentPassword)||!string.IsNullOrWhiteSpace(newPassword)||!string.IsNullOrWhiteSpace(confirmPassword);
-        if(wantsPassword){
-            if(string.IsNullOrWhiteSpace(currentPassword)){formError="Informe a senha atual.";return;}
-            if(newPassword.Length<8){formError="A nova senha deve ter pelo menos 8 caracteres.";return;}
-            if(newPassword!=confirmPassword){formError="A confirmação da nova senha não confere.";return;}
-        }
-        saving=true;formError=null;
-        try{
-            await Api.UpdateUserAsync(me.Id,new(editName.Trim(),editEmail.Trim()));
-            if(wantsPassword)await Api.ChangeMyPasswordAsync(currentPassword,newPassword);
-            CloseEdit();await LoadAsync();
-        }catch(Exception ex){formError=Friendly(ex);}finally{saving=false;}
+@code {
+    // Dados do perfil e sessões
+    private UserListItemDto? me;
+    private readonly List<SessionListItemDto> sessions = [];
+
+    // Estado da página e do formulário
+    private bool loading = true;
+    private bool showEdit;
+    private bool saving;
+    private string? error;
+    private string? formError;
+
+    private string editName = "";
+    private string editEmail = "";
+    private string currentPassword = "";
+    private string newPassword = "";
+    private string confirmPassword = "";
+
+    private bool showCurrentPassword;
+    private bool showNewPassword;
+    private bool showConfirmPassword;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
     }
-    private async Task RevokeAsync(Guid id){try{await Api.RevokeMySessionAsync(id);await LoadAsync();}catch(Exception ex){error=Friendly(ex);}}
-    private async Task Logout(){var viewer=string.Equals(informE.Desktop.Components.State.AppSession.Role,"Viewer",StringComparison.OrdinalIgnoreCase);try{await Api.LogoutAsync();}catch{} informE.Desktop.Components.State.AppSession.Clear();Navigation.NavigateTo(viewer?"/login/viewer":"/login/admin");}
-    private static string RoleLabel(string r)=>r switch{"SuperAdmin"=>"Super Administrador","Admin"=>"Administrador do Sistema",_=>"Visualizador"};
-    private static string Initials(string value){var p=value.Split(' ',StringSplitOptions.RemoveEmptyEntries);return p.Length>1?$"{p[0][0]}{p[^1][0]}".ToUpperInvariant():value[..Math.Min(2,value.Length)].ToUpperInvariant();}
-    private static string Friendly(Exception ex)=>ex is HttpRequestException?"Não foi possível conectar ao servidor.":ex.Message;
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+
+        try
+        {
+            me = await Api.GetMeAsync();
+            sessions.Clear();
+            sessions.AddRange(await Api.GetMySessionsAsync());
+        }
+        catch (Exception ex)
+        {
+            error = Friendly(ex);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ResetPasswordFields()
+    {
+        currentPassword = "";
+        newPassword = "";
+        confirmPassword = "";
+        showCurrentPassword = false;
+        showNewPassword = false;
+        showConfirmPassword = false;
+    }
+
+    private void OpenEdit()
+    {
+        if (me is null)
+        {
+            return;
+        }
+
+        editName = me.Username;
+        editEmail = me.Email;
+        formError = null;
+        ResetPasswordFields();
+        showEdit = true;
+    }
+
+    private void CloseEdit()
+    {
+        if (saving)
+        {
+            return;
+        }
+
+        showEdit = false;
+        ResetPasswordFields();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (me is null || saving)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(editName) || string.IsNullOrWhiteSpace(editEmail))
+        {
+            formError = "Nome e e-mail são obrigatórios.";
+            return;
+        }
+
+        var wantsPassword =
+            !string.IsNullOrWhiteSpace(currentPassword) ||
+            !string.IsNullOrWhiteSpace(newPassword) ||
+            !string.IsNullOrWhiteSpace(confirmPassword);
+
+        if (wantsPassword)
+        {
+            if (string.IsNullOrWhiteSpace(currentPassword))
+            {
+                formError = "Informe a senha atual.";
+                return;
+            }
+
+            if (newPassword.Length < 8)
+            {
+                formError = "A nova senha deve ter pelo menos 8 caracteres.";
+                return;
+            }
+
+            if (newPassword != confirmPassword)
+            {
+                formError = "A confirmação da nova senha não confere.";
+                return;
+            }
+        }
+
+        saving = true;
+        formError = null;
+
+        try
+        {
+            await Api.UpdateUserAsync(me.Id, new(editName.Trim(), editEmail.Trim()));
+
+            if (wantsPassword)
+            {
+                await Api.ChangeMyPasswordAsync(currentPassword, newPassword);
+            }
+
+            showEdit = false;
+            ResetPasswordFields();
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            formError = Friendly(ex);
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task RevokeAsync(Guid id)
+    {
+        try
+        {
+            await Api.RevokeMySessionAsync(id);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            error = Friendly(ex);
+        }
+    }
+
+    private async Task Logout()
+    {
+        var viewer = string.Equals(
+            informE.Desktop.Components.State.AppSession.Role,
+            "Viewer",
+            StringComparison.OrdinalIgnoreCase);
+
+        try
+        {
+            await Api.LogoutAsync();
+        }
+        catch
+        {
+            // A sessão local também precisa ser encerrada caso o servidor não responda.
+        }
+
+        informE.Desktop.Components.State.AppSession.Clear();
+        Navigation.NavigateTo(viewer ? "/login/viewer" : "/login/admin");
+    }
+
+    private static string RoleLabel(string role) => role switch
+    {
+        "SuperAdmin" => "Super Administrador",
+        "Admin" => "Administrador do Sistema",
+        _ => "Visualizador"
+    };
+
+    private static string Initials(string value)
+    {
+        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        return parts.Length > 1
+            ? $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+            : value[..Math.Min(2, value.Length)].ToUpperInvariant();
+    }
+
+    private static string Friendly(Exception ex) => ex is HttpRequestException
+        ? "Não foi possível conectar ao servidor."
+        : ex.Message;
 }
