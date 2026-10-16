@@ -8,11 +8,10 @@
 <PageTitle>Detalhes do Equipamento | informE</PageTitle>
 
 <div class="details-page">
-
-	<button class="back-button" type="button" @onclick="GoBack">
-		<LucideIcon Name="arrow-left" Size="17" />
-		<span>Voltar para Equipamentos</span>
-	</button>
+    <button class="back-button" type="button" @onclick="GoBack">
+        <LucideIcon Name="arrow-left" Size="17" />
+        <span>@(FromGroups ? "Voltar para o Grupo" : "Voltar para Equipamentos")</span>
+    </button>
 
     @if (loading)
     {
@@ -44,7 +43,6 @@
                 </div>
             </div>
             <div class="header-actions">
-                @*<button class="refresh-button" type="button" @onclick="LoadAsync" disabled="@refreshing"><LucideIcon Name="refresh-cw" Size="15" /> <span>@(refreshing ? "Atualizando..." : "Atualizar")</span></button>*@
                 <button class="execute-button" type="button" @onclick="OpenExecution"><LucideIcon Name="terminal" Size="15" /> <span>Executar Comando</span></button>
             </div>
         </header>
@@ -153,7 +151,6 @@
 
     private DeviceDetailDto? detail;
     private bool loading = true;
-    @*private bool refreshing;*@
     private string? errorMessage;
     private DetailTab activeTab = DetailTab.General;
 
@@ -170,7 +167,6 @@
 
     private async Task LoadAsync()
     {
-        //if (!loading) refreshing = true;
         errorMessage = null;
 
         try
@@ -188,7 +184,6 @@
         finally
         {
             loading = false;
-            //refreshing = false;
         }
     }
 

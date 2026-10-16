@@ -22,27 +22,16 @@
     cursor: pointer;
     transition: background .15s ease, border-color .15s ease;
 }
-     .back-button:hover {
+
+    .back-button:hover {
         background: #202d42;
         border-color: #10c6f4;
         color: #f5f7fb;
     }
 
-.back-link {
-    border: 0;
-    background: transparent;
-    color: #8792a4;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0;
-    margin: 0 0 24px;
-    cursor: pointer;
-}
-
-    .back-link:hover {
-        color: #dce3ed;
+    .back-button:focus-visible {
+        outline: 2px solid #10c6f4;
+        outline-offset: 2px;
     }
 
 /* Cabeçalho da máquina */
@@ -113,7 +102,6 @@
     gap: 10px;
 }
 
-.refresh-button,
 .execute-button {
     height: 38px;
     border-radius: 18px;
@@ -121,11 +109,6 @@
     font-size: 12px;
     color: #e9edf4;
     cursor: pointer;
-}
-
-.refresh-button {
-    background: #0f1724;
-    border: 1px solid #374156;
 }
 
 .execute-button {
@@ -138,16 +121,16 @@
 .metric-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 22px;
-    margin-bottom: 32px;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
 .metric-card {
-    min-height: 176px;
+    min-height: 136px;
     border: 1px solid #283248;
     background: #121b2b;
     border-radius: 15px;
-    padding: 25px 26px;
+    padding: 18px 20px;
     display: flex;
     flex-direction: column;
 }
@@ -194,7 +177,7 @@
     height: 7px;
     border-radius: 5px;
     background: #293346;
-    margin: 38px 0 21px;
+    margin: 18px 0 12px;
     overflow: hidden;
 }
 
@@ -213,14 +196,14 @@
 }
 
 .metric-card > strong {
-    margin-top: 34px;
+    margin-top: 0;
     font-size: 24px;
     color: #f4f6fa;
 }
 
 .metric-card > small {
-    margin-top: auto;
-    color: #6f7a8c;
+    margin-top: 12px;
+    color: #8995a8;
     font-size: 11px;
 }
 
@@ -256,6 +239,15 @@
         .tabs button.active {
             background: #2a3445;
             color: #f5f7fb;
+        }
+
+        .tabs button:focus:not(:focus-visible) {
+            outline: none;
+        }
+
+        .tabs button:focus-visible {
+            outline: 2px solid #10c6f4;
+            outline-offset: 2px;
         }
 
 .content-card {
@@ -307,26 +299,6 @@
     }
 
 /* Processos e serviços */
-.card-heading {
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 18px;
-    border-bottom: 1px solid #273246;
-}
-
-    .card-heading button {
-        height: 31px;
-        border: 1px solid #384357;
-        background: #101724;
-        color: #e3e8ef;
-        border-radius: 16px;
-        padding: 0 13px;
-        font-size: 11px;
-        cursor: pointer;
-    }
-
 .detail-table-scroll {
     overflow-x: auto;
 }
@@ -384,14 +356,6 @@
 .square-cell {
     text-align: right !important;
     color: #93a0b1 !important;
-}
-
-.mock-note {
-    font-size: 10px;
-    color: #7f8a9d;
-    border: 1px solid #344055;
-    border-radius: 12px;
-    padding: 4px 9px;
 }
 
 /* Estados de carregamento, erro e indisponibilidade */
@@ -468,7 +432,6 @@
     }
 
 .metric-title svg,
-.back-link svg,
 .header-actions svg {
     flex: 0 0 auto;
 }
@@ -526,7 +489,6 @@
         justify-content: stretch;
     }
 
-    .refresh-button,
     .execute-button {
         flex: 1;
     }
