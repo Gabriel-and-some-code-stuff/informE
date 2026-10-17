@@ -9,7 +9,10 @@
 
 <div class="group-details-page">
     <header class="group-heading">
-        <button class="back-button" type="button" @onclick="GoBack"><LucideIcon Name="arrow-left" Size="15" /> <span>Voltar</span></button>
+        <button class="back-button" type="button" @onclick="GoBack">
+            <LucideIcon Name="arrow-left" Size="17" />
+            <span>Voltar para Grupos</span>
+        </button>
         <div class="heading-row">
             <div>
                 <h1>@(group?.Name ?? "Grupo")</h1>
@@ -50,12 +53,42 @@
                 <LucideIcon Name="search" Size="16" />
                 <input value="@searchText" @oninput="OnSearch" placeholder="Buscar por nome, IP ou sistema operacional..." />
             </div>
-            <select value="@statusFilter" @onchange="OnStatusFilterChanged">
-                <option value="all">Todos os status</option>
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-                <option value="problem">Com problema</option>
-            </select>
+
+            <div class="status-filter-wrap">
+                <button class="status-filter-button"
+                        type="button"
+                        aria-expanded="@statusFilterOpen"
+                        @onclick="() => statusFilterOpen = !statusFilterOpen">
+                    <LucideIcon Name="list-filter" Size="18" />
+                    <span>@StatusFilterLabel</span>
+                    <LucideIcon Name="chevron-down" Size="16" />
+                </button>
+
+                @if (statusFilterOpen)
+                {
+                    <div class="status-filter-overlay"
+                         @onclick="() => statusFilterOpen = false"></div>
+
+                    <div class="status-filter-menu">
+                        <div class="status-filter-title">Filtrar por status</div>
+
+                        @foreach (var option in StatusOptions)
+                        {
+                            <button type="button"
+                                    class="status-filter-option @(statusFilter == option.Value ? "selected" : "")"
+                                    @onclick="() => SelectStatusFilter(option.Value)">
+                                <span class="status-filter-check">
+                                    @if (statusFilter == option.Value)
+                                    {
+                                        <LucideIcon Name="check" Size="14" />
+                                    }
+                                </span>
+                                <span>@option.Label</span>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
         </section>
 
         @if (professor is not null)
@@ -104,21 +137,25 @@
 
             @if (TotalPages > 1)
             {
-                <div class="pagination">
-                    <button type="button" @onclick="PreviousPage" disabled="@(page == 1)">‹</button>
-                    @for (var i = 1; i <= TotalPages; i++)
-                    {
-                        var pageNumber = i;
-                        <button type="button" class="@(page == pageNumber ? "active" : null)" @onclick="() => SetPage(pageNumber)">@pageNumber</button>
-                    }
-                    <button type="button" @onclick="NextPage" disabled="@(page == TotalPages)">›</button>
-                </div>
+                <nav class="pagination" aria-label="Paginação dos alunos">
+                    <button type="button" aria-label="Página anterior"
+                            @onclick="PreviousPage" disabled="@(page == 1)">
+                        <LucideIcon Name="chevron-left" Size="18" />
+                    </button>
+                    <span>Página @(page) de @TotalPages</span>
+                    <button type="button" aria-label="Próxima página"
+                            @onclick="NextPage" disabled="@(page == TotalPages)">
+                        <LucideIcon Name="chevron-right" Size="18" />
+                    </button>
+                </nav>
             }
+
         </section>
     }
 </div>
 
 @code {
+    // Estado e parâmetros do grupo
     [Parameter] public Guid GroupId { get; set; }
 
     private GroupListItemDto? group;
@@ -128,6 +165,28 @@
     private readonly List<DeviceListItemDto> pagedStudents = [];
     private string searchText = string.Empty;
     private string statusFilter = "all";
+
+    private bool statusFilterOpen;
+
+    private static readonly (string Value, string Label)[] StatusOptions =
+    [
+        ("all", "Todos os status"),
+        ("online", "Online"),
+        ("offline", "Offline"),
+        ("problem", "Com problema")
+    ];
+
+    private string StatusFilterLabel =>
+        StatusOptions.First(x => x.Value == statusFilter).Label;
+
+    private void SelectStatusFilter(string value)
+    {
+        statusFilter = value;
+        statusFilterOpen = false;
+        page = 1;
+        ApplyFilter();
+    }
+
     private string? errorMessage;
     private bool loading = true;
     private int page = 1;
@@ -137,6 +196,7 @@
     private int PageStart => filteredStudents.Count == 0 ? 0 : ((page - 1) * PageSize) + 1;
     private int PageEnd => Math.Min(page * PageSize, filteredStudents.Count);
 
+    // Carregamento de dados
     protected override async Task OnParametersSetAsync()
     {
         if (!informE.Desktop.Components.State.AppSession.IsAuthenticated)
@@ -187,16 +247,10 @@
         }
     }
 
+    // Pesquisa, filtros e paginação
     private void OnSearch(ChangeEventArgs args)
     {
         searchText = args.Value?.ToString() ?? string.Empty;
-        page = 1;
-        ApplyFilter();
-    }
-
-    private void OnStatusFilterChanged(ChangeEventArgs args)
-    {
-        statusFilter = args.Value?.ToString() ?? "all";
         page = 1;
         ApplyFilter();
     }
@@ -239,11 +293,13 @@
         RefreshPage();
     }
 
+    // Navegação
     private void PreviousPage() => SetPage(page - 1);
     private void NextPage() => SetPage(page + 1);
     private void GoBack() => Navigation.NavigateTo("/groups");
-    private void OpenDevice(Guid id) => Navigation.NavigateTo($"/equipments/{id}");
+    private void OpenDevice(Guid id) => Navigation.NavigateTo($"/equipments/{id}?from=groups&groupId={GroupId}");
 
+    // Formatação e apresentação
     private static string ConnectionLabel(string status) => status == "Online" ? "Online" : status == "Offline" ? "Offline" : "Desconhecido";
     private static string HealthClass(string health) => health switch { "Critico" => "critical", "Aviso" => "warning", "Erro" => "error", _ => "healthy" };
 

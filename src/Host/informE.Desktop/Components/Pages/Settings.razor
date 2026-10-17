@@ -1,29 +1,84 @@
 @page "/settings"
 @layout informE.Desktop.Components.Layout.App.AppLayout
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+@inject NavigationManager Navigation
 
 <PageTitle>Configurações | informE</PageTitle>
 
 <div class="settings-page">
-    <header>
+    <header class="settings-header">
         <h1>Configurações</h1>
-        <p>Informações de segurança e da aplicação.</p>
+        <p>Gerencie seu perfil e consulte informações da aplicação.</p>
     </header>
 
-    <section class="settings-grid">
-        <article>
-            <div class="section-title">
-                <LucideIcon Name="shield-check" Size="20"/>
-                <div><h2>Segurança</h2><p>Informações da sessão e da conta autenticada.</p></div>
+    <section class="profile-summary-card" aria-labelledby="profile-card-title">
+        <div class="section-title">
+            <span class="section-icon"><LucideIcon Name="user-round" Size="20" /></span>
+            <div>
+                <h2 id="profile-card-title">Meu Perfil</h2>
+                <p>Informações da sua conta no informE.</p>
             </div>
-            <div class="info-row"><span>Sessão atual</span><strong>Autenticada</strong></div>
-            <div class="info-row"><span>Perfil</span><strong>@Role</strong></div>
-            <div class="info-row"><span>Email</span><strong>@Email</strong></div>
+        </div>
+
+        @if (profileLoading)
+        {
+            <div class="profile-message" role="status">Carregando informações do perfil...</div>
+        }
+        else if (!string.IsNullOrWhiteSpace(profileError))
+        {
+            <div class="profile-message error" role="alert">
+                <span>@profileError</span>
+                <button type="button" @onclick="LoadProfileAsync">Tentar novamente</button>
+            </div>
+        }
+        else if (profile is not null)
+        {
+            <div class="profile-content">
+                <span class="profile-avatar" aria-hidden="true">@GetInitials(profile.Username)</span>
+
+                <div class="profile-details">
+                    <h3>@profile.Username</h3>
+                    <p>@profile.Email</p>
+                    <span class="profile-role"><LucideIcon Name="shield-check" Size="14" /> @FormatRole(profile.Role)</span>
+                </div>
+
+                <button class="profile-edit-button" type="button" @onclick="OpenProfile">
+                    <LucideIcon Name="pencil" Size="17" />
+                    Ver e editar perfil
+                </button>
+            </div>
+        }
+    </section>
+
+    <section class="settings-grid" aria-label="Informações da conta e da aplicação">
+        <article class="settings-card">
+            <div class="section-title">
+                <span class="section-icon"><LucideIcon Name="shield-check" Size="20" /></span>
+                <div>
+                    <h2>Segurança</h2>
+                    <p>Acompanhe o acesso e a segurança da sua conta.</p>
+                </div>
+            </div>
+            <div class="info-row">
+                <span>Sessão atual</span>
+                <strong>@(informE.Desktop.Components.State.AppSession.IsAuthenticated ? "Autenticada" : "Não autenticada")</strong>
+            </div>
+
+            <div class="info-row">
+                <span>Situação da conta</span>
+                <strong>@AccountStatus</strong>
+            </div>
+
         </article>
 
-        <article>
+        <article class="settings-card">
             <div class="section-title">
-                <LucideIcon Name="info" Size="20"/>
-                <div><h2>Sobre</h2><p>Informações do aplicativo.</p></div>
+                <span class="section-icon"><LucideIcon Name="info" Size="20" /></span>
+                <div>
+                    <h2>Sobre</h2>
+                    <p>Informações do aplicativo.</p>
+                </div>
             </div>
             <div class="info-row"><span>Produto</span><strong>informE</strong></div>
             <div class="info-row"><span>Versão</span><strong>1.0</strong></div>
@@ -33,14 +88,73 @@
 </div>
 
 @code {
-    private string Role => informE.Desktop.Components.State.AppSession.Role switch
-    {
-        "SuperAdmin" => "Super Administrador",
-        "Admin" => "Administrador",
-        _ => "Visualizador"
-    };
+    private UserListItemDto? profile;
+    private bool profileLoading = true;
+    private string? profileError;
 
-    private string Email => string.IsNullOrWhiteSpace(informE.Desktop.Components.State.AppSession.Email)
+    private string AccountStatus => profile is null
         ? "—"
-        : informE.Desktop.Components.State.AppSession.Email;
+        : profile.IsActive ? "Ativa" : "Inativa";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfileAsync();
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        profileLoading = true;
+        profileError = null;
+
+        try
+        {
+            profile = await Api.GetMeAsync();
+        }
+        catch (TaskCanceledException)
+        {
+            profileError = "A consulta demorou mais que o esperado.";
+        }
+        catch (HttpRequestException)
+        {
+            profileError = "Não foi possível conectar ao servidor.";
+        }
+        catch (Exception)
+        {
+            profileError = "Não foi possível carregar as informações do perfil.";
+        }
+        finally
+        {
+            profileLoading = false;
+        }
+    }
+
+    private void OpenProfile()
+    {
+        Navigation.NavigateTo("/profile");
+    }
+
+    private static string FormatRole(string role)
+    {
+        return role switch
+        {
+            "SuperAdmin" => "Super Administrador",
+            "Admin" => "Administrador",
+            "Viewer" => "Visualizador",
+            _ => "—"
+        };
+    }
+
+    private static string GetInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (parts.Length > 1)
+        {
+            return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+        }
+
+        return parts.Length == 1
+            ? parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant()
+            : "?";
+    }
 }
