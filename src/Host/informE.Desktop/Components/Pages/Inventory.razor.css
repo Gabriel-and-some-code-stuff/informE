@@ -450,3 +450,10 @@
         flex-direction: column;
     }
 }
+
+/* Legendas dos gráficos do Inventário */
+.chart-panel ::deep .apexcharts-legend-text {
+    color: #f5f7fb !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+}

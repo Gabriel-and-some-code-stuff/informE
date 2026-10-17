@@ -127,10 +127,12 @@
             </section>
         }
     }
+    <NewExecutionModal @ref="executionModal" />
 </div>
 
 @code {
     [Parameter] public Guid DeviceId { get; set; }
+    private NewExecutionModal? executionModal;
 
     // Origem da navegação: preserva o contexto do laboratório.
     private bool FromGroups => QueryValue("from").Equals("groups", StringComparison.OrdinalIgnoreCase);
@@ -199,22 +201,13 @@
 
     private async Task OpenExecution()
     {
-        if (detail is null) return;
+        if (detail is null || executionModal is null)
+        {
+            return;
+        }
+
         var device = detail.Equipamento;
-
-        Guid? groupId = null;
-        try
-        {
-            var groups = await Api.GetGroupsAsync();
-            groupId = groups.FirstOrDefault(x => string.Equals(x.Name, device.GroupName, StringComparison.OrdinalIgnoreCase))?.Id;
-        }
-        catch
-        {
-        }
-
-        var group = Uri.EscapeDataString(device.GroupName ?? string.Empty);
-        var groupIdPart = groupId is null ? string.Empty : $"&groupId={groupId}";
-        Navigation.NavigateTo($"/executions?new=1&deviceId={device.Id}{groupIdPart}&group={group}");
+        await executionModal.OpenAsync(device.Id, null, device.GroupName);
     }
 
     private static string Fallback(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;

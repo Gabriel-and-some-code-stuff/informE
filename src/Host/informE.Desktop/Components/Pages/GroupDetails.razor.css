@@ -379,7 +379,7 @@
 }
 
 .student-row {
-    min-height: 46px;
+    min-height:52px;
     border-radius: 12px;
     padding: 0 14px;
     display: grid;
@@ -391,13 +391,14 @@
 
     .student-row strong {
         font-family: Consolas, monospace;
-        font-size: 12px;
-        color: #eef2f8;
+        font-size: 14px;
+        font-weight: 600;
+        color: #f5f7fb;
     }
 
     .student-row > span:not(.health-dot):not(.status-pill) {
-        font-size: 10px;
-        color: #8995a8;
+        font-size: 13px;
+        color: #cbd5e1;
     }
 
 
