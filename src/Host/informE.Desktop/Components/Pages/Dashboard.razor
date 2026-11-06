@@ -8,6 +8,7 @@
 <PageTitle>Dashboard | informE</PageTitle>
 
 <div class="dashboard-page @(IsViewer ? "viewer-dashboard" : "admin-dashboard")">
+    @* ===== CABEÇALHO E FILTRO DE GRUPOS ===== *@
     <header class="dashboard-header">
         <div>
             <h1>Dashboard</h1>
@@ -18,20 +19,28 @@
         {
             <div class="lab-filter-wrap">
                 <button class="lab-filter-button" type="button" @onclick="ToggleLabFilter">
-                    <LucideIcon Name="filter" Size="17" />
+                    <LucideIcon Name="flask-conical" Size="18" />
                     <span>@GroupFilterLabel</span>
-                    <LucideIcon Name="chevron-down" Size="15" />
+                    <LucideIcon Name="chevron-down" Size="18" />
                 </button>
                 @if (groupFilterOpen)
                 {
+                    <div class="filter-click-outside" @onclick="CloseLabFilter"></div>
                     <div class="lab-filter-menu">
                         <div class="filter-title">Filtrar grupos</div>
                         @foreach (var group in groups)
                         {
-                            <label>
-                                <input type="checkbox" checked="@group.Selected" @onchange="e => ToggleGroup(group, e)" />
+                            <button type="button"
+                                    class="group-filter-option @(group.Selected ? "selected" : "")"
+                                    @onclick="() => ToggleGroup(group)">
+                                <span class="group-filter-check">
+                                    @if (group.Selected)
+                                    {
+                                        <LucideIcon Name="check" Size="14" />
+                                    }
+                                </span>
                                 <span>@group.Name</span>
-                            </label>
+                            </button>
                         }
                     </div>
                 }
@@ -39,6 +48,7 @@
         }
     </header>
 
+    @* ===== ESTADOS DE CARREGAMENTO E CONTEÚDO ===== *@
     @if (loading)
     {
         <div class="dashboard-state"><span class="loader"></span><span>Carregando dados...</span></div>
@@ -51,6 +61,7 @@
             <button type="button" @onclick="LoadAsync">Tentar novamente</button>
         </div>
     }
+    @* ===== DASHBOARD VIEWER ===== *@
     else if (IsViewer)
     {
         <section class="metrics-grid viewer-metrics" aria-label="Resumo do grupo">
@@ -91,18 +102,19 @@
             </article>
         </section>
     }
+    @* ===== DASHBOARD ADMIN ===== *@
     else
     {
         <section class="metrics-grid" aria-label="Indicadores principais">
             <article class="metric-card">
-                <span class="metric-icon cyan"><LucideIcon Name="layers-3" Size="20" /></span>
-                <strong>@SelectedGroupCount</strong>
+                <span class="metric-icon purple"><LucideIcon Name="flask-conical" Size="20" /></span>
+                <strong class="cyan-text">@SelectedGroupCount</strong>
                 <span>Grupos</span>
             </article>
             <article class="metric-card">
                 <span class="metric-icon cyan"><LucideIcon Name="monitor" Size="20" /></span>
-                <strong>@FilteredDevices.Count</strong>
-                <span>Total de Máquinas</span>
+                <strong class="cyan-text">@FilteredDevices.Count</strong>
+                <span>Dispositivos</span>
             </article>
             <article class="metric-card">
                 <span class="metric-icon green"><LucideIcon Name="circle-check" Size="20" /></span>
@@ -121,59 +133,55 @@
             </article>
         </section>
 
-        <section class="dashboard-grid">
-            <article class="panel chart-panel">
+        <section class="dashboard-grid admin-panels">
+            <article class="panel history-panel">
                 <div class="panel-heading">
                     <div>
-                        <h2>Máquinas por Grupo</h2>
-                        <p>Dados de conexão retornados pelo backend</p>
+                        <h2>Histórico de Alertas</h2>
+                        <p>Total diário nos últimos 7 dias</p>
                     </div>
-                    <LucideIcon Name="bar-chart-3" Size="20" />
                 </div>
 
-                @if (ChartData.Count == 0)
+                @if (!string.IsNullOrWhiteSpace(alertsError))
                 {
-                    <div class="empty-panel">Nenhum grupo selecionado.</div>
+                    <div class="alerts-state">Histórico indisponível.</div>
+                }
+                else if (alerts is null || alerts.Historico.Count == 0)
+                {
+                    <div class="alerts-state">Nenhum dado de histórico.</div>
                 }
                 else
                 {
-                    <ApexChart TItem="GroupChartPoint" Options="chartOptions" Height="320">
-                        <ApexPointSeries TItem="GroupChartPoint"
-                                         Items="ChartData"
-                                         Name="Online"
-                                         SeriesType="SeriesType.Bar"
-                                         XValue="@(e => e.Group)"
-                                         YValue="@(e => e.Online)"
-                                         Color="#13d17a" />
-                        <ApexPointSeries TItem="GroupChartPoint"
-                                         Items="ChartData"
-                                         Name="Offline"
-                                         SeriesType="SeriesType.Bar"
-                                         XValue="@(e => e.Group)"
-                                         YValue="@(e => e.Offline)"
-                                         Color="#7f8a9c" />
-                    </ApexChart>
+                    <div class="history-apex-chart">
+                        <ApexChart TItem="HistoryChartPoint" Options="historyChartOptions" Height="300">
+                            @foreach (var category in HistoryCategories)
+                            {
+                                <ApexPointSeries TItem="HistoryChartPoint"
+                                                 Items="HistoryChartData"
+                                                 Name="@category.Label"
+                                                 SeriesType="SeriesType.Bar"
+                                                 XValue="@(day => day.Label)"
+                                                 YValue="@(day => day.Counts.GetValueOrDefault(category.Key))"
+                                                 Color="@HistoryColor(category.Key)" />
+                            }
+                        </ApexChart>
+                    </div>
+                    <div class="history-day-actions" aria-label="Detalhar alertas por dia">
+                        @foreach (var day in alerts.Historico)
+                        {
+                            <button type="button" @onclick="() => OpenHistoryDetails(day)"
+                                    title="@($"Ver alertas de {day.Dia:dd/MM}")">
+                                @day.Dia.ToString("dd/MM") <LucideIcon Name="arrow-up-right" Size="13" />
+                            </button>
+                        }
+                    </div>
+
+                    <div class="history-summary">
+                        <span>Total no período</span>
+                        <strong>@alerts.Total</strong>
+                    </div>
                 }
             </article>
-
-            <article class="panel health-panel">
-                <div class="panel-heading">
-                    <div>
-                        <h2>Saúde dos Equipamentos</h2>
-                        <p>Resumo da saúde das máquinas online</p>
-                    </div>
-                    <LucideIcon Name="activity" Size="20" />
-                </div>
-                <div class="health-list">
-                    <div><span><i class="healthy"></i>Saudável</span><strong>@OnlineDevices.Count(x => x.Health == "Saudavel")</strong></div>
-                    <div><span><i class="warning"></i>Aviso</span><strong>@OnlineDevices.Count(x => x.Health == "Aviso")</strong></div>
-                    <div><span><i class="critical"></i>Crítico</span><strong>@OnlineDevices.Count(x => x.Health == "Critico")</strong></div>
-                    <div><span><i class="error"></i>Erro</span><strong>@OnlineDevices.Count(x => x.Health == "Erro")</strong></div>
-                </div>
-            </article>
-        </section>
-
-        <section class="dashboard-grid bottom-grid">
             <article class="panel alerts-panel">
                 <div class="panel-heading">
                     <div>
@@ -196,7 +204,11 @@
                     <div class="recent-alerts">
                         @foreach (var alert in alerts.Recentes.OrderByDescending(x => x.OcorridoEm).Take(4))
                         {
-                            <div class="recent-alert-item">
+							<button class="recent-alert-item"
+								type="button"
+								@onclick="() => OpenAlert(alert)"
+								 
+								 tabindex="0">
                                 <span class="alert-category-dot @CategoryClass(alert.Categoria)"></span>
                                 <div class="recent-alert-content">
                                     <div class="recent-alert-topline">
@@ -206,81 +218,54 @@
                                     <p>@(string.IsNullOrWhiteSpace(alert.Mensagem) ? AlertLabel(alert) : alert.Mensagem)</p>
                                     <small>@(alert.GroupName ?? "Sem grupo") · @CategoryLabel(alert.Categoria)</small>
                                 </div>
-                            </div>
+                            </button>
                         }
                     </div>
                 }
             </article>
-
-            <article class="panel history-panel">
+            <article class="panel chart-panel">
                 <div class="panel-heading">
                     <div>
-                        <h2>Histórico de Alertas</h2>
-                        <p>Total diário nos últimos 7 dias</p>
+                        <h2>Máquinas por Grupo</h2>
+                        <p>Equipamentos online e offline por laboratório</p>
                     </div>
-                    <LucideIcon Name="chart-no-axes-column" Size="20" />
                 </div>
-
-                @if (!string.IsNullOrWhiteSpace(alertsError))
+                @if (ChartData.Count == 0)
                 {
-                    <div class="alerts-state">Histórico indisponível.</div>
-                }
-                else if (alerts is null || alerts.Historico.Count == 0)
-                {
-                    <div class="alerts-state">Nenhum dado de histórico.</div>
+                    <div class="empty-panel">Nenhum grupo selecionado.</div>
                 }
                 else
                 {
-                    var maxAlerts = Math.Max(1, alerts.Historico.Max(x => x.Total));
-                    <div class="history-chart">
-                        @foreach (var day in alerts.Historico)
-                        {
-                            <button type="button"
-                                    class="history-day"
-                                    title="@($"Detalhar {day.Dia:dd/MM} · {day.Total} alerta(s)")"
-                                    @onclick="() => OpenHistoryDetails(day)">
-                                <span class="history-value">@day.Total</span>
-                                <span class="history-bar-track">
-                                    @if (day.Total == 0)
-                                    {
-                                        <i class="history-empty"></i>
-                                    }
-                                    else
-                                    {
-                                        @foreach (var category in HistoryCategories)
-                                        {
-                                            var count = CategoryCount(day, category.Key);
-                                            if (count > 0)
-                                            {
-                                                <i class="history-segment @category.Css"
-                                                   style="height:@HistorySegmentHeight(count, maxAlerts)"
-                                                   title="@($"{category.Label}: {count}")"></i>
-                                            }
-                                        }
-                                    }
-                                </span>
-                                <span class="history-label">@day.Dia.ToString("dd/MM")</span>
-                            </button>
-                        }
-                    </div>
-
-                    <div class="history-legend">
-                        @foreach (var category in HistoryCategories)
-                        {
-                            <span><i class="@category.Css"></i>@category.Label</span>
-                        }
-                    </div>
-
-                    <div class="history-summary">
-                        <span>Total no período</span>
-                        <strong>@alerts.Total</strong>
-                    </div>
+                    <ApexChart TItem="GroupChartPoint" Options="chartOptions" Height="300">
+                        <ApexPointSeries TItem="GroupChartPoint" Items="ChartData" Name="Online"
+                                         SeriesType="SeriesType.Bar" XValue="@(e => e.Group)"
+                                         YValue="@(e => e.Online)" Color="#13d17a" />
+                        <ApexPointSeries TItem="GroupChartPoint" Items="ChartData" Name="Offline"
+                                         SeriesType="SeriesType.Bar" XValue="@(e => e.Group)"
+                                         YValue="@(e => e.Offline)" Color="#7f8a9c" />
+                    </ApexChart>
                 }
+            </article>
+            <article class="panel health-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h2>Saúde dos Equipamentos</h2>
+                        <p>Resumo da saúde das máquinas online</p>
+                    </div>
+                    <LucideIcon Name="activity" Size="20" />
+                </div>
+                <div class="health-list">
+                    <div><span><i class="healthy"></i>Saudável</span><strong>@OnlineDevices.Count(x => x.Health == "Saudavel")</strong></div>
+                    <div><span><i class="warning"></i>Aviso</span><strong>@OnlineDevices.Count(x => x.Health == "Aviso")</strong></div>
+                    <div><span><i class="critical"></i>Crítico</span><strong>@OnlineDevices.Count(x => x.Health == "Critico")</strong></div>
+                    <div><span><i class="error"></i>Erro</span><strong>@OnlineDevices.Count(x => x.Health == "Erro")</strong></div>
+                </div>
             </article>
         </section>
     }
 </div>
 
+@* ===== MODAL DE HISTÓRICO ===== *@
 @if (selectedHistoryDay is not null)
 {
     <div class="history-modal-backdrop" @onclick="CloseHistoryDetails">
@@ -308,7 +293,17 @@
     </div>
 }
 
+@* ===== LÓGICA C# DO COMPONENTE ===== *@
 @code {
+	private void OpenAlert(AlertListItemDto alert)
+	{
+		Navigation.NavigateTo($"/equipments/{alert.DeviceId}");
+	}
+
+	private void NavigateToAlert(dynamic alert)
+	{
+		Navigation.NavigateTo($"/alertas/{alert.Id}");
+	}
     [Parameter] public string? AccessType { get; set; }
 
     private readonly List<GroupFilterItem> groups = [];
@@ -320,6 +315,40 @@
     private AlertsResponseDto? alerts;
     private AlertHistoryDayDto? selectedHistoryDay;
     private ApexChartOptions<GroupChartPoint> chartOptions = new();
+
+    private List<GroupChartPoint> ChartData => groups.Where(x => x.Selected)
+        .Select(group =>
+        {
+            var items = devices.Where(x => string.Equals(x.GroupName, group.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+            return new GroupChartPoint(group.Name, items.Count(x => x.Status == "Online"), items.Count(x => x.Status == "Offline"));
+        }).ToList();
+
+    private sealed record GroupChartPoint(string Group, int Online, int Offline);
+
+    private ApexChartOptions<HistoryChartPoint> historyChartOptions = new()
+    {
+        Chart = new ApexCharts.Chart { Stacked = true }
+    };
+
+    private List<HistoryChartPoint> HistoryChartData => alerts?.Historico
+        .Select(day => new HistoryChartPoint(
+            day.Dia.ToString("dd/MM"),
+            HistoryCategories.ToDictionary(c => c.Key, c => CategoryCount(day, c.Key))))
+        .ToList() ?? [];
+
+    private static string HistoryColor(string key) => key switch
+    {
+        "Hardware" => "#ff615b",
+        "Armazenamento" => "#efb000",
+        "Rede" => "#10c6f4",
+        "Offline" => "#7f8a9d",
+        "Agente" => "#df3e63",
+        "Windows" => "#7f6cf5",
+        _ => "#9aa5b8"
+    };
+
+    private sealed record HistoryChartPoint(string Label, Dictionary<string, int> Counts);
+
 
     private static readonly HistoryCategory[] HistoryCategories =
     [
@@ -347,15 +376,6 @@
         .Where(x => string.Equals(x.Status, "Online", StringComparison.OrdinalIgnoreCase))
         .ToList();
 
-    private List<GroupChartPoint> ChartData => groups
-        .Where(x => x.Selected)
-        .Select(group =>
-        {
-            var items = devices.Where(x => string.Equals(x.GroupName, group.Name, StringComparison.OrdinalIgnoreCase)).ToList();
-            return new GroupChartPoint(group.Name, items.Count(x => x.Status == "Online"), items.Count(x => x.Status == "Offline"));
-        })
-        .ToList();
-
     private string GroupFilterLabel => SelectedGroupCount == groups.Count
         ? "Todos os Grupos"
         : SelectedGroupCount == 0 ? "Nenhum grupo" : $"{SelectedGroupCount} selecionado{(SelectedGroupCount == 1 ? "" : "s")}";
@@ -368,7 +388,6 @@
             return;
         }
 
-        ConfigureChart();
         await LoadAsync();
     }
 
@@ -440,12 +459,13 @@
 
     private void ToggleLabFilter() => groupFilterOpen = !groupFilterOpen;
 
-    private void ToggleGroup(GroupFilterItem group, ChangeEventArgs args)
+    private void CloseLabFilter() => groupFilterOpen = false;
+
+    private void ToggleGroup(GroupFilterItem group)
     {
-        group.Selected = bool.TryParse(args.Value?.ToString(), out var value) && value;
+        group.Selected = !group.Selected;
     }
 
-    private void ConfigureChart() => chartOptions = new ApexChartOptions<GroupChartPoint>();
 
     private static bool IsProblem(string health) => health is "Aviso" or "Critico" or "Erro";
 
@@ -506,5 +526,4 @@
         public bool Selected { get; set; } = selected;
     }
 
-    private sealed record GroupChartPoint(string Group, int Online, int Offline);
 }

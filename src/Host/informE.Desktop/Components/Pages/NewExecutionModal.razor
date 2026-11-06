@@ -1,0 +1,542 @@
+@using informE.Contracts.Dtos.Api
+@inject informE.Desktop.Services.InformEApiClient Api
+
+@if (newExecutionOpen && !confirmationOpen)
+{
+    <div class="modal-backdrop" @onclick="CloseNewExecution">
+        <section class="execution-modal" role="dialog" aria-modal="true" aria-labelledby="new-execution-title" @onclick:stopPropagation="true">
+            <header class="modal-header">
+                <div><h2 id="new-execution-title">Nova execução remota</h2><p>Defina o destino, a ação e o momento da execução.</p></div>
+                <button class="icon-button" type="button" @onclick="CloseNewExecution" disabled="@submitting" aria-label="Fechar"><LucideIcon Name="x" Size="20" /></button>
+            </header>
+            <div class="modal-body">
+                @if (modalDataLoading)
+                {
+                    <div class="modal-inline-state"><span class="loader small"></span> Carregando laboratórios e ações...</div>
+                }
+                @if (presetDeviceLocked)
+                {
+                    <div class="preset-note"><LucideIcon Name="lock" Size="16" /> Destino definido pelo equipamento de origem.</div>
+                }
+
+                <div class="form-field">
+                    <label>Laboratório</label>
+                    <div class="form-dropdown">
+                        <button type="button" class="form-dropdown-trigger" disabled="@(modalDataLoading || presetDeviceLocked)"
+                                aria-expanded="@labDropdownOpen" @onclick="ToggleLabDropdown">
+                            <span>@(string.IsNullOrWhiteSpace(selectedGroupId) ? "Selecione o laboratório" : SelectedGroupName)</span>
+                            <LucideIcon Name="chevron-down" Size="17" />
+                        </button>
+                        @if (labDropdownOpen)
+                        {
+                            <div class="form-dropdown-dismiss" @onclick="CloseModalDropdowns"></div>
+                            <div class="form-dropdown-menu" role="group" aria-label="Selecionar laboratório">
+                                @foreach (var group in groups.OrderBy(x => x.Name))
+                                {
+                                    <button type="button" class="form-choice" @onclick="() => SelectModalGroupAsync(group.Id)">
+                                        <span class="choice-radio @(selectedGroupId == group.Id.ToString() ? "checked" : "")"></span>
+                                        <span>@group.Name <small>(@group.TotalDeDispositivos máquinas)</small></span>
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Dispositivos</label>
+                    <div class="form-dropdown">
+                        <button type="button" class="form-dropdown-trigger" disabled="@(modalDataLoading || devicesLoading || string.IsNullOrWhiteSpace(selectedGroupId) || presetDeviceLocked)"
+                                aria-expanded="@deviceDropdownOpen" @onclick="ToggleDeviceDropdown">
+                            <span>@(presetDeviceLocked && selectedDeviceIds.Count == 1 ? devices.FirstOrDefault(x => selectedDeviceIds.Contains(x.Id))?.Hostname ?? "Equipamento selecionado" : DeviceSelectionLabel)</span>
+                            <LucideIcon Name="chevron-down" Size="17" />
+                        </button>
+                        @if (deviceDropdownOpen)
+                        {
+                            <div class="form-dropdown-dismiss" @onclick="CloseModalDropdowns"></div>
+                            <div class="form-dropdown-menu device-dropdown-menu" role="group" aria-label="Selecionar dispositivos">
+                                <label class="device-option all-option">
+                                    <input type="checkbox" checked="@allDevicesSelected" @onchange="OnSelectAllChanged" />
+                                    <span>Todas as máquinas do laboratório</span>
+                                </label>
+                                @if (!allDevicesSelected)
+                                {
+                                    <div class="device-options">
+                                        @foreach (var device in devices.OrderBy(x => x.Hostname))
+                                        {
+                                            <label class="device-option">
+                                                <input type="checkbox" checked="@selectedDeviceIds.Contains(device.Id)"
+                                                       @onchange="e => ToggleDevice(device.Id, e.Value is bool checkedValue && checkedValue)" />
+                                                <span>@device.Hostname</span>
+                                                <small>@device.Status</small>
+                                            </label>
+                                        }
+                                        @if (devices.Count == 0)
+                                        {
+                                            <div class="device-select-state">Nenhum dispositivo encontrado.</div>
+                                        }
+                                    </div>
+                                }
+                                <div class="device-dropdown-footer">
+                                    <span>@(presetDeviceLocked && selectedDeviceIds.Count == 1 ? devices.FirstOrDefault(x => selectedDeviceIds.Contains(x.Id))?.Hostname ?? "Equipamento selecionado" : DeviceSelectionLabel)</span>
+                                    <button type="button" @onclick="CloseModalDropdowns">Confirmar seleção</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    @if (presetDeviceLocked)
+                    {
+                        <small class="action-description">Equipamento selecionado automaticamente.</small>
+                    }
+                </div>
+
+                <div class="form-field">
+                    <label>Ação a executar</label>
+                    <div class="form-dropdown">
+                        <button type="button" class="form-dropdown-trigger" disabled="@modalDataLoading"
+                                aria-expanded="@actionDropdownOpen" @onclick="ToggleActionDropdown">
+                            <span>@(SelectedActionDefinition?.DisplayName ?? "Selecione a ação")</span>
+                            <LucideIcon Name="chevron-down" Size="17" />
+                        </button>
+                        @if (actionDropdownOpen)
+                        {
+                            <div class="form-dropdown-dismiss" @onclick="CloseModalDropdowns"></div>
+                            <div class="form-dropdown-menu" role="group" aria-label="Selecionar ação">
+                                @foreach (var action in actions)
+                                {
+                                    <button type="button" class="form-choice" @onclick="() => SelectModalAction(action.Kind)">
+                                        <span class="choice-radio @(selectedAction == action.Kind ? "checked" : "")"></span>
+                                        <span>@action.DisplayName</span>
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (SelectedActionDefinition is not null)
+                    {
+                        <small class="action-description">@SelectedActionDefinition.Description</small>
+                    }
+                </div>
+
+                <div class="schedule-box">
+                    <label class="schedule-toggle-row">
+                        <span><LucideIcon Name="calendar-clock" Size="18" /> Agendar execução</span>
+                        <input type="checkbox" @bind="scheduleEnabled" />
+                    </label>
+                    @if (scheduleEnabled)
+                    {
+                        <div class="schedule-fields">
+                            <div class="form-field"><label for="execution-date">Data</label><input id="execution-date" type="date" min="@TodayForInput" @bind="scheduledDate" /></div>
+                            <div class="form-field"><label for="execution-time">Horário</label><input id="execution-time" type="time" @bind="scheduledTime" /></div>
+                        </div>
+                    }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(modalError))
+                {
+                    <div class="modal-error" role="alert">@modalError</div>
+                }
+            </div>
+            <footer class="modal-footer">
+                <button type="button" class="secondary-button" @onclick="CloseNewExecution" disabled="@submitting">Cancelar</button>
+                <button type="button" class="execute-button" @onclick="ReviewExecution" disabled="@(submitting || modalDataLoading || devicesLoading)">
+                    <LucideIcon Name="arrow-right" Size="17" /> Revisar execução
+                </button>
+            </footer>
+        </section>
+    </div>
+}
+
+@if (confirmationOpen)
+{
+    <div class="modal-backdrop" @onclick="() => confirmationOpen = false">
+        <section class="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" @onclick:stopPropagation="true">
+            <header class="modal-header"><h2 id="confirm-title">Confirmar execução</h2><button type="button" class="icon-button" aria-label="Voltar à edição" @onclick="() => confirmationOpen = false"><LucideIcon Name="x" Size="20" /></button></header>
+            <div class="confirm-details">
+                <p><span>Laboratório</span><strong>@SelectedGroupName</strong></p>
+                <p><span>Destino</span><strong>@(presetDeviceLocked ? devices.FirstOrDefault(x => selectedDeviceIds.Contains(x.Id))?.Hostname ?? "Equipamento de origem" : allDevicesSelected ? "Todas as máquinas do laboratório" : $"{selectedDeviceIds.Count} dispositivo(s)")</strong></p>
+                <p><span>Ação</span><strong>@(SelectedActionDefinition?.DisplayName ?? selectedAction)</strong></p>
+                <p><span>Quando</span><strong>@(scheduleEnabled ? $"{scheduledDate:dd/MM/yyyy} às {scheduledTime:HH:mm}" : "Imediatamente")</strong></p>
+                <div class="confirm-warning"><LucideIcon Name="triangle-alert" Size="17" /> Essa operação pode alterar os computadores selecionados. Confira antes de confirmar.</div>
+                @if (!string.IsNullOrWhiteSpace(modalError))
+                {
+                    <div class="modal-error" role="alert">@modalError</div>
+                }
+            </div>
+            <footer class="modal-footer">
+                <button type="button" class="secondary-button" @onclick="() => confirmationOpen = false" disabled="@submitting">Voltar</button>
+                <button type="button" class="execute-button" @onclick="SubmitExecutionAsync" disabled="@submitting">@(submitting ? "Enviando..." : scheduleEnabled ? "Confirmar agendamento" : "Confirmar execução")</button>
+            </footer>
+        </section>
+    </div>
+}
+
+
+@code {
+    [Parameter] public EventCallback OnCompleted { get; set; }
+
+    private readonly List<MachineActionDto> actions = [];
+    private readonly List<DeviceListItemDto> devices = [];
+    private readonly List<GroupListItemDto> groups = [];
+    private readonly HashSet<Guid> selectedDeviceIds = [];
+
+    private bool newExecutionOpen;
+    private bool confirmationOpen;
+    private bool modalDataLoading;
+    private bool devicesLoading;
+    private bool submitting;
+    private bool allDevicesSelected;
+    private bool presetDeviceLocked;
+    private Guid? presetDeviceId;
+    private bool labDropdownOpen;
+    private bool deviceDropdownOpen;
+    private bool actionDropdownOpen;
+    private bool scheduleEnabled;
+
+    private string? modalError;
+    private string selectedGroupId = "";
+    private string selectedAction = "";
+    private DateTime scheduledDate = DateTime.Today;
+    private TimeOnly scheduledTime = TimeOnly.FromDateTime(DateTime.Now.AddMinutes(30));
+
+    private string TodayForInput => DateTime.Today.ToString("yyyy-MM-dd");
+    private MachineActionDto? SelectedActionDefinition => actions.FirstOrDefault(x => x.Kind == selectedAction);
+    private string SelectedGroupName =>
+        groups.FirstOrDefault(x => x.Id.ToString() == selectedGroupId)?.Name ?? "—";
+
+    private string DeviceSelectionLabel => devicesLoading
+        ? "Carregando máquinas..."
+        : allDevicesSelected
+            ? "Todas as máquinas do laboratório"
+            : selectedDeviceIds.Count switch
+            {
+                0 => "Selecionar dispositivos",
+                1 => "1 dispositivo selecionado",
+                _ => $"{selectedDeviceIds.Count} dispositivos selecionados"
+            };
+
+    // Sem parâmetros: seleção livre. Com deviceId: destino obrigatório e bloqueado.
+    public async Task OpenAsync(Guid? deviceId = null, Guid? groupId = null, string? groupName = null)
+    {
+        newExecutionOpen = true;
+        confirmationOpen = false;
+        modalError = null;
+        submitting = false;
+        CloseModalDropdowns();
+        presetDeviceLocked = deviceId.HasValue;
+        presetDeviceId = deviceId;
+        selectedGroupId = "";
+        selectedDeviceIds.Clear();
+        allDevicesSelected = false;
+        selectedAction = "";
+        scheduleEnabled = false;
+        scheduledDate = DateTime.Today;
+        scheduledTime = TimeOnly.FromDateTime(DateTime.Now.AddMinutes(30));
+        devices.Clear();
+        modalDataLoading = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            if (actions.Count == 0)
+            {
+                actions.AddRange(await Api.GetActionsAsync());
+            }
+            if (groups.Count == 0)
+            {
+                groups.AddRange(await Api.GetGroupsAsync());
+            }
+
+            if (deviceId is not null)
+            {
+                var group = groupId is null
+                    ? null
+                    : groups.FirstOrDefault(x => x.Id == groupId.Value);
+
+                if (group is null && !string.IsNullOrWhiteSpace(groupName))
+                {
+                    group = groups.FirstOrDefault(x =>
+                        string.Equals(x.Name, groupName, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (group is null)
+                {
+                    var allDevices = await Api.GetDevicesAsync();
+                    var current = allDevices.Itens.FirstOrDefault(x => x.Id == deviceId.Value);
+                    if (current is not null)
+                    {
+                        group = groups.FirstOrDefault(x =>
+                            string.Equals(x.Name, current.GroupName, StringComparison.OrdinalIgnoreCase));
+                    }
+                }
+
+                if (group is null)
+                {
+                    modalError = "Não foi possível identificar o laboratório deste equipamento.";
+                    return;
+                }
+
+                selectedGroupId = group.Id.ToString();
+                devices.AddRange((await Api.GetDevicesAsync(group.Id)).Itens);
+
+                if (!devices.Any(x => x.Id == deviceId.Value))
+                {
+                    modalError = "O equipamento selecionado não foi encontrado neste laboratório.";
+                    return;
+                }
+
+                selectedDeviceIds.Add(deviceId.Value);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            modalError = "A busca de dados demorou mais que o esperado.";
+        }
+        catch (HttpRequestException)
+        {
+            modalError = "Não foi possível buscar os dados no servidor.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            modalError = ex.Message;
+        }
+        finally
+        {
+            modalDataLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void CloseNewExecution()
+    {
+        if (submitting)
+        {
+            return;
+        }
+        newExecutionOpen = false;
+        confirmationOpen = false;
+        modalError = null;
+        CloseModalDropdowns();
+    }
+
+    private void CloseModalDropdowns()
+    {
+        labDropdownOpen = false;
+        deviceDropdownOpen = false;
+        actionDropdownOpen = false;
+    }
+
+    private void ToggleLabDropdown()
+    {
+        var next = !labDropdownOpen;
+        CloseModalDropdowns();
+        labDropdownOpen = next;
+    }
+
+    private void ToggleDeviceDropdown()
+    {
+        var next = !deviceDropdownOpen;
+        CloseModalDropdowns();
+        deviceDropdownOpen = next;
+    }
+
+    private void ToggleActionDropdown()
+    {
+        var next = !actionDropdownOpen;
+        CloseModalDropdowns();
+        actionDropdownOpen = next;
+    }
+
+    private async Task SelectModalGroupAsync(Guid id)
+    {
+        CloseModalDropdowns();
+        await OnGroupChangedAsync(id);
+    }
+
+    private void SelectModalAction(string kind)
+    {
+        selectedAction = kind;
+        CloseModalDropdowns();
+    }
+
+    private async Task OnGroupChangedAsync(Guid groupId)
+    {
+        if (presetDeviceLocked)
+        {
+            return;
+        }
+
+        selectedGroupId = groupId.ToString();
+        selectedDeviceIds.Clear();
+        allDevicesSelected = false;
+        devices.Clear();
+        modalError = null;
+        devicesLoading = true;
+
+        try
+        {
+            devices.AddRange((await Api.GetDevicesAsync(groupId)).Itens);
+        }
+        catch (TaskCanceledException)
+        {
+            modalError = "A busca das máquinas demorou mais que o esperado.";
+        }
+        catch (HttpRequestException)
+        {
+            modalError = "Não foi possível carregar as máquinas.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            modalError = ex.Message;
+        }
+        finally
+        {
+            devicesLoading = false;
+        }
+    }
+
+    private void OnSelectAllChanged(ChangeEventArgs args)
+    {
+        if (presetDeviceLocked)
+        {
+            return;
+        }
+        allDevicesSelected = args.Value is bool value && value;
+        selectedDeviceIds.Clear();
+    }
+
+    private void ToggleDevice(Guid deviceId, bool isSelected)
+    {
+        if (presetDeviceLocked)
+        {
+            return;
+        }
+        if (isSelected)
+        {
+            selectedDeviceIds.Add(deviceId);
+        }
+        else
+        {
+            selectedDeviceIds.Remove(deviceId);
+        }
+    }
+
+    private void ReviewExecution()
+    {
+        modalError = null;
+        if (!Guid.TryParse(selectedGroupId, out _))
+        {
+            modalError = "Selecione um laboratório.";
+            return;
+        }
+        if (!allDevicesSelected && selectedDeviceIds.Count == 0)
+        {
+            modalError = "Selecione pelo menos um dispositivo.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(selectedAction))
+        {
+            modalError = "Selecione uma ação.";
+            return;
+        }
+        if (scheduleEnabled && !TryGetScheduledAt(out _, out var validationError))
+        {
+            modalError = validationError;
+            return;
+        }
+        confirmationOpen = true;
+    }
+
+    private async Task SubmitExecutionAsync()
+    {
+        if (submitting)
+        {
+            return;
+        }
+        modalError = null;
+
+        if (!Guid.TryParse(selectedGroupId, out var groupId))
+        {
+            confirmationOpen = false;
+            modalError = "Selecione um laboratório.";
+            return;
+        }
+        if (!allDevicesSelected && selectedDeviceIds.Count == 0)
+        {
+            confirmationOpen = false;
+            modalError = "Selecione um dispositivo.";
+            return;
+        }
+        if (presetDeviceLocked && (allDevicesSelected || selectedDeviceIds.Count != 1 || !selectedDeviceIds.Contains(presetDeviceId!.Value)))
+        {
+            confirmationOpen = false;
+            modalError = "O destino deve ser o equipamento de origem.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(selectedAction))
+        {
+            confirmationOpen = false;
+            modalError = "Selecione uma ação.";
+            return;
+        }
+
+        DateTimeOffset? scheduledAt = null;
+        if (scheduleEnabled && !TryGetScheduledAt(out scheduledAt, out var validationError))
+        {
+            confirmationOpen = false;
+            modalError = validationError;
+            return;
+        }
+
+        submitting = true;
+        try
+        {
+            var groupIds = allDevicesSelected ? new List<Guid> { groupId } : new List<Guid>();
+            var deviceIds = allDevicesSelected ? new List<Guid>() : selectedDeviceIds.ToList();
+            await Api.DispatchAsync(new DispatchTaskRequestDto(selectedAction, deviceIds, groupIds, scheduledAt));
+
+            CloseNewExecutionAfterSuccess();
+            await OnCompleted.InvokeAsync();
+        }
+        catch (HttpRequestException)
+        {
+            modalError = "O servidor não respondeu ao pedido de execução.";
+        }
+        catch (informE.Desktop.Services.InformEApiException ex)
+        {
+            modalError = ex.Message;
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private void CloseNewExecutionAfterSuccess()
+    {
+        confirmationOpen = false;
+        newExecutionOpen = false;
+        presetDeviceLocked = false;
+        selectedGroupId = "";
+        selectedDeviceIds.Clear();
+        allDevicesSelected = false;
+        selectedAction = "";
+        scheduleEnabled = false;
+        devices.Clear();
+    }
+
+    private bool TryGetScheduledAt(out DateTimeOffset? value, out string error)
+    {
+        value = null;
+        error = "";
+        var localDateTime = DateOnly.FromDateTime(scheduledDate).ToDateTime(scheduledTime);
+        var offset = TimeZoneInfo.Local.GetUtcOffset(localDateTime);
+        var scheduled = new DateTimeOffset(localDateTime, offset);
+        if (scheduled <= DateTimeOffset.Now)
+        {
+            error = "Escolha uma data e horário futuros.";
+            return false;
+        }
+        value = scheduled;
+        return true;
+    }
+}

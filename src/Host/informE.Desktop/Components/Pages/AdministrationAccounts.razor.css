@@ -1,1 +1,575 @@
-.accounts-page{display:flex;flex-direction:column;gap:22px}.page-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.page-header h1{margin:4px 0 6px;font-size:28px}.page-header p,.eyebrow{color:#8f9ab0}.eyebrow{display:flex;gap:8px;align-items:center;font-size:12px}.primary-button,.secondary-button,.danger-button{border-radius:11px;min-height:40px;padding:0 16px;border:1px solid #2a3a54;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}.primary-button{background:#05384a;color:#14c7f4;border-color:#0b6e8d}.secondary-button{background:#182132;color:#aeb8c9}.danger-button{background:#371923;color:#ff6d7d;border-color:#6a2635}.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.summary-grid article{padding:20px;border:1px solid #263247;border-radius:14px;background:#111a2a;display:flex;flex-direction:column;gap:8px}.summary-grid span,.summary-grid small{color:#8995aa}.summary-grid strong{font-size:26px}.table-panel{border:1px solid #263247;border-radius:15px;background:#101827;overflow:hidden}.table-toolbar{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #263247}.table-toolbar>div:first-child{display:flex;gap:8px;align-items:center}.table-toolbar>div:first-child span{background:#073d50;color:#14c7f4;border-radius:6px;padding:2px 7px}.search{width:260px;display:flex;align-items:center;gap:8px;background:#182132;border:1px solid #2b374d;border-radius:12px;padding:0 12px}.search input{height:38px;width:100%;border:0;outline:0;background:transparent;color:#e9eef7}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:14px 16px;text-align:left;border-bottom:1px solid #202b3d;font-size:13px}th{color:#7f8ba1;font-size:11px;text-transform:uppercase}.user-cell{display:flex;align-items:center;gap:10px}.initials{width:32px;height:32px;border-radius:50%;background:#073e52;color:#19c7f5;display:grid;place-items:center}.user-cell div{display:flex;flex-direction:column;gap:2px}.user-cell small{color:#7f899d}.role,.status{padding:5px 10px;border-radius:999px;font-size:11px}.role-superadmin{background:#382812;color:#ffb31a}.role-admin{background:#07384b;color:#1bc5ef}.role-viewer{background:#29184c;color:#9d6cf7}.status.active{background:#07392d;color:#1dd887}.status.inactive{background:#3b1721;color:#ff6072}.table-panel th:last-child{text-align:center;width:116px}.table-panel td.actions{text-align:center;vertical-align:middle}.action-buttons{display:flex;gap:8px;align-items:center;justify-content:center}.actions button{width:32px;height:32px;border:0;border-radius:9px;background:#182132;color:#91a0b5;cursor:pointer}.actions .danger{color:#ff5f72}.actions .success{color:#1fd68a}.state-card{padding:18px;border-radius:12px;background:#111a2a;border:1px solid #263247}.state-card.error{color:#ff8b98}.state-card button{margin-left:10px}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.64);display:grid;place-items:center;z-index:100}.modal-card,.confirm-card{width:min(460px,calc(100vw - 32px));background:#101827;border:1px solid #2a354a;border-radius:16px;box-shadow:0 25px 70px rgba(0,0,0,.4)}.modal-head{height:62px;padding:0 18px;border-bottom:1px solid #253047;display:flex;align-items:center;justify-content:space-between}.modal-head>div{display:flex;align-items:center;gap:10px}.modal-head button{border:0;background:transparent;color:#8792a6;font-size:22px;cursor:pointer}.modal-body{padding:18px;display:grid;gap:14px}.modal-body label{display:grid;gap:7px;color:#9aa5b8;font-size:12px}.modal-body input,.modal-body select{height:42px;border:1px solid #2c384d;border-radius:11px;background:#182132;color:#eef2f8;padding:0 12px;outline:0}.modal-actions{padding:14px 18px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.form-error{padding:10px;border-radius:9px;background:#381b24;color:#ff8997;font-size:12px}.confirm-card{text-align:center;padding:26px}.confirm-card h2{margin:10px 0}.confirm-card p{color:#96a0b3;line-height:1.5}.confirm-card>div{display:flex;justify-content:center;gap:10px;margin-top:20px}@media(max-width:900px){.summary-grid{grid-template-columns:repeat(2,1fr)}.page-header{flex-direction:column}}@media(max-width:580px){.summary-grid{grid-template-columns:1fr}.search{width:100%}.table-toolbar{align-items:stretch;flex-direction:column;gap:10px}}
+/* ========================================================================== 
+   Administração de Contas — estrutura e cabeçalho
+   ========================================================================== */
+
+.accounts-page {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+    .page-header h1 {
+        margin: 4px 0 6px;
+        font-size: 28px;
+    }
+
+    .page-header p,
+    .eyebrow {
+        color: #8f9ab0;
+    }
+
+.eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+/* ========================================================================== 
+   Botões gerais
+   ========================================================================== */
+
+.primary-button,
+.secondary-button,
+.danger-button {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: 1px solid #2a3a54;
+    border-radius: 11px;
+    cursor: pointer;
+}
+
+.primary-button {
+    border-color: #0b6e8d;
+    background: #05384a;
+    color: #14c7f4;
+}
+
+.secondary-button {
+    background: #182132;
+    color: #aeb8c9;
+}
+
+.danger-button {
+    border-color: #6a2635;
+    background: #371923;
+    color: #ff6d7d;
+}
+
+/* ========================================================================== 
+   Indicadores
+   ========================================================================== */
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+
+/* ==================================================
+   CARDS DE INDICADORES
+   Padrão visual do Dashboard
+   ================================================== */
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.summary-card {
+    min-height: 128px;
+    padding: 18px;
+    border: 1px solid #273247;
+    border-radius: 14px;
+    background: #111a29;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 10px;
+}
+
+    .summary-card > span:not(.summary-icon) {
+        grid-column: 2;
+        grid-row: 1;
+        color: #cbd5e1;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .summary-card > strong {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        align-self: start;
+        color: #f5f7fb;
+        font-size: 29px;
+        font-weight: 600;
+    }
+
+/* Ícones */
+
+.summary-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+    .summary-icon.cyan {
+        color: #10c6f4;
+        background: #07384c;
+    }
+
+    .summary-icon.purple {
+        color: #a78bfa;
+        background: #2b2145;
+    }
+
+    .summary-icon.green {
+        color: #13d17a;
+        background: #0b3227;
+    }
+
+    .summary-icon.gray {
+        color: #929caf;
+        background: #202838;
+    }
+
+
+/* ========================================================================== 
+   Tabela de usuários e pesquisa
+   ========================================================================== */
+
+.table-panel {
+    overflow: hidden;
+    border: 1px solid #263247;
+    border-radius: 15px;
+    background: #101827;
+}
+
+.table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid #263247;
+}
+
+    .table-toolbar > div:first-child {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .table-toolbar > div:first-child span {
+            padding: 2px 7px;
+            border-radius: 6px;
+            background: #073d50;
+            color: #14c7f4;
+        }
+
+.search {
+    width: 260px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: 1px solid #2b374d;
+    border-radius: 12px;
+    background: #182132;
+}
+
+    .search input {
+        width: 100%;
+        height: 38px;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: #e9eef7;
+    }
+
+.table-wrap {
+    overflow: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #202b3d;
+    font-size: 13px;
+    text-align: left;
+}
+
+th {
+    color: #7f8ba1;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.initials {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #073e52;
+    color: #19c7f5;
+}
+
+.user-cell div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-cell small {
+    color: #7f899d;
+}
+
+/* ========================================================================== 
+   Funções e status
+   ========================================================================== */
+
+.role,
+.status {
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+}
+
+.role-superadmin {
+    background: #382812;
+    color: #ffb31a;
+}
+
+.role-admin {
+    background: #07384b;
+    color: #1bc5ef;
+}
+
+.role-viewer {
+    background: #29184c;
+    color: #9d6cf7;
+}
+
+.status.active {
+    background: #07392d;
+    color: #1dd887;
+}
+
+.status.inactive {
+    background: #3b1721;
+    color: #ff6072;
+}
+
+/* ========================================================================== 
+   Coluna de ações: botões e ícones alinhados
+   ========================================================================== */
+
+.table-panel th:last-child {
+    width: 116px;
+    text-align: center;
+}
+
+.table-panel td.actions {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.actions button {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: #182132;
+    color: #91a0b5;
+    cursor: pointer;
+}
+
+    .actions button svg {
+        width: 17px;
+        height: 17px;
+        display: block;
+        flex-shrink: 0;
+    }
+
+    .actions button:hover {
+        background: #243146;
+        color: #10c6f4;
+    }
+
+    .actions button.danger {
+        color: #ff5f72;
+    }
+
+    .actions button.success {
+        color: #1fd68a;
+    }
+
+    .actions button:focus-visible {
+        outline: 2px solid #10c6f4;
+        outline-offset: 2px;
+    }
+
+/* ========================================================================== 
+   Estados de carregamento e erro
+   ========================================================================== */
+
+.state-card {
+    padding: 18px;
+    border: 1px solid #263247;
+    border-radius: 12px;
+    background: #111a2a;
+}
+
+    .state-card.error {
+        color: #ff8b98;
+    }
+
+    .state-card button {
+        margin-left: 10px;
+    }
+
+/* ========================================================================== 
+   Modais
+   ========================================================================== */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, .64);
+}
+
+.modal-card,
+.confirm-card {
+    width: min(460px, calc(100vw - 32px));
+    border: 1px solid #2a354a;
+    border-radius: 16px;
+    background: #101827;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, .4);
+}
+
+.modal-head {
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    border-bottom: 1px solid #253047;
+}
+
+    .modal-head > div {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .modal-head button {
+        border: 0;
+        background: transparent;
+        color: #8792a6;
+        font-size: 22px;
+        cursor: pointer;
+    }
+
+.modal-body {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+}
+
+    .modal-body label {
+        display: grid;
+        gap: 7px;
+        color: #9aa5b8;
+        font-size: 12px;
+    }
+
+    .modal-body input,
+    .modal-body select {
+        height: 42px;
+        padding: 0 12px;
+        border: 1px solid #2c384d;
+        border-radius: 11px;
+        outline: 0;
+        background: #182132;
+        color: #eef2f8;
+    }
+
+.modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 14px 18px 18px;
+}
+
+.form-error {
+    padding: 10px;
+    border-radius: 9px;
+    background: #381b24;
+    color: #ff8997;
+    font-size: 12px;
+}
+
+/* ========================================================================== 
+   Senha temporária: botão de mostrar/ocultar
+   ========================================================================== */
+
+
+/* Oculta o botão nativo de revelar senha do Windows */
+
+.password-input-wrap input::-ms-reveal,
+.password-input-wrap input::-ms-clear {
+    display: none;
+}
+
+.password-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+    .password-field > label {
+        color: #9aa5b8;
+        font-size: 12px;
+    }
+
+.password-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+    .password-input-wrap input {
+        width: 100%;
+        height: 42px;
+        box-sizing: border-box;
+        padding: 0 48px 0 12px;
+    }
+
+        .password-input-wrap input:focus {
+            border-color: #10c6f4;
+        }
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    transform: translateY(-50%);
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #91a0b5;
+    cursor: pointer;
+}
+
+    .password-toggle:hover {
+        background: #243146;
+        color: #10c6f4;
+    }
+
+    .password-toggle:focus-visible {
+        outline: 2px solid #10c6f4;
+        outline-offset: 2px;
+    }
+
+/* ========================================================================== 
+   Confirmação de ativação/desativação
+   ========================================================================== */
+
+.confirm-card {
+    padding: 26px;
+    text-align: center;
+}
+
+    .confirm-card h2 {
+        margin: 10px 0;
+    }
+
+    .confirm-card p {
+        color: #96a0b3;
+        line-height: 1.5;
+    }
+
+    .confirm-card > div {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+/* ========================================================================== 
+   Responsividade
+   ========================================================================== */
+
+@media (max-width: 900px) {
+
+    .page-header {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 580px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .search {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .table-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+    }
+}

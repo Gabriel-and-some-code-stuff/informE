@@ -50,7 +50,17 @@ public sealed class InformEApiClient(HttpClient http)
 
     public async Task<IReadOnlyList<GroupListItemDto>> GetGroupsAsync(CancellationToken ct = default) =>
         await GetAsync<List<GroupListItemDto>>("groups", ct) ?? [];
+    public async Task<CreateGroupResponseDto> CreateGroupAsync(
+    CreateGroupRequestDto request,
+    CancellationToken ct = default)
+    {
+        using var message = CreateAuthorizedRequest(HttpMethod.Post, "groups");
+        message.Content = JsonContent.Create(request);
 
+        using var response = await http.SendAsync(message, ct);
+
+        return await ReadAsync<CreateGroupResponseDto>(response, ct);
+    }
     public async Task<AlertsResponseDto> GetAlertsAsync(int dias = 7, int recentes = 8, Guid? groupId = null, CancellationToken ct = default)
     {
         var query = new List<string>

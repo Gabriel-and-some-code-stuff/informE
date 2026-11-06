@@ -8,7 +8,10 @@
 <PageTitle>Detalhes do Equipamento | informE</PageTitle>
 
 <div class="details-page">
-    <button class="back-link" type="button" @onclick="GoBack"><LucideIcon Name="arrow-left" Size="15" /> <span>Voltar para Equipamentos</span></button>
+    <button class="back-button" type="button" @onclick="GoBack">
+        <LucideIcon Name="arrow-left" Size="17" />
+        <span>@(FromGroups ? "Voltar para o Grupo" : "Voltar para Equipamentos")</span>
+    </button>
 
     @if (loading)
     {
@@ -40,7 +43,6 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button class="refresh-button" type="button" @onclick="LoadAsync" disabled="@refreshing"><LucideIcon Name="refresh-cw" Size="15" /> <span>@(refreshing ? "Atualizando..." : "Atualizar")</span></button>
                 <button class="execute-button" type="button" @onclick="OpenExecution"><LucideIcon Name="terminal" Size="15" /> <span>Executar Comando</span></button>
             </div>
         </header>
@@ -95,7 +97,6 @@
         else if (activeTab == DetailTab.Processes)
         {
             <section class="content-card table-card">
-                <div class="card-heading"><h2>Processos em Execução</h2><span class="mock-note">Demonstração</span></div>
                 <div class="detail-table-scroll">
                     <table class="detail-table">
                         <thead><tr><th>Processo</th><th>CPU</th><th>RAM</th><th>Status</th></tr></thead>
@@ -112,7 +113,6 @@
         else
         {
             <section class="content-card table-card">
-                <div class="card-heading"><h2>Serviços do Sistema</h2><span class="mock-note">Demonstração</span></div>
                 <div class="detail-table-scroll">
                     <table class="detail-table services-table">
                         <thead><tr><th>Nome do Serviço</th><th>Identificador</th><th>Status</th><th>Inicialização</th></tr></thead>
@@ -127,14 +127,32 @@
             </section>
         }
     }
+    <NewExecutionModal @ref="executionModal" />
 </div>
 
 @code {
     [Parameter] public Guid DeviceId { get; set; }
+    private NewExecutionModal? executionModal;
+
+    // Origem da navegação: preserva o contexto do laboratório.
+    private bool FromGroups => QueryValue("from").Equals("groups", StringComparison.OrdinalIgnoreCase);
+
+    private Guid? OriginGroupId => Guid.TryParse(QueryValue("groupId"), out var id) ? id : null;
+
+    private string QueryValue(string key)
+    {
+        var query = new Uri(Navigation.Uri).Query.TrimStart('?');
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length == 2 && string.Equals(Uri.UnescapeDataString(pair[0]), key, StringComparison.OrdinalIgnoreCase))
+                return Uri.UnescapeDataString(pair[1].Replace('+', ' '));
+        }
+        return string.Empty;
+    }
 
     private DeviceDetailDto? detail;
     private bool loading = true;
-    private bool refreshing;
     private string? errorMessage;
     private DetailTab activeTab = DetailTab.General;
 
@@ -151,7 +169,6 @@
 
     private async Task LoadAsync()
     {
-        if (!loading) refreshing = true;
         errorMessage = null;
 
         try
@@ -169,30 +186,28 @@
         finally
         {
             loading = false;
-            refreshing = false;
         }
     }
 
-    private void GoBack() => Navigation.NavigateTo("/equipments");
+    private void GoBack()
+    {
+        if (FromGroups && OriginGroupId is Guid groupId)
+            Navigation.NavigateTo($"/groups/{groupId}");
+        else if (FromGroups)
+            Navigation.NavigateTo("/groups");
+        else
+            Navigation.NavigateTo("/equipments");
+    }
 
     private async Task OpenExecution()
     {
-        if (detail is null) return;
+        if (detail is null || executionModal is null)
+        {
+            return;
+        }
+
         var device = detail.Equipamento;
-
-        Guid? groupId = null;
-        try
-        {
-            var groups = await Api.GetGroupsAsync();
-            groupId = groups.FirstOrDefault(x => string.Equals(x.Name, device.GroupName, StringComparison.OrdinalIgnoreCase))?.Id;
-        }
-        catch
-        {
-        }
-
-        var group = Uri.EscapeDataString(device.GroupName ?? string.Empty);
-        var groupIdPart = groupId is null ? string.Empty : $"&groupId={groupId}";
-        Navigation.NavigateTo($"/executions?new=1&deviceId={device.Id}{groupIdPart}&group={group}");
+        await executionModal.OpenAsync(device.Id, null, device.GroupName);
     }
 
     private static string Fallback(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
