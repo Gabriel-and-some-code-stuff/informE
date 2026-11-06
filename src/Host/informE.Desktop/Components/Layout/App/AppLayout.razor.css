@@ -60,7 +60,7 @@
     display: none;
     width: 36px;
     height: 36px;
-    object-fit: contain;
+    object-fit: none;
 }
 
 .sidebar-nav {
@@ -126,6 +126,8 @@
     color: white;
     font-size: 12px;
     font-weight: 700;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
 .account-copy {
