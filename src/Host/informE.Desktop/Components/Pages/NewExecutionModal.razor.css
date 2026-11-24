@@ -1,0 +1,550 @@
+/* Nova execução e confirmação */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(2,7,16,.78);
+    backdrop-filter: blur(2px);
+    overscroll-behavior: contain;
+}
+
+.execution-modal, .confirmation-modal, .log-modal {
+    width: min(100%, 760px);
+    max-height: calc(100dvh - 40px);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #344057;
+    border-radius: 16px;
+    background: #111a2a;
+    box-shadow: 0 24px 70px rgba(0,0,0,.48);
+    overflow: hidden;
+}
+
+.confirmation-modal {
+    width: min(100%, 490px);
+}
+
+.log-modal {
+    width: min(100%, 700px);
+}
+
+.modal-header {
+    flex: 0 0 auto;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    border-bottom: 1px solid #283449;
+}
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 19px;
+        color: #edf2f8;
+    }
+
+    .modal-header p {
+        margin: 5px 0 0;
+        color: #8895a9;
+        font-size: 12px;
+    }
+
+.icon-button {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #a1acbd;
+    cursor: pointer;
+}
+
+    .icon-button:hover {
+        background: #202d42;
+    }
+
+.modal-body {
+    padding: 18px 24px 8px;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
+    scrollbar-gutter: stable;
+}
+
+.form-field {
+    margin-bottom: 15px;
+}
+
+    .form-field > label {
+        display: block;
+        margin-bottom: 7px;
+        color: #cbd5e1;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    /* Campos do modal: visual compacto, inspirado na versão original */
+    .form-field input[type="date"],
+    .form-field input[type="time"] {
+        width: 100%;
+        height: 42px;
+        padding: 0 13px;
+        border: 1px solid #3b4659;
+        border-radius: 11px;
+        background: #1d2636;
+        color: #edf2f8;
+        font: inherit;
+        font-size: 13px;
+        color-scheme: dark;
+    }
+
+    .form-field input:focus-visible {
+        outline: 2px solid #10c6f4;
+        outline-offset: 1px;
+    }
+
+.form-dropdown {
+    position: relative;
+}
+
+.form-dropdown-trigger {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 14px;
+    border: 1px solid #3b4659;
+    border-radius: 13px;
+    background: #1d2636;
+    color: #e4e9f0;
+    text-align: left;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+    .form-dropdown-trigger:hover,
+    .form-dropdown-trigger[aria-expanded="true"] {
+        border-color: #10c6f4;
+    }
+
+    .form-dropdown-trigger:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+    }
+
+    .form-dropdown-trigger > span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+.form-dropdown-dismiss {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background: transparent;
+}
+
+.form-dropdown-menu {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    margin-top: 6px;
+    max-height: 230px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 7px;
+    border: 1px solid #344057;
+    border-radius: 12px;
+    background: #172132;
+    box-shadow: 0 14px 32px rgba(0,0,0,.4);
+}
+
+.form-choice {
+    width: 100%;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #d7e0eb;
+    text-align: left;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+    .form-choice:hover {
+        background: #202b3d;
+    }
+
+    .form-choice small {
+        color: #8995a9;
+    }
+
+.choice-radio {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    border: 1.5px solid #667389;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+}
+
+    .choice-radio.checked {
+        border-color: #10c6f4;
+    }
+
+        .choice-radio.checked::after {
+            content: "";
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #10c6f4;
+        }
+
+.action-description {
+    display: block;
+    margin-top: 7px;
+    color: #8895a9;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* Seleção múltipla de dispositivos */
+.device-dropdown-menu {
+    display: flex;
+    flex-direction: column;
+    max-height: 270px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.device-option {
+    min-height: 41px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 13px;
+    color: #d7e0eb;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+    .device-option:hover {
+        background: #202b3d;
+    }
+
+    .device-option input {
+        width: 17px;
+        height: 17px;
+        margin: 0;
+        accent-color: #10c6f4;
+    }
+
+    .device-option span {
+        flex: 1;
+    }
+
+    .device-option small {
+        color: #8995a9;
+        font-size: 11px;
+    }
+
+.all-option {
+    border-bottom: 1px solid #344057;
+    font-weight: 600;
+}
+
+.device-options {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 165px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.device-dropdown-footer {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-top: 1px solid #344057;
+    color: #8995a9;
+    font-size: 11px;
+}
+
+    .device-dropdown-footer button {
+        min-height: 33px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 8px;
+        background: #10c6f4;
+        color: #07131e;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+.device-select-state {
+    padding: 12px;
+    color: #8995a9;
+    font-size: 12px;
+}
+
+.preset-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid #2d5062;
+    border-radius: 9px;
+    background: #0d2736;
+    color: #a8dff0;
+    font-size: 12px;
+}
+
+.schedule-box {
+    padding: 14px;
+    border: 1px solid #344057;
+    border-radius: 11px;
+    background: #172132;
+}
+
+.schedule-toggle-row {
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    color: #edf2f8;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+    .schedule-toggle-row > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+    }
+
+    .schedule-toggle-row svg {
+        color: #a78bfa;
+    }
+
+    .schedule-toggle-row input {
+        width: 18px;
+        height: 18px;
+        accent-color: #853bf3;
+        cursor: pointer;
+    }
+
+.schedule-fields {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 13px;
+    margin-top: 16px;
+}
+
+    .schedule-fields .form-field {
+        margin-bottom: 0;
+    }
+
+.schedule-hint {
+    margin: 9px 0 0;
+    color: #8490a4;
+    font-size: 12px;
+}
+
+.modal-inline-state {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 12px;
+    color: #8995a9;
+    font-size: 12px;
+}
+
+.modal-error {
+    padding: 11px 12px;
+    margin: 12px 0;
+    border: 1px solid #60303a;
+    border-radius: 9px;
+    color: #ff9298;
+    background: #28171d;
+    font-size: 12px;
+}
+
+.modal-footer {
+    flex: 0 0 auto;
+    background: #111a2a;
+    padding: 16px 24px 22px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 11px;
+    border-top: 1px solid #283449;
+}
+
+.secondary-button, .execute-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.secondary-button {
+    border: 1px solid #445067;
+    color: #dce3ed;
+    background: transparent;
+}
+
+    .secondary-button:hover {
+        background: #202d42;
+    }
+
+.execute-button {
+    border: 0;
+    color: #07131e;
+    background: #10c6f4;
+}
+
+    .secondary-button:disabled, .execute-button:disabled {
+        opacity: .5;
+        cursor: default;
+    }
+
+.confirm-details {
+    padding: 18px 24px;
+    overflow-y: auto;
+}
+
+    .confirm-details > p {
+        margin: 0;
+        padding: 11px 0;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid #283449;
+        font-size: 13px;
+    }
+
+        .confirm-details > p span {
+            color: #8c9aaf;
+        }
+
+        .confirm-details > p strong {
+            max-width: 60%;
+            color: #edf2f8;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+
+.confirm-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid #644d12;
+    border-radius: 9px;
+    background: #2b240e;
+    color: #f1c461;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+    .confirm-warning svg {
+        flex: 0 0 auto;
+    }
+
+.log-modal pre {
+    margin: 20px 24px 24px;
+    padding: 16px;
+    overflow: auto;
+    border: 1px solid #313d52;
+    border-radius: 10px;
+    background: #09111e;
+    color: #b8c4d6;
+    font: 12px/1.55 Consolas, monospace;
+    white-space: pre-wrap;
+}
+
+button:focus-visible, .device-option:focus-within {
+    outline: 2px solid #10c6f4;
+    outline-offset: 2px;
+}
+
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loader {
+    width: 26px;
+    height: 26px;
+    border: 3px solid #283449;
+    border-top-color: #10c6f4;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+
+    .loader.small {
+        width: 17px;
+        height: 17px;
+        border-width: 2px;
+    }
+
+@media (max-width: 700px) {
+    .modal-backdrop {
+        padding: 10px;
+    }
+
+    .execution-modal, .confirmation-modal {
+        max-height: calc(100dvh - 20px);
+    }
+
+    .modal-header, .modal-footer, .modal-body {
+        padding: 15px;
+    }
+
+    .schedule-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .confirm-details {
+        padding: 15px;
+    }
+
+    .modal-footer {
+        flex-wrap: wrap;
+    }
+
+        .modal-footer button {
+            flex: 1;
+        }
+}

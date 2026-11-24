@@ -10,9 +10,7 @@
 <main class="login-page">
     <section class="login-card @(IsViewer ? "viewer" : "admin")" aria-labelledby="login-title">
         <header class="brand-area">
-            <div class="brand-logo-frame">
-                <img class="brand-logo" src="images/logo-full.png" alt="informE" />
-            </div>
+			<img class="brand-logo" src="images/logo-full.svg" alt="informE" />
            
         </header>
 
@@ -29,8 +27,8 @@
                             <span>Gerenciamento completo</span>
                         </button>
                         <button type="button" class="access-option @(IsViewer ? "selected" : null)" @onclick="() => SelectAccess(true)">
-                            <strong>Viewer</strong>
-                            <span>Suporte e diagnóstico</span>
+							<strong>Visualizador</strong>
+							<span>Consulta e diagnóstico</span>
                         </button>
                     </div>
                 </fieldset>
@@ -43,7 +41,21 @@
 
                 <div class="field">
                     <label for="password">Senha</label>
-                    <InputText id="password" type="password" autocomplete="current-password" placeholder="••••••••" @bind-Value="model.Password" />
+					<div class="password-wrapper">
+						<InputText id="password"
+								   type="@(showPassword ? "text" : "password")"
+								   autocomplete="current-password"
+								   placeholder="••••••••"
+								   @bind-Value="model.Password" />
+
+						<button type="button"
+								class="password-toggle"
+								@onclick="() => showPassword = !showPassword"
+								aria-label="@(showPassword ? "Ocultar senha" : "Exibir senha")"
+								title="@(showPassword ? "Ocultar senha" : "Exibir senha")">
+							<LucideIcon Name="@(showPassword ? "eye-off" : "eye")" Size="19" />
+						</button>
+					</div>
                     <ValidationMessage For="() => model.Password" />
                 </div>
 
@@ -62,7 +74,7 @@
             </EditForm>
         </div>
 
-        <footer class="card-footer">informE Platform <span>•</span> <strong>Online</strong></footer>
+		<footer class="card-footer">informE</footer>
     </section>
 </main>
 
@@ -76,6 +88,7 @@
     private string? loginError;
 
     private bool IsViewer => isViewer;
+	private bool showPassword;
 
     protected override void OnParametersSet()
     {
@@ -103,7 +116,7 @@
             if (accountIsViewer != IsViewer)
             {
                 loginError = accountIsViewer
-                    ? "Esta conta possui acesso Viewer. Selecione Viewer para entrar."
+					? "Esta conta possui acesso de Visualizador. Selecione Visualizador para entrar."
                     : "Esta conta possui acesso de Administrador. Selecione Administrador para entrar.";
                 return;
             }

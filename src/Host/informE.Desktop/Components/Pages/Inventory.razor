@@ -12,18 +12,54 @@
             <h1>Inventário</h1>
             <p>Composição dos dispositivos monitorados.</p>
         </div>
-        <select value="@(selectedGroup?.ToString() ?? string.Empty)" @onchange="ChangeGroup">
-            <option value="">Todos os Grupos</option>
-            @foreach (var g in groups)
-            {
-                <option value="@g.Id">@g.Name</option>
-            }
-        </select>
-    </header>
 
-    <section class="inventory-tools compact">
-        <span>@filteredDevices.Count máquina@(filteredDevices.Count == 1 ? "" : "s") no inventário</span>
-    </section>
+        <div class="group-filter-wrap">
+            <button type="button"
+                    class="group-filter-button"
+                    aria-haspopup="true"
+                    aria-expanded="@groupFilterOpen"
+                    @onclick="ToggleGroupFilter">
+                <LucideIcon Name="flask-conical" Size="18" />
+                <span>@SelectedGroupLabel</span>
+                <LucideIcon Name="chevron-down" Size="18" />
+            </button>
+
+            @if (groupFilterOpen)
+            {
+                <div class="filter-overlay" @onclick="CloseGroupFilter"></div>
+                <div class="group-filter-menu">
+                    <div class="group-filter-title">Filtrar grupos</div>
+
+                    <button type="button"
+                            class="group-filter-option @(selectedGroup is null ? "selected" : "")"
+                            @onclick="() => SelectGroupAsync(null)">
+                        <span class="group-filter-check">
+                            @if (selectedGroup is null)
+                            {
+                                <LucideIcon Name="check" Size="14" />
+                            }
+                        </span>
+                        <span>Todos os Grupos</span>
+                    </button>
+
+                    @foreach (var group in groups.OrderBy(x => x.Name))
+                    {
+                        <button type="button"
+                                class="group-filter-option @(selectedGroup == group.Id ? "selected" : "")"
+                                @onclick="() => SelectGroupAsync(group.Id)">
+                            <span class="group-filter-check">
+                                @if (selectedGroup == group.Id)
+                                {
+                                    <LucideIcon Name="check" Size="14" />
+                                }
+                            </span>
+                            <span>@group.Name</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    </header>
 
     @if (loading)
     {
@@ -35,25 +71,29 @@
     }
     else
     {
-        <section class="top-cards">
-            <article>
-                <LucideIcon Name="monitor" Size="20" />
-                <strong>@devices.Count</strong>
-                <span>Total de Dispositivos</span>
+        <section class="top-cards" aria-label="Indicadores do inventário">
+            <article class="summary-card">
+                <div class="summary-heading">
+                    <span class="summary-icon cyan"><LucideIcon Name="monitor" Size="20" /></span>
+                    <span>Dispositivos</span>
+                </div>
+                <strong>@GroupDeviceCount</strong>
             </article>
-            <article>
-                <LucideIcon Name="boxes" Size="20" />
+            <article class="summary-card">
+                <div class="summary-heading">
+                    <span class="summary-icon purple"><LucideIcon Name="boxes" Size="20" /></span>
+                    <span>Média de softwares por máquina</span>
+                </div>
                 <strong>—</strong>
-                <span>Média de softwares por máquina</span>
             </article>
         </section>
 
-        <section class="charts-grid">
-            <article class="panel">
+        <section class="charts-grid" aria-label="Composição do inventário">
+            <article class="panel chart-panel">
                 <h2>Sistemas Operacionais</h2>
                 @if (OsData.Count == 0)
                 {
-                    <p class="empty">Sem dados.</p>
+                    <p class="empty">Sem dados disponíveis para este grupo.</p>
                 }
                 else
                 {
@@ -68,7 +108,7 @@
                 }
             </article>
 
-            <article class="panel">
+            <article class="panel chart-panel">
                 <h2>Hardware</h2>
                 <ApexChart TItem="ChartPoint" Height="280">
                     <ApexPointSeries TItem="ChartPoint"
@@ -78,7 +118,7 @@
                                      XValue="@(x => x.Label)"
                                      YAggregate="@(x => x.Sum(v => v.Value))" />
                 </ApexChart>
-                <small class="chart-note">Distribuição demonstrativa para apresentação.</small>
+                <small class="chart-note">Dados demonstrativos: este gráfico não acompanha o filtro de grupos.</small>
             </article>
         </section>
 
@@ -86,14 +126,24 @@
             <div class="panel-head">
                 <div>
                     <h2>Inventário detalhado por máquina</h2>
-                    <small>Dados reais do cadastro e do inventário disponível.</small>
+                    <small>Dados do cadastro e do inventário disponível.</small>
                 </div>
-                <span>@filteredDevices.Count registros</span>
+                <span>@filteredDevices.Count registro@(filteredDevices.Count == 1 ? "" : "s")</span>
+            </div>
+
+            <div class="table-tools">
+                <div class="inventory-search">
+                    <LucideIcon Name="search" Size="18" />
+                    <input value="@searchText"
+                           @oninput="OnSearchAsync"
+                           placeholder="Buscar por dispositivo, grupo ou sistema..."
+                           aria-label="Buscar no inventário" />
+                </div>
             </div>
 
             @if (filteredDevices.Count == 0)
             {
-                <div class="empty-table">Nenhuma máquina encontrada.</div>
+                <div class="empty-table">Nenhuma máquina encontrada com os filtros atuais.</div>
             }
             else
             {
@@ -111,17 +161,21 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var d in pagedDevices)
+                            @foreach (var device in pagedDevices)
                             {
-                                var hardware = hardwareByDevice.GetValueOrDefault(d.Id);
-                                <tr @onclick="() => OpenDevice(d.Id)">
-                                    <td><strong>@d.Hostname</strong></td>
-                                    <td>@(d.GroupName ?? "—")</td>
+                                var hardware = hardwareByDevice.GetValueOrDefault(device.Id);
+                                <tr>
+                                    <td>
+                                        <button type="button" class="device-link" @onclick="() => OpenDevice(device.Id)">
+                                            @device.Hostname
+                                        </button>
+                                    </td>
+                                    <td>@(device.GroupName ?? "—")</td>
                                     <td>@(hardware?.Cpu ?? "—")</td>
                                     <td>@FormatRam(hardware)</td>
                                     <td>@FormatStorage(hardware)</td>
                                     <td>@(hardware?.Bios ?? "—")</td>
-                                    <td>@d.Os</td>
+                                    <td>@device.Os</td>
                                 </tr>
                             }
                         </tbody>
@@ -130,11 +184,17 @@
 
                 @if (TotalPages > 1)
                 {
-                    <div class="pagination">
-                        <button type="button" @onclick="PreviousPage" disabled="@(page == 1)">‹</button>
+                    <nav class="pagination" aria-label="Paginação do inventário">
+                        <button type="button" aria-label="Página anterior"
+                                @onclick="PreviousPage" disabled="@(page == 1)">
+                            <LucideIcon Name="chevron-left" Size="18" />
+                        </button>
                         <span>Página @(page) de @TotalPages</span>
-                        <button type="button" @onclick="NextPage" disabled="@(page == TotalPages)">›</button>
-                    </div>
+                        <button type="button" aria-label="Próxima página"
+                                @onclick="NextPage" disabled="@(page == TotalPages)">
+                            <LucideIcon Name="chevron-right" Size="18" />
+                        </button>
+                    </nav>
                 }
             }
         </section>
@@ -149,17 +209,27 @@
     private readonly Dictionary<Guid, HardwareDto?> hardwareByDevice = [];
 
     private bool loading = true;
+    private bool groupFilterOpen;
     private string? error;
+    private string searchText = string.Empty;
     private Guid? selectedGroup;
     private int page = 1;
     private const int PageSize = 10;
 
-    private List<ChartPoint> OsData => filteredDevices
+    private string SelectedGroupLabel =>
+        selectedGroup is null
+            ? "Todos os Grupos"
+            : groups.FirstOrDefault(x => x.Id == selectedGroup)?.Name ?? "Todos os Grupos";
+
+    private int GroupDeviceCount => devices.Count;
+
+    private List<ChartPoint> OsData => devices
         .GroupBy(x => string.IsNullOrWhiteSpace(x.Os) ? "Não informado" : x.Os)
         .Select(x => new ChartPoint(x.Key, x.Count()))
         .OrderByDescending(x => x.Value)
         .ToList();
 
+    // Mantido do protótipo original; não representa dados coletados pelo agente.
     private static readonly List<ChartPoint> HardwareMockData =
     [
         new("Intel Core i5", 46),
@@ -168,7 +238,8 @@
         new("AMD Ryzen", 14)
     ];
 
-    private int TotalPages => Math.Max(1, (int)Math.Ceiling(filteredDevices.Count / (double)PageSize));
+    private int TotalPages =>
+        Math.Max(1, (int)Math.Ceiling(filteredDevices.Count / (double)PageSize));
 
     protected override async Task OnInitializedAsync()
     {
@@ -181,7 +252,7 @@
         try
         {
             groups.AddRange(await Api.GetGroupsAsync());
-            await LoadDevices();
+            await LoadDevicesAsync();
         }
         catch (Exception ex)
         {
@@ -190,10 +261,11 @@
         }
     }
 
-    private async Task LoadDevices()
+    private async Task LoadDevicesAsync()
     {
         loading = true;
         error = null;
+
         try
         {
             var result = await Api.GetDevicesAsync(selectedGroup);
@@ -212,17 +284,54 @@
         }
     }
 
-    private async Task ChangeGroup(ChangeEventArgs e)
+    private void ToggleGroupFilter()
     {
-        selectedGroup = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
-        await LoadDevices();
+        groupFilterOpen = !groupFilterOpen;
+    }
+
+    private void CloseGroupFilter()
+    {
+        groupFilterOpen = false;
+    }
+
+    private async Task SelectGroupAsync(Guid? groupId)
+    {
+        groupFilterOpen = false;
+        if (selectedGroup == groupId)
+        {
+            return;
+        }
+
+        selectedGroup = groupId;
+        await LoadDevicesAsync();
+    }
+
+    private async Task OnSearchAsync(ChangeEventArgs args)
+    {
+        searchText = args.Value?.ToString() ?? string.Empty;
+        page = 1;
+        await ApplyFilterAsync();
     }
 
     private async Task ApplyFilterAsync()
     {
         filteredDevices.Clear();
-        filteredDevices.AddRange(devices.OrderBy(x => x.Hostname));
-        if (page > TotalPages) page = TotalPages;
+
+        var query = devices.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            query = query.Where(x =>
+                x.Hostname.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                (x.GroupName?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (x.Os?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        filteredDevices.AddRange(query.OrderBy(x => x.Hostname));
+        if (page > TotalPages)
+        {
+            page = TotalPages;
+        }
+
         await RefreshPageAsync();
     }
 
@@ -234,7 +343,9 @@
         foreach (var device in pagedDevices)
         {
             if (hardwareByDevice.ContainsKey(device.Id))
+            {
                 continue;
+            }
 
             try
             {
@@ -250,23 +361,38 @@
 
     private async Task PreviousPage()
     {
-        if (page <= 1) return;
+        if (page <= 1)
+        {
+            return;
+        }
+
         page--;
         await RefreshPageAsync();
     }
 
     private async Task NextPage()
     {
-        if (page >= TotalPages) return;
+        if (page >= TotalPages)
+        {
+            return;
+        }
+
         page++;
         await RefreshPageAsync();
     }
 
-    private void OpenDevice(Guid id) => Navigation.NavigateTo($"/equipments/{id}");
+    private void OpenDevice(Guid id)
+    {
+        Navigation.NavigateTo($"/equipments/{id}");
+    }
 
     private static string FormatRam(HardwareDto? hardware)
     {
-        if (hardware?.RamGb is null) return "—";
+        if (hardware?.RamGb is null)
+        {
+            return "—";
+        }
+
         return string.IsNullOrWhiteSpace(hardware.RamType)
             ? $"{hardware.RamGb} GB"
             : $"{hardware.RamGb} GB {hardware.RamType}";
@@ -274,15 +400,22 @@
 
     private static string FormatStorage(HardwareDto? hardware)
     {
-        if (hardware?.StorageGb is null) return "—";
+        if (hardware?.StorageGb is null)
+        {
+            return "—";
+        }
+
         return string.IsNullOrWhiteSpace(hardware.StorageType)
             ? $"{hardware.StorageGb} GB"
             : $"{hardware.StorageGb} GB {hardware.StorageType}";
     }
 
-    private static string Friendly(Exception ex) => ex is HttpRequestException
-        ? "Não foi possível conectar ao servidor."
-        : ex.Message;
+    private static string Friendly(Exception ex)
+    {
+        return ex is HttpRequestException
+            ? "Não foi possível conectar ao servidor."
+            : ex.Message;
+    }
 
     private sealed record ChartPoint(string Label, int Value);
 }
